@@ -12,7 +12,7 @@ const CLIENT_ID = "bbdf8a5464ba4d7f8a29e947a1a3d913";
 const REDIRECT_URI = "http://localhost:3007";
 const AUTH_URL = `https://oauth.yandex.ru/authorize?response_type=token&client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}`;
 
-export const getData = async ({ state, setState, token }) => {
+export const getData = async ({ state, setState, token, typeData = "all" }) => {
   const startDate = dayjs()
     .subtract(7, "day")
     .startOf("day")
@@ -30,21 +30,28 @@ export const getData = async ({ state, setState, token }) => {
     )?.login;
     console.log("login ", login);
     const res = await axios.get(
-      `http://localhost:4000/api/issues?token=${token}&endDate=${endDate}&startDate=${startDate}&login=${login}`
+      `http://localhost:4000/api/issues?token=${token}&endDate=${endDate}&startDate=${startDate}&login=${login}&typeData=${typeData}`
     );
 
     if (res.status !== 200) {
       throw new Error("Api issues error");
     }
-
-    setState({ ...state, loaded: true, ...res.data });
+    if (typeData === "all") {
+      setState({ ...state, loaded: true, ...res.data });
+    }
+    if (typeData === "data") {
+      setState({ ...state, loaded: true, data: res.data.data });
+    }
+    if (typeData === "users") {
+      setState({ ...state, loaded: true, users: res.data.users });
+    }
   } catch (err) {
     console.log("ERROR ", err.message);
     setState({ ...state, loaded: true });
   }
 };
 
-export default function YandexOAuth() {
+export default function YandexTracker() {
   const [token, setToken] = useState(localStorage.getItem("yandex_token"));
   // const [token, setToken] = useState(
   //   "y0__xD48tOlqveAAhjtmjYg4MvKyxK1MAkqmCzdKHCxTza9dSbqrC4bvA"
@@ -69,9 +76,10 @@ export default function YandexOAuth() {
     users: null,
     data: null,
   });
+  // typeData: "all", //all|users|data
   useEffect(() => {
     if (token) {
-      getData({ state, setState, token });
+      getData({ state, setState, token, typeData: "all" });
     }
   }, [token]);
 
@@ -85,9 +93,14 @@ export default function YandexOAuth() {
   const handleSelectedUsersChange = (userId) => {
     const newState = { ...state, userId };
     setState(newState);
-    getData({ state: newState, setState, token });
+    getData({ state: newState, setState, token, typeData: "data" });
   };
   console.log("state", state);
+
+  // (state.data || []).forEach((it) => {
+  //   console.log("updatedDate", dayjs(it.updatedAt).format("YYYY-MM-DD"));
+  // });
+
   return (
     <Grid
       container
@@ -112,14 +125,15 @@ export default function YandexOAuth() {
         )}
       </Grid>
       {state.loaded && !isEmpty(state.users) && (
-        <Grid size={12}>
+        <Grid size={6}>
           <AutocompleteUsers
             userId={state.userId}
             handleSelectedUsersChange={handleSelectedUsersChange}
-            users={(state.users || []).map((it) => ({
-              id: it.uid,
-              name: `${it.lastName ?? ""} ${it.firstName ?? ""} ${it.middleName ?? ""}`,
-            }))}
+            // users={(state.users || []).map((it) => ({
+            //   id: it.uid,
+            //   name: `${it.lastName ?? ""} ${it.firstName ?? ""} ${it.middleName ?? ""}`,
+            // }))}
+            users={state.users}
           />
         </Grid>
       )}
