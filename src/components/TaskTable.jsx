@@ -1,9 +1,9 @@
 import React from "react";
 import { DataGrid } from "@mui/x-data-grid";
-import { Grid2 as Grid } from "@mui/material";
+import { Button, Grid2 as Grid, IconButton, Typography } from "@mui/material";
 import dayjs from "dayjs";
 import "dayjs/locale/ru"; // Подключение русской локализации
-
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 dayjs.locale("ru");
 
 // Пример данных
@@ -11,18 +11,28 @@ dayjs.locale("ru");
 //   {
 //     id: "67dadfb8abcc830716019cbe",
 //     key: "PLATFORMABI-226",
-//     summary:
+//     issue:
 //       "Включить в конфигурации Superset на dev-стенде опцию работы с шаблонами Jinja",
 //     updatedAt: "2025-03-19T15:16:26.473+0000",
 //   },
 //   {
 //     id: "67dadfb8abcc830716019cbf",
 //     key: "PLATFORMABI-227",
-//     summary: "Обновить документацию по API",
+//     issue: "Обновить документацию по API",
 //     updatedAt: "2025-03-20T10:00:00.000+0000",
 //   },
 // ];
 
+const IssueDisplay = ({ display, href }) => (
+  <>
+    <Typography variant="body2">
+      <IconButton content="a" href={href} target="_blank">
+        <OpenInNewIcon />
+      </IconButton>{" "}
+      {display}{" "}
+    </Typography>
+  </>
+);
 // Функция преобразования данных
 const transformData = (data) => {
   return data.map((item) => {
@@ -31,8 +41,9 @@ const transformData = (data) => {
     const durationOfWeek = item.duration;
     return {
       id: item.id,
-      //summary: item.summary,
-      summary: item.issue.display,
+      issue: item.issue.display,
+      key: item.issue.key,
+
       monday: dayOfWeek === 1 ? durationOfWeek : "",
       tuesday: dayOfWeek === 2 ? durationOfWeek : "",
       wednesday: dayOfWeek === 3 ? durationOfWeek : "",
@@ -46,7 +57,21 @@ const transformData = (data) => {
 
 // Определение колонок
 const columns = [
-  { field: "summary", headerName: "Название", flex: 4 },
+  {
+    field: "issue",
+    headerName: "Название",
+    flex: 4,
+    // renderCell: (params) => {
+    //   //console.log("params", params);
+    //   return (
+    //     <IssueDisplay
+    //       display={params.row.issue.display}
+    //       href={params.row.issue.self}
+    //     />
+    //   );
+    // },
+  },
+  { field: "key", headerName: "Key", flex: 1.5 },
   { field: "monday", headerName: "Пн", flex: 1 },
   { field: "tuesday", headerName: "Вт", flex: 1 },
   { field: "wednesday", headerName: "Ср", flex: 1 },

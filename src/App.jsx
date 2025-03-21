@@ -26,7 +26,7 @@ export const getData = async ({ state, setState, token, typeData = "all" }) => {
     });
     console.log("state.userId", state?.userId);
     const login = (state.users || []).find(
-      (it) => state?.userId && it.uid === state.userId
+      (it) => state?.userId && it.id === state.userId
     )?.login;
     console.log("login ", login);
     const res = await axios.get(
@@ -142,7 +142,7 @@ export default function YandexTracker() {
           size={12}
           sx={{ height: "80vh", background: "white", mx: "auto" }}
         >
-          {!state.loaded && isEmpty(state.data) && <Loading />}
+          {!state.loaded && <Loading />}
           {state.loaded && !isEmpty(state.data) && (
             <TaskTable data={state.data} />
           )}

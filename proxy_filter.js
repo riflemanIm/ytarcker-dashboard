@@ -16,19 +16,18 @@ app.get("/api/issues", async (req, res) => {
     if (token) {
       // ------------ users -------------
       // console.log("login", login);
-      // let responseUsers = [];
-      // if (typeData === "all" || typeData === "users") {
-      //   responseUsers = await axios.get(
-      //     "https://api.tracker.yandex.net/v2/users?perPage=1000",
-      //     {
-      //       headers: {
-      //         Authorization: `OAuth ${token}`,
-      //         "X-Org-ID": "8063720",
-      //         Host: "api.tracker.yandex.net",
-      //       },
-      //     }
-      //   );
-      // }
+      let responseUsers = [];
+
+      responseUsers = await axios.get(
+        "https://api.tracker.yandex.net/v2/users?perPage=1000",
+        {
+          headers: {
+            Authorization: `OAuth ${token}`,
+            "X-Org-ID": "8063720",
+            Host: "api.tracker.yandex.net",
+          },
+        }
+      );
 
       // ------------ issues filter issues -------------
       // const url = "https://api.tracker.yandex.net/v2/issues/_search";
@@ -51,50 +50,58 @@ app.get("/api/issues", async (req, res) => {
 
       // ------------ issues filter issues -------------
       let response = [];
-      if (typeData === "all" || typeData === "data") {
-        startDate = "2025-02-11";
-        endDate = "2025-03-21";
-        const createdBy = login !== "undefined" ? login : undefined;
-        //const createdBy = "i.babkov";
-        const url =
-          "https://api.tracker.yandex.net/v2/worklog/_search?perPage=1000";
-        response = await axios.post(
-          url,
-          {
-            createdBy,
-            createdAt: {
-              from: startDate,
-              to: endDate,
-            },
+
+      startDate = "2025-02-11";
+      endDate = "2025-03-21";
+      const createdBy = login !== "undefined" ? login : undefined;
+      //const createdBy = "i.babkov";
+
+      const url =
+        "https://api.tracker.yandex.net/v2/worklog/_search?perPage=1000";
+      response = await axios.post(
+        url,
+        {
+          createdBy,
+          createdAt: {
+            from: startDate,
+            to: endDate,
           },
-          {
-            headers: {
-              Authorization: `OAuth ${token}`,
-              "X-Org-ID": "8063720",
-              Host: "api.tracker.yandex.net",
-            },
-          }
-        );
-      }
-      // const uniqueUsersIds = [
-      //   ...new Set(response.data.map((item) => parseInt(item.updatedBy.id))),
-      // ];
-
-      const userFromData = response.data.map((it) => ({
-        id: parseInt(it.updatedBy.id),
-        name: it.updatedBy.display,
-      }));
-      console.log("userFromData", userFromData);
-
-      let uniqueUsers = [];
-
-      userFromData.forEach((it) => {
-        if (!uniqueUsers.find((itt) => it.id == itt.id)) {
-          uniqueUsers.push(it);
+        },
+        {
+          headers: {
+            Authorization: `OAuth ${token}`,
+            "X-Org-ID": "8063720",
+            Host: "api.tracker.yandex.net",
+          },
         }
-      });
+      );
 
-      console.log("uniqueUsers", uniqueUsers);
+      const uniqueUsersIds = [
+        ...new Set(response.data.map((item) => parseInt(item.updatedBy.id))),
+      ];
+
+      // const userFromData = response.data.map((it) => ({
+      //   id: parseInt(it.updatedBy.id),
+      //   name: it.updatedBy.display,
+      // }));
+      // console.log("userFromData", userFromData);
+
+      //let uniqueUsers = [];
+      // userFromData.forEach((it) => {
+      //   if (!uniqueUsers.find((itt) => it.id == itt.id)) {
+      //     uniqueUsers.push(it);
+      //   }
+      // });
+      //console.log("responseUsers.data", responseUsers.data);
+      const uniqueUsers = responseUsers.data
+        .filter((it) => uniqueUsersIds.includes(it.uid))
+        .map((it) => ({
+          id: it.uid,
+          name: `${it.lastName ?? ""} ${it.firstName ?? ""} ${it.middleName ?? ""}`,
+          login: it.login,
+        }));
+
+      console.log("uniqueUsers", uniqueUsers, createdBy);
       //const users=
       res.json({ data: response.data, users: uniqueUsers });
     } else {
