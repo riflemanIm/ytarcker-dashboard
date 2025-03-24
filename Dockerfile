@@ -6,9 +6,11 @@ RUN adduser -D -u 1100 pmt
 
 # Установить минимальные зависимости
 WORKDIR /app
-RUN yarn add express cors axios
-# Скопировать proxy.js
+COPY /app/node_modules /app/node_modules
 COPY /app/proxy.js /app/proxy.js
+
+RUN yarn add express cors axios
+
 
 # Убедиться, что все файлы принадлежат пользователю appuser
 RUN chown -R pmt:pmt /app
