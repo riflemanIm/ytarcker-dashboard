@@ -1,26 +1,3 @@
-# Ступень 1: Сборка приложения
-FROM node:20-alpine AS builder
-
-# Установить Yarn
-RUN apk add --no-cache yarn
-
-# Создать директорию для приложения
-WORKDIR /app
-
-# Копировать package.json и yarn.lock
-COPY package.json yarn.lock ./
-
-# Установить зависимости
-#RUN yarn install --frozen-lockfile --production
-RUN yarn install 
-
-# Копировать остальные файлы приложения
-COPY . .
-
-# Собрать приложение (если требуется)
-RUN yarn build || true  # Если у вас есть команда build, выполните её
-
-
 
 # Ступень 2: Минимальный образ
 FROM node:20-alpine
@@ -42,5 +19,6 @@ USER pmt
 
 # Команда для запуска приложения
 CMD ["nodejs", "./proxy.js"]
+
 #CMD ["yarn", "start_proxy"]  
 # или CMD ["node", "dist/index.js"], если вы используете build-процесс
