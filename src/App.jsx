@@ -8,16 +8,10 @@ import AutocompleteUsers from "./components/AutocompleteUsers";
 import WeekNavigator from "./components/WeekNavigator";
 
 const CLIENT_ID = "bbdf8a5464ba4d7f8a29e947a1a3d913";
-const REDIRECT_URI =
-  import.meta.env.NODE_ENV !== "production"
-    ? "http://localhost:3007"
-    : "https://ytracker.mobimed.ru";
+const REDIRECT_URI = import.meta.env.VITE_APP_REDIRECT_URI;
 const AUTH_URL = `https://oauth.yandex.ru/authorize?response_type=token&client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}`;
 
-const apiUrl =
-  import.meta.env.NODE_ENV !== "production"
-    ? "http://localhost:4000"
-    : "https://10.250.200.36:4000";
+const apiUrl = import.meta.env.VITE_APP_API_URL;
 
 export const getData = async ({ state, setState, token, start, end }) => {
   try {
