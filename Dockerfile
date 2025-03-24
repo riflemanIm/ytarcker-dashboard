@@ -1,4 +1,3 @@
-
 # Ступень 2: Минимальный образ
 FROM node:20-alpine
 
@@ -9,7 +8,7 @@ RUN adduser -D -u 1100 pmt
 WORKDIR /app
 RUN yarn add express cors axios
 # Скопировать зависимости и собранный код из первого этапа
-COPY --from=builder /app/proxy.js /app/proxy.js
+COPY /app/proxy.js /app/proxy.js
 
 # Убедиться, что все файлы принадлежат пользователю appuser
 RUN chown -R pmt:pmt /app
