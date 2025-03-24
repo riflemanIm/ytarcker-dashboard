@@ -7,61 +7,23 @@ app.use(cors());
 app.use(express.json());
 
 app.get("/api/issues", async (req, res) => {
-  let { token, startDate, endDate, login, typeData } = req.query;
+  let { token, startDate, endDate, userId } = req.query;
   console.log("token", token);
-  console.log("startDate", startDate);
-  console.log("endDate", endDate);
 
   try {
     if (token) {
-      // ------------ users -------------
-      // console.log("login", login);
-      let responseUsers = [];
-
-      responseUsers = await axios.get(
-        "https://api.tracker.yandex.net/v2/users?perPage=1000",
-        {
-          headers: {
-            Authorization: `OAuth ${token}`,
-            "X-Org-ID": "8063720",
-            Host: "api.tracker.yandex.net",
-          },
-        }
-      );
-
-      // ------------ issues filter issues -------------
-      // const url = "https://api.tracker.yandex.net/v2/issues/_search";
-      // const response = await axios.post(
-      //   url,
-      //   {
-      //     filter: {
-      //       queue: "APPS",
-      //       assignee: "i.babkov",
-      //     },
-      //   },
-      //   {
-      //     headers: {
-      //       Authorization: `OAuth ${token}`,
-      //       "X-Org-ID": "8063720",
-      //       Host: "api.tracker.yandex.net",
-      //     },
-      //   }
-      // );
-
       // ------------ issues filter issues -------------
       let response = [];
 
-      startDate = "2025-02-11";
-      endDate = "2025-03-21";
-      const createdBy = login !== "undefined" ? login : undefined;
-      //const createdBy = "i.babkov";
+      userId = userId !== "undefined" && userId !== "null" ? userId : null;
+      // startDate = "2025-02-11";
+      // endDate = "2025-03-21";
 
       const url =
         "https://api.tracker.yandex.net/v2/worklog/_search?perPage=1000";
       response = await axios.post(
         url,
         {
-          createdBy,
           createdAt: {
             from: startDate,
             to: endDate,
@@ -76,34 +38,17 @@ app.get("/api/issues", async (req, res) => {
         }
       );
 
-      const uniqueUsersIds = [
-        ...new Set(response.data.map((item) => parseInt(item.updatedBy.id))),
-      ];
+      let users = response.data.map((it) => ({
+        id: parseInt(it.updatedBy.id),
+        name: it.updatedBy.display,
+      }));
+      users = [...new Map(users.map((item) => [item.id, item])).values()];
 
-      // const userFromData = response.data.map((it) => ({
-      //   id: parseInt(it.updatedBy.id),
-      //   name: it.updatedBy.display,
-      // }));
-      // console.log("userFromData", userFromData);
-
-      //let uniqueUsers = [];
-      // userFromData.forEach((it) => {
-      //   if (!uniqueUsers.find((itt) => it.id == itt.id)) {
-      //     uniqueUsers.push(it);
-      //   }
-      // });
-      //console.log("responseUsers.data", responseUsers.data);
-      const uniqueUsers = responseUsers.data
-        .filter((it) => uniqueUsersIds.includes(it.uid))
-        .map((it) => ({
-          id: it.uid,
-          name: `${it.lastName ?? ""} ${it.firstName ?? ""} ${it.middleName ?? ""}`,
-          login: it.login,
-        }));
-
-      console.log("uniqueUsers", uniqueUsers, createdBy);
-      //const users=
-      res.json({ data: response.data, users: uniqueUsers });
+      const data = response.data.filter(
+        (it) => it.createdBy.id === userId || userId == null
+      );
+      console.log(users, "startDate", startDate, "endDate", endDate, userId);
+      res.json({ data, users });
     } else {
       res.status(400).json({ error: "token not pass " });
     }

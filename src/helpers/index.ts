@@ -1,3 +1,28 @@
+import dayjs from "dayjs";
+import isoWeek from "dayjs/plugin/isoWeek";
+dayjs.extend(isoWeek);
+
+/**
+ * Возвращает даты начала и конца недели.
+ * @param historyNumWeek - Количество недель назад (null - текущая неделя)
+ * @returns объект с датами начала и конца недели
+ */
+export function getWeekRange(historyNumWeek: number | null = null): {
+  start: string;
+  end: string;
+} {
+  let date = dayjs();
+
+  if (typeof historyNumWeek === "number" && historyNumWeek > 0) {
+    date = date.subtract(historyNumWeek, "week");
+  }
+
+  const start = date.startOf("isoWeek").format("YYYY-MM-DD");
+  const end = date.endOf("isoWeek").format("YYYY-MM-DD");
+
+  return { start, end };
+}
+
 export function currencyFormat(num: number | string) {
   return parseFloat(`${num}`)
     .toFixed(2)

@@ -1,12 +1,11 @@
 import axios from "axios";
 import { useEffect, useState } from "react";
 import TaskTable from "./components/TaskTable";
-import isEmpty from "./helpers";
+import isEmpty, { getWeekRange } from "./helpers";
 import Loading from "./components/Loading";
-import dayjs from "dayjs";
 import { Button, Grid2 as Grid, Typography } from "@mui/material";
 import AutocompleteUsers from "./components/AutocompleteUsers";
-//import { Button } from "@/components/ui/button";
+import WeekNavigator from "./components/WeekNavigator";
 
 const CLIENT_ID = "bbdf8a5464ba4d7f8a29e947a1a3d913";
 const REDIRECT_URI =
@@ -15,39 +14,30 @@ const REDIRECT_URI =
     : "https://ytracker.mobimed.ru";
 const AUTH_URL = `https://oauth.yandex.ru/authorize?response_type=token&client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}`;
 
-export const getData = async ({ state, setState, token, typeData = "all" }) => {
-  const startDate = dayjs()
-    .subtract(7, "day")
-    .startOf("day")
-    .format("YYYY-MM-DD");
-  const endDate = dayjs().endOf("day").format("YYYY-MM-DD");
+const apiUrl =
+  import.meta.env.NODE_ENV !== "production"
+    ? "http://localhost:4000"
+    : "https://10.250.200.36:4000";
 
+export const getData = async ({ state, setState, token, start, end }) => {
   try {
     setState({
       ...state,
       loaded: false,
     });
     console.log("state.userId", state?.userId);
-    const login = (state.users || []).find(
+    const userId = (state.users || []).find(
       (it) => state?.userId && it.id === state.userId
-    )?.login;
-    console.log("login ", login);
+    )?.id;
+    console.log("userId ", userId);
     const res = await axios.get(
-      `http://localhost:4000/api/issues?token=${token}&endDate=${endDate}&startDate=${startDate}&login=${login}&typeData=${typeData}`
+      `${apiUrl}/api/issues?token=${token}&endDate=${end}&startDate=${start}&userId=${userId}`
     );
 
     if (res.status !== 200) {
       throw new Error("Api issues error");
     }
-    if (typeData === "all") {
-      setState({ ...state, loaded: true, ...res.data });
-    }
-    if (typeData === "data") {
-      setState({ ...state, loaded: true, data: res.data.data });
-    }
-    if (typeData === "users") {
-      setState({ ...state, loaded: true, users: res.data.users });
-    }
+    setState({ ...state, loaded: true, ...res.data });
   } catch (err) {
     console.log("ERROR ", err.message);
     setState({ ...state, loaded: true });
@@ -59,6 +49,7 @@ export default function YandexTracker() {
   // const [token, setToken] = useState(
   //   "y0__xD48tOlqveAAhjtmjYg4MvKyxK1MAkqmCzdKHCxTza9dSbqrC4bvA"
   // );
+
   useEffect(() => {
     const hash = window.location.hash;
 
@@ -79,12 +70,20 @@ export default function YandexTracker() {
     users: null,
     data: null,
   });
-  // typeData: "all", //all|users|data
+
+  const [weekOffset, setWeekOffset] = useState(0);
+  const handlePrevious = () => {
+    setWeekOffset((prev) => prev + 1);
+  };
+  const handleNext = () => {
+    setWeekOffset((prev) => (prev > 0 ? prev - 1 : 0));
+  };
+  const { start, end } = getWeekRange(weekOffset);
   useEffect(() => {
     if (token) {
-      getData({ state, setState, token, typeData: "all" });
+      getData({ state, setState, token, start, end });
     }
-  }, [token]);
+  }, [token, weekOffset]);
 
   const handleLogin = () => {
     window.location.href = AUTH_URL;
@@ -96,7 +95,8 @@ export default function YandexTracker() {
   const handleSelectedUsersChange = (userId) => {
     const newState = { ...state, userId };
     setState(newState);
-    getData({ state: newState, setState, token, typeData: "data" });
+
+    getData({ state: newState, setState, token, start, end });
   };
   console.log("state", state);
 
@@ -146,6 +146,15 @@ export default function YandexTracker() {
           sx={{ height: "80vh", background: "white", mx: "auto" }}
         >
           {!state.loaded && <Loading />}
+          {state.loaded && (
+            <WeekNavigator
+              start={start}
+              end={end}
+              onPrevious={handlePrevious}
+              onNext={handleNext}
+              disableNext={weekOffset === 0}
+            />
+          )}
           {state.loaded && !isEmpty(state.data) && (
             <TaskTable data={state.data} />
           )}
