@@ -3,9 +3,10 @@ import { useEffect, useState } from "react";
 import TaskTable from "./components/TaskTable";
 import isEmpty, { getWeekRange } from "./helpers";
 import Loading from "./components/Loading";
-import { Button, Grid2 as Grid, Typography } from "@mui/material";
+import { Button, Grid2 as Grid, Stack, Typography } from "@mui/material";
 import AutocompleteUsers from "./components/AutocompleteUsers";
 import WeekNavigator from "./components/WeekNavigator";
+import dayjs from "dayjs";
 
 const CLIENT_ID = "bbdf8a5464ba4d7f8a29e947a1a3d913";
 const REDIRECT_URI = import.meta.env.VITE_APP_REDIRECT_URI;
@@ -105,42 +106,38 @@ export default function YandexTracker() {
       sx={{
         background: "white",
         height: "100vh",
-        width: "100vw",
+        width: "98vw",
         justifyContent: "center",
+        alignSelf: "center",
+        justifySelf: "center",
+        textAlign: "center",
       }}
+      spacing={2}
     >
-      <Grid
-        size={12}
-        sx={{ alignSelf: "center", justifySelf: "center", textAlign: "center" }}
-      >
-        {token ? (
-          <Typography variant="body1">
-            Вы авторизованы. <Button onClick={handleLogout}>Выйти</Button>
-          </Typography>
-        ) : (
-          <Button onClick={handleLogin}>Войти</Button>
-        )}
-      </Grid>
-      {state.loaded && !isEmpty(state.users) && (
-        <Grid size={6}>
-          <AutocompleteUsers
-            userId={state.userId}
-            handleSelectedUsersChange={handleSelectedUsersChange}
-            // users={(state.users || []).map((it) => ({
-            //   id: it.uid,
-            //   name: `${it.lastName ?? ""} ${it.firstName ?? ""} ${it.middleName ?? ""}`,
-            // }))}
-            users={state.users}
-          />
-        </Grid>
-      )}
-      {token && (
+      <>
         <Grid
-          size={12}
-          sx={{ height: "80vh", background: "white", mx: "auto" }}
+          size={2}
+          sx={{
+            alignSelf: "center",
+            justifySelf: "center",
+            textAlign: "center",
+          }}
         >
-          {!state.loaded && <Loading />}
-          {state.loaded && (
+          {token ? (
+            <Typography variant="body1">
+              Вы авторизованы. <Button onClick={handleLogout}>Выйти</Button>
+            </Typography>
+          ) : (
+            <Button onClick={handleLogin}>Войти</Button>
+          )}
+        </Grid>
+        {token && (
+          <Grid
+            size={5}
+            alignSelf="center"
+            justifySelf="center"
+            textAlign="center"
+          >
             <WeekNavigator
               start={start}
               end={end}
@@ -148,9 +145,35 @@ export default function YandexTracker() {
               onNext={handleNext}
               disableNext={weekOffset === 0}
             />
-          )}
+          </Grid>
+        )}
+        {state.loaded && !isEmpty(state.users) && (
+          <Grid
+            size="grow"
+            alignSelf="center"
+            justifySelf="center"
+            textAlign="center"
+          >
+            <AutocompleteUsers
+              userId={state.userId}
+              handleSelectedUsersChange={handleSelectedUsersChange}
+              users={state.users}
+            />
+          </Grid>
+        )}
+      </>
+      {token && (
+        <Grid
+          size={12}
+          sx={{ height: "80vh", background: "white", mx: "auto" }}
+        >
+          {!state.loaded && <Loading />}
+
           {state.loaded && !isEmpty(state.data) && (
             <TaskTable data={state.data} />
+          )}
+          {state.loaded && isEmpty(state.data) && (
+            <Typography variant="h6">Нет данных</Typography>
           )}
         </Grid>
       )}

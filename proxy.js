@@ -18,7 +18,7 @@ app.get("/api/issues", async (req, res) => {
       userId = userId !== "undefined" && userId !== "null" ? userId : null;
       // startDate = "2025-02-11";
       // endDate = "2025-03-21";
-
+      endDate = `${endDate}T23:59`;
       const url =
         "https://api.tracker.yandex.net/v2/worklog/_search?perPage=1000";
       response = await axios.post(

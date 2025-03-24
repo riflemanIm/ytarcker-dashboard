@@ -1,5 +1,5 @@
 import React from "react";
-import { Button, Typography, Stack } from "@mui/material";
+import { Button, Stack, Typography } from "@mui/material";
 import dayjs from "dayjs";
 
 interface WeekNavigatorProps {
@@ -18,18 +18,16 @@ const WeekNavigator: React.FC<WeekNavigatorProps> = ({
   disableNext,
 }) => {
   return (
-    <Stack spacing={2} alignItems="center">
-      <Stack direction="row" spacing={2}>
-        <Button variant="contained" onClick={onPrevious}>
-          Previous Week
-        </Button>
-        <Button variant="contained" onClick={onNext} disabled={disableNext}>
-          Next Week
-        </Button>
-      </Stack>
-      <Typography variant="h6">
+    <Stack direction="row" spacing={2} alignSelf="center">
+      <Button variant="contained" onClick={onPrevious}>
+        Previous Week
+      </Button>
+      <Typography variant="h5">
         {dayjs(start).format("DD.MM.YYYY")} - {dayjs(end).format("DD.MM.YYYY")}
       </Typography>
+      <Button variant="contained" onClick={onNext} disabled={disableNext}>
+        Next Week
+      </Button>
     </Stack>
   );
 };
