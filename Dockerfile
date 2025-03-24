@@ -30,8 +30,9 @@ WORKDIR /app
 RUN npm i express && npm i cors
 # Скопировать зависимости и собранный код из первого этапа
 COPY --from=builder /app/node_modules /app/node_modules
-COPY --from=builder /app/proxy.js /app/
+COPY --from=builder /app/proxy.js /app/proxy.js
 COPY --from=builder /app/package.json /app/package.json
+COPY --from=builder /app/vite.config.js /app/vite.config.js
 COPY --from=builder /app/.env /app/.env
 
 # Убедиться, что все файлы принадлежат пользователю appuser
