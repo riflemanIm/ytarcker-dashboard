@@ -11,13 +11,16 @@ WORKDIR /app
 COPY package.json yarn.lock ./
 
 # Установить зависимости
-RUN yarn install --frozen-lockfile --production
+#RUN yarn install --frozen-lockfile --production
+RUN yarn install 
 
 # Копировать остальные файлы приложения
 COPY . .
 
 # Собрать приложение (если требуется)
 RUN yarn build || true  # Если у вас есть команда build, выполните её
+
+
 
 # Ступень 2: Минимальный образ
 FROM node:20-alpine
@@ -27,13 +30,9 @@ RUN adduser -D -u 1100 pmt
 
 # Установить минимальные зависимости
 WORKDIR /app
-RUN npm i express && npm i cors
+RUN yarn add express cors
 # Скопировать зависимости и собранный код из первого этапа
-COPY --from=builder /app/node_modules /app/node_modules
 COPY --from=builder /app/proxy.js /app/proxy.js
-COPY --from=builder /app/package.json /app/package.json
-COPY --from=builder /app/vite.config.js /app/vite.config.js
-COPY --from=builder /app/.env /app/.env
 
 # Убедиться, что все файлы принадлежат пользователю appuser
 RUN chown -R pmt:pmt /app
