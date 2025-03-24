@@ -6,14 +6,13 @@ import Loading from "./components/Loading";
 import { Button, Grid2 as Grid, Stack, Typography } from "@mui/material";
 import AutocompleteUsers from "./components/AutocompleteUsers";
 import WeekNavigator from "./components/WeekNavigator";
-import dayjs from "dayjs";
 
 const CLIENT_ID = "bbdf8a5464ba4d7f8a29e947a1a3d913";
 const REDIRECT_URI = import.meta.env.VITE_APP_REDIRECT_URI;
 const AUTH_URL = `https://oauth.yandex.ru/authorize?response_type=token&client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}`;
 
 const apiUrl = import.meta.env.VITE_APP_API_URL;
-
+console.log("apiUrl", apiUrl);
 export const getData = async ({ state, setState, token, start, end }) => {
   try {
     setState({
