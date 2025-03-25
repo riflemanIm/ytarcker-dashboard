@@ -56,7 +56,7 @@ app.get("/api/issues", async (req, res) => {
         }));
 
       console.log(
-        response.data[0],
+        data,
         "startDate",
         startDate,
         "endDate",

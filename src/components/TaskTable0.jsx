@@ -43,7 +43,26 @@ const isValidDuration = (duration) => {
   const iso8601DurationRegex = /^P(?=.+)(\d+D)?(T(?=\d+[HM])(\d+H)?(\d+M)?)?$/;
   return iso8601DurationRegex.test(duration);
 };
+const normalizeDuration = (input) => {
+  if (isValidDuration(input)) return input; // уже валидное значение
 
+  const match = input.trim().match(/^(\d+)\s*([DdHhMm])$/);
+  if (!match) return input; // вернуть исходное значение, если не совпадает
+
+  const value = match[1];
+  const unit = match[2].toUpperCase();
+
+  switch (unit) {
+    case "D":
+      return `P${value}D`;
+    case "H":
+      return `PT${value}H`;
+    case "M":
+      return `PT${value}M`;
+    default:
+      return input;
+  }
+};
 const transformData = (data) => {
   const result = {};
 
@@ -101,10 +120,9 @@ const transformData = (data) => {
 
 const TaskTable = ({ data }) => {
   const [alert, setAlert] = useState(null);
+  const [tableRows, setTableRows] = useState(() => transformData(data));
 
-  const rows = useMemo(() => transformData(data), [data]);
-
-  const totalRow = useMemo(() => {
+  const calculateTotalRow = useCallback((rows) => {
     const fields = [
       "monday",
       "tuesday",
@@ -133,7 +151,12 @@ const TaskTable = ({ data }) => {
       key: "",
       ...totals,
     };
-  }, [rows]);
+  }, []);
+
+  const totalRow = useMemo(
+    () => calculateTotalRow(tableRows),
+    [tableRows, calculateTotalRow]
+  );
 
   const renderWeekCell = (params) => {
     const val = params.value === "P" ? "+" : params.value.replace(/P|T/g, "");
@@ -141,19 +164,62 @@ const TaskTable = ({ data }) => {
   };
 
   const handleCellEdit = useCallback((rowId, field, newValue) => {
-    if (!isValidDuration(newValue)) {
+    const normalizedValue = normalizeDuration(newValue);
+
+    if (!isValidDuration(normalizedValue)) {
       setAlert(
-        `Значение \"${newValue}\" не является корректным форматом времени.`
+        `Значение "${newValue}" не является корректным форматом времени.`
       );
       return false;
-    } else {
-      setAlert(null);
-      console.log(
-        `Edited row ${rowId}, field ${field}, new value: ${newValue}`
-      );
-      return true;
     }
+
+    setAlert(null);
+    setTableRows((prevRows) => {
+      const updatedRows = prevRows.map((row) =>
+        row.id === rowId ? { ...row, [field]: normalizedValue } : row
+      );
+      return updatedRows;
+    });
+
+    return true;
   }, []);
+
+  const columns = [
+    {
+      field: "issue",
+      headerName: "Название",
+      flex: 4,
+      sortable: false,
+      renderCell: (params) =>
+        params.row.id !== "total" ? (
+          <IssueDisplay
+            display={params.value.display}
+            href={params.value.href}
+          />
+        ) : (
+          params.value.display
+        ),
+    },
+    { field: "key", headerName: "Key", flex: 1.5 },
+    ...[
+      "monday",
+      "tuesday",
+      "wednesday",
+      "thursday",
+      "friday",
+      "saturday",
+      "sunday",
+    ].map((day) => ({
+      field: day,
+      sortable: false,
+      filterable: false,
+      headerName: day.slice(0, 2),
+      flex: 1,
+      editable: true,
+      renderCell: renderWeekCell,
+    })),
+    { field: "total", headerName: "Итого", flex: 1.5 },
+  ];
 
   return (
     <Grid>
@@ -163,63 +229,28 @@ const TaskTable = ({ data }) => {
         </Alert>
       )}
       <DataGrid
-        rows={[...rows, totalRow]}
-        columns={[
-          {
-            field: "issue",
-            headerName: "Название",
-            flex: 4,
-            sortable: false,
-            renderCell: (params) =>
-              params.row.id !== "total" ? (
-                <IssueDisplay
-                  display={params.value.display}
-                  href={params.value.href}
-                />
-              ) : (
-                params.value.display
-              ),
-          },
-          { field: "key", headerName: "Key", flex: 1.5 },
-          ...[
-            "monday",
-            "tuesday",
-            "wednesday",
-            "thursday",
-            "friday",
-            "saturday",
-            "sunday",
-          ].map((day) => ({
-            field: day,
-            headerName: day[0].toUpperCase() + day.slice(1, 2),
-            flex: 1,
-            editable: true,
-            renderCell: renderWeekCell,
-          })),
-          { field: "total", headerName: "Итого", flex: 1.5 },
-        ]}
+        rows={[...tableRows, totalRow]}
+        columns={columns}
         pageSizeOptions={[5]}
         isCellEditable={(params) => params.row.id !== "total"}
-        processRowUpdate={(updatedRow, originalRow) => {
-          let isValid = true;
-          Object.keys(updatedRow).forEach((field) => {
-            if (updatedRow[field] !== originalRow[field] && field !== "id") {
-              if (!handleCellEdit(updatedRow.id, field, updatedRow[field])) {
-                isValid = false;
-              }
-            }
-          });
-          return isValid ? updatedRow : originalRow;
-        }}
-        getRowClassName={(params) => (params.id === "total" ? "total-row" : "")}
+        processRowUpdate={(updatedRow, originalRow) =>
+          handleCellEdit(
+            updatedRow.id,
+            Object.keys(updatedRow).find(
+              (key) => updatedRow[key] !== originalRow[key]
+            ),
+            updatedRow[
+              Object.keys(updatedRow).find(
+                (key) => updatedRow[key] !== originalRow[key]
+              )
+            ]
+          )
+            ? updatedRow
+            : originalRow
+        }
+        getRowClassName={(params) => (params.id === "total" ? "no-hover" : "")}
         sx={{
-          "& .total-row:hover": {
-            backgroundColor: "transparent !important",
-          },
-          "& .total-row": {
-            backgroundColor: "transparent !important",
-            pointerEvents: "none",
-          },
+          "& .no-hover:hover": { backgroundColor: "transparent !important" },
         }}
       />
     </Grid>
