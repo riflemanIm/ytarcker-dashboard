@@ -1,9 +1,10 @@
 import React, { useMemo, useCallback, useState } from "react";
 import { DataGrid } from "@mui/x-data-grid";
-import { Grid2 as Grid, IconButton, Typography, Alert } from "@mui/material";
+import { Grid2 as Grid, IconButton, Typography } from "@mui/material";
 import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import DurationAlert from "./DurationAlert";
 dayjs.extend(duration);
 dayjs.locale("ru");
 
@@ -40,29 +41,32 @@ const sumDurations = (durations) => {
 };
 
 const isValidDuration = (duration) => {
-  const iso8601DurationRegex = /^P(?=.+)(\d+D)?(T(?=\d+[HM])(\d+H)?(\d+M)?)?$/;
+  const iso8601DurationRegex =
+    /^P(?=\d|T\d)(\d+D)?(T(?=\d+[HM])(\d+H)?(\d+M)?)?$/i;
   return iso8601DurationRegex.test(duration);
 };
+
 const normalizeDuration = (input) => {
-  if (isValidDuration(input)) return input; // уже валидное значение
+  if (isValidDuration(input)) return input;
 
-  const match = input.trim().match(/^(\d+)\s*([DdHhMm])$/);
-  if (!match) return input; // вернуть исходное значение, если не совпадает
+  const regex = /^(?:(\d+)[dD])?(?:(\d+)[hH])?(?:(\d+)[mM])?$/;
+  const match = input.trim().match(regex);
 
-  const value = match[1];
-  const unit = match[2].toUpperCase();
-
-  switch (unit) {
-    case "D":
-      return `P${value}D`;
-    case "H":
-      return `PT${value}H`;
-    case "M":
-      return `PT${value}M`;
-    default:
-      return input;
+  if (!match || (!match[1] && !match[2] && !match[3])) {
+    return input; // невалидный формат, возвращаем исходное значение
   }
+
+  const [, days, hours, minutes] = match;
+
+  let result = "P";
+  if (days) result += `${parseInt(days, 10)}D`;
+  if (hours || minutes) result += "T";
+  if (hours) result += `${parseInt(hours, 10)}H`;
+  if (minutes) result += `${parseInt(minutes, 10)}M`;
+
+  return result;
 };
+
 const transformData = (data) => {
   const result = {};
 
@@ -120,6 +124,7 @@ const transformData = (data) => {
 
 const TaskTable = ({ data }) => {
   const [alert, setAlert] = useState(null);
+  const handleCloseAlert = () => setAlert(null);
   const [tableRows, setTableRows] = useState(() => transformData(data));
 
   const calculateTotalRow = useCallback((rows) => {
@@ -266,11 +271,11 @@ const TaskTable = ({ data }) => {
 
   return (
     <Grid>
-      {alert && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {alert}
-        </Alert>
-      )}
+      <DurationAlert
+        open={!!alert}
+        message={alert}
+        onClose={handleCloseAlert}
+      />
       <DataGrid
         rows={[...tableRows, totalRow]}
         columns={columns}
