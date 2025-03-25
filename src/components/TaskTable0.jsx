@@ -211,12 +211,55 @@ const TaskTable = ({ data }) => {
       "sunday",
     ].map((day) => ({
       field: day,
-      sortable: false,
-      filterable: false,
-      headerName: day.slice(0, 2),
+      headerName: day[0].toUpperCase() + day.slice(1, 2),
       flex: 1,
       editable: true,
+      sortable: false,
       renderCell: renderWeekCell,
+      renderEditCell: (params) => (
+        <input
+          type="text"
+          autoFocus
+          style={{
+            border: "none",
+            outline: "none",
+            width: "100%",
+            height: "100%",
+            fontSize: "inherit",
+            fontFamily: "inherit",
+            padding: "0 8px",
+            boxSizing: "border-box",
+          }}
+          defaultValue=""
+          onBlur={(e) => {
+            params.api.setEditCellValue({
+              id: params.id,
+              field: params.field,
+              value: e.target.value,
+            });
+            params.api.stopCellEditMode({ id: params.id, field: params.field });
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              params.api.setEditCellValue({
+                id: params.id,
+                field: params.field,
+                value: e.target.value,
+              });
+              params.api.stopCellEditMode({
+                id: params.id,
+                field: params.field,
+              });
+            } else if (e.key === "Escape") {
+              params.api.stopCellEditMode({
+                id: params.id,
+                field: params.field,
+                ignoreModifications: true,
+              });
+            }
+          }}
+        />
+      ),
     })),
     { field: "total", headerName: "Итого", flex: 1.5 },
   ];
@@ -231,8 +274,14 @@ const TaskTable = ({ data }) => {
       <DataGrid
         rows={[...tableRows, totalRow]}
         columns={columns}
+        disableColumnMenu
         pageSizeOptions={[5]}
         isCellEditable={(params) => params.row.id !== "total"}
+        onCellEditStart={(params, event) => {
+          const input = event.currentTarget.querySelector("input");
+          console.log("event.currentTarget", event.currentTarget);
+          if (input) input.value = "sss";
+        }}
         processRowUpdate={(updatedRow, originalRow) =>
           handleCellEdit(
             updatedRow.id,
