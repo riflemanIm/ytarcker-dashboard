@@ -143,13 +143,15 @@ const TaskTable = ({ data }) => {
   const handleCellEdit = useCallback((rowId, field, newValue) => {
     if (!isValidDuration(newValue)) {
       setAlert(
-        `Значение "${newValue}" не является корректным форматом времени.`
+        `Значение \"${newValue}\" не является корректным форматом времени.`
       );
+      return false;
     } else {
       setAlert(null);
       console.log(
         `Edited row ${rowId}, field ${field}, new value: ${newValue}`
       );
+      return true;
     }
   }, []);
 
@@ -167,6 +169,7 @@ const TaskTable = ({ data }) => {
             field: "issue",
             headerName: "Название",
             flex: 4,
+            sortable: false,
             renderCell: (params) =>
               params.row.id !== "total" ? (
                 <IssueDisplay
@@ -198,12 +201,25 @@ const TaskTable = ({ data }) => {
         pageSizeOptions={[5]}
         isCellEditable={(params) => params.row.id !== "total"}
         processRowUpdate={(updatedRow, originalRow) => {
+          let isValid = true;
           Object.keys(updatedRow).forEach((field) => {
             if (updatedRow[field] !== originalRow[field] && field !== "id") {
-              handleCellEdit(updatedRow.id, field, updatedRow[field]);
+              if (!handleCellEdit(updatedRow.id, field, updatedRow[field])) {
+                isValid = false;
+              }
             }
           });
-          return updatedRow;
+          return isValid ? updatedRow : originalRow;
+        }}
+        getRowClassName={(params) => (params.id === "total" ? "total-row" : "")}
+        sx={{
+          "& .total-row:hover": {
+            backgroundColor: "transparent !important",
+          },
+          "& .total-row": {
+            backgroundColor: "transparent !important",
+            pointerEvents: "none",
+          },
         }}
       />
     </Grid>
