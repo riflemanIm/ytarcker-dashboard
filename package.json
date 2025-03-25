@@ -21,9 +21,9 @@
     ]
   },
   "scripts": {
-    "dev": "vite",
+    "dev": "kill-port 3007 && vite",
     "build": "vite build",
-    "start_proxy": "nodemon --watch proxy --inspect ./proxy.js",
+    "start_proxy": "kill-port 4000 && nodemon --watch proxy --inspect ./proxy.js",
     "lint": "eslint .",
     "preview": "vite preview",
     "clean": "rm -rf node_modules/ && rm -rf package-lock.json && rm -rf build/ && yarn install"
@@ -76,6 +76,7 @@
     "eslint-plugin-react-refresh": "^0.4.16",
     "express": "^4.21.2",
     "globals": "^15.14.0",
+    "kill-port": "^2.0.1",
     "node-html-parser": "^6.1.13",
     "nodemon": "^3.1.9",
     "pdfjs-dist": "3.11.174",

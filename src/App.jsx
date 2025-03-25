@@ -1,7 +1,7 @@
 import axios from "axios";
 import { useEffect, useState } from "react";
 import TaskTable from "./components/TaskTable";
-import isEmpty, { getWeekRange } from "./helpers";
+import isEmpty, { aggregateDurations, getWeekRange } from "./helpers";
 import Loading from "./components/Loading";
 import { Button, Grid2 as Grid, Stack, Typography } from "@mui/material";
 import AutocompleteUsers from "./components/AutocompleteUsers";
@@ -114,22 +114,6 @@ export default function YandexTracker() {
       spacing={2}
     >
       <>
-        <Grid
-          size={2}
-          sx={{
-            alignSelf: "center",
-            justifySelf: "center",
-            textAlign: "center",
-          }}
-        >
-          {token ? (
-            <Typography variant="body1">
-              Вы авторизованы. <Button onClick={handleLogout}>Выйти</Button>
-            </Typography>
-          ) : (
-            <Button onClick={handleLogin}>Войти</Button>
-          )}
-        </Grid>
         {token && (
           <Grid
             size={5}
@@ -160,6 +144,22 @@ export default function YandexTracker() {
             />
           </Grid>
         )}
+        <Grid
+          size={2}
+          sx={{
+            alignSelf: "center",
+            justifySelf: "center",
+            textAlign: "center",
+          }}
+        >
+          {token ? (
+            <Typography variant="body1">
+              <Button onClick={handleLogout}>Выйти</Button>
+            </Typography>
+          ) : (
+            <Button onClick={handleLogin}>Войти</Button>
+          )}
+        </Grid>
       </>
       {token && (
         <Grid
@@ -169,7 +169,7 @@ export default function YandexTracker() {
           {!state.loaded && <Loading />}
 
           {state.loaded && !isEmpty(state.data) && (
-            <TaskTable data={state.data} />
+            <TaskTable data={aggregateDurations(state.data)} />
           )}
           {state.loaded && isEmpty(state.data) && (
             <Typography variant="h6">Нет данных</Typography>

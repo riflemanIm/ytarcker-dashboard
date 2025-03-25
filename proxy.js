@@ -44,10 +44,25 @@ app.get("/api/issues", async (req, res) => {
       }));
       users = [...new Map(users.map((item) => [item.id, item])).values()];
 
-      const data = response.data.filter(
-        (it) => it.createdBy.id === userId || userId == null
+      const data = response.data
+        .filter((it) => it.createdBy.id === userId || userId == null)
+        .map((item) => ({
+          id: item.id,
+          issue: item.issue.display,
+          key: item.issue.key,
+          duration: item.duration,
+          updatedAt: item.updatedAt,
+        }));
+
+      console.log(
+        data,
+        "startDate",
+        startDate,
+        "endDate",
+        endDate,
+        "userId",
+        userId
       );
-      console.log(users, "startDate", startDate, "endDate", endDate, userId);
       res.json({ data, users });
     } else {
       res.status(400).json({ error: "token not pass " });

@@ -23,6 +23,66 @@ export function getWeekRange(historyNumWeek: number | null = null): {
   return { start, end };
 }
 
+export function sumDurations(durations: string[]): string {
+  let totalMinutes = 0;
+
+  durations.forEach((duration) => {
+    const dayMatch = duration.match(/(\d+)D/);
+    const hourMatch = duration.match(/(\d+)H/);
+    const minuteMatch = duration.match(/(\d+)M/);
+
+    if (dayMatch) {
+      totalMinutes += parseInt(dayMatch[1], 10) * 1440; // 1 день = 1440 минут
+    }
+
+    if (hourMatch) {
+      totalMinutes += parseInt(hourMatch[1], 10) * 60;
+    }
+
+    if (minuteMatch) {
+      totalMinutes += parseInt(minuteMatch[1], 10);
+    }
+  });
+
+  const days = Math.floor(totalMinutes / 1440);
+  totalMinutes %= 1440;
+
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  let result = "P";
+  if (days > 0) result += `${days}D`;
+
+  if (hours > 0 || minutes > 0) {
+    result += "T";
+    if (hours > 0) result += `${hours}H`;
+    if (minutes > 0) result += `${minutes}M`;
+  }
+
+  return result;
+}
+export function aggregateDurations<
+  T extends { key: string; duration: string; [key: string]: any },
+>(data: T[]): T[] {
+  const grouped: Record<string, T[]> = {};
+
+  data.forEach((item) => {
+    if (!grouped[item.key]) grouped[item.key] = [];
+    grouped[item.key].push(item);
+  });
+
+  return Object.keys(grouped).map((key) => ({
+    ...grouped[key][0],
+    duration: sumDurations(grouped[key].map((i) => i.duration)),
+  }));
+}
+
+// Пример использования:
+const durations = ["P1D", "PT4H", "PT45M", "PT2H30M"];
+const result = sumDurations(durations);
+
+console.log(result); // Выведет максимально возможный формат, например "P1DT7H15M"
+
 export function currencyFormat(num: number | string) {
   return parseFloat(`${num}`)
     .toFixed(2)
