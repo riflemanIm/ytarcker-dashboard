@@ -13,7 +13,7 @@ const AUTH_URL = `https://oauth.yandex.ru/authorize?response_type=token&client_i
 
 const apiUrl = import.meta.env.VITE_APP_API_URL;
 console.log("apiUrl", apiUrl);
-export const getData = async ({ state, setState, token, start, end }) => {
+const getData = async ({ state, setState, token, start, end }) => {
   try {
     setState({
       ...state,
