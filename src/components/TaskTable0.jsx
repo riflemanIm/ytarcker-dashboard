@@ -1,15 +1,6 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useCallback, useState } from "react";
 import { DataGrid } from "@mui/x-data-grid";
-import {
-  Grid2 as Grid,
-  IconButton,
-  Typography,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-} from "@mui/material";
+import { Grid2 as Grid, IconButton, Typography, Alert } from "@mui/material";
 import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
@@ -25,16 +16,11 @@ const IssueDisplay = ({ display, href }) => (
   </Typography>
 );
 
-const formatDuration = (isoDuration, isTotal = false) => {
-  if (!isoDuration || isoDuration === "P") return isTotal ? "" : "+";
-  return isoDuration.replace(/P|T/g, "");
-};
-
 const sumDurations = (durations) => {
-  let totalMinutes = durations.reduce((total, dur) => {
-    const parsed = dayjs.duration(dur).asMinutes();
-    return total + parsed;
-  }, 0);
+  let totalMinutes = durations.reduce(
+    (total, dur) => total + dayjs.duration(dur).asMinutes(),
+    0
+  );
 
   const days = Math.floor(totalMinutes / 1440);
   totalMinutes %= 1440;
@@ -51,6 +37,11 @@ const sumDurations = (durations) => {
   }
 
   return result;
+};
+
+const isValidDuration = (duration) => {
+  const iso8601DurationRegex = /^P(?=.+)(\d+D)?(T(?=\d+[HM])(\d+H)?(\d+M)?)?$/;
+  return iso8601DurationRegex.test(duration);
 };
 
 const transformData = (data) => {
@@ -104,13 +95,12 @@ const transformData = (data) => {
         item.saturday,
         item.sunday,
       ].flat()
-    ),
+    ).replace(/P|T/g, ""),
   }));
 };
 
 const TaskTable = ({ data }) => {
-  const [openDialog, setOpenDialog] = useState(false);
-  const [dialogContent, setDialogContent] = useState({});
+  const [alert, setAlert] = useState(null);
 
   const rows = useMemo(() => transformData(data), [data]);
 
@@ -126,16 +116,16 @@ const TaskTable = ({ data }) => {
     ];
 
     const totals = {};
+    const totalsVals = {};
     fields.forEach((field) => {
-      const fieldDurations = rows
-        .map((row) => row[field])
-        .filter(Boolean)
-        .map((dur) => `P${dur}`);
-
-      totals[field] = sumDurations(fieldDurations);
+      totals[field] = sumDurations(rows.map((row) => row[field])).replace(
+        /P|T/g,
+        ""
+      );
+      totalsVals[field] = sumDurations(rows.map((row) => row[field]));
     });
 
-    totals.total = sumDurations(Object.values(totals).map((dur) => `P${dur}`));
+    totals.total = sumDurations(Object.values(totalsVals)).replace(/P|T/g, "");
 
     return {
       id: "total",
@@ -145,35 +135,31 @@ const TaskTable = ({ data }) => {
     };
   }, [rows]);
 
-  const handleCellClick = (params) => {
-    if (
-      params.row.id !== "total" &&
-      [
-        "monday",
-        "tuesday",
-        "wednesday",
-        "thursday",
-        "friday",
-        "saturday",
-        "sunday",
-      ].includes(params.field)
-    ) {
-      setDialogContent(params);
-      setOpenDialog(true);
-    }
+  const renderWeekCell = (params) => {
+    const val = params.value === "P" ? "+" : params.value.replace(/P|T/g, "");
+    return val;
   };
 
-  const renderButtonCell = (params) =>
-    params.row.id !== "total" ? (
-      <Button variant="outlined" size="small">
-        {formatDuration(params.value)}
-      </Button>
-    ) : (
-      formatDuration(params.value, true)
-    );
+  const handleCellEdit = useCallback((rowId, field, newValue) => {
+    if (!isValidDuration(newValue)) {
+      setAlert(
+        `Значение "${newValue}" не является корректным форматом времени.`
+      );
+    } else {
+      setAlert(null);
+      console.log(
+        `Edited row ${rowId}, field ${field}, new value: ${newValue}`
+      );
+    }
+  }, []);
 
   return (
     <Grid>
+      {alert && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {alert}
+        </Alert>
+      )}
       <DataGrid
         rows={[...rows, totalRow]}
         columns={[
@@ -192,62 +178,34 @@ const TaskTable = ({ data }) => {
               ),
           },
           { field: "key", headerName: "Key", flex: 1.5 },
-          {
-            field: "monday",
-            headerName: "Пн",
+          ...[
+            "monday",
+            "tuesday",
+            "wednesday",
+            "thursday",
+            "friday",
+            "saturday",
+            "sunday",
+          ].map((day) => ({
+            field: day,
+            headerName: day[0].toUpperCase() + day.slice(1, 2),
             flex: 1,
-            renderCell: renderButtonCell,
-          },
-          {
-            field: "tuesday",
-            headerName: "Вт",
-            flex: 1,
-            renderCell: renderButtonCell,
-          },
-          {
-            field: "wednesday",
-            headerName: "Ср",
-            flex: 1,
-            renderCell: renderButtonCell,
-          },
-          {
-            field: "thursday",
-            headerName: "Чт",
-            flex: 1,
-            renderCell: renderButtonCell,
-          },
-          {
-            field: "friday",
-            headerName: "Пт",
-            flex: 1,
-            renderCell: renderButtonCell,
-          },
-          {
-            field: "saturday",
-            headerName: "Сб",
-            flex: 1,
-            renderCell: renderButtonCell,
-          },
-          {
-            field: "sunday",
-            headerName: "Вс",
-            flex: 1,
-            renderCell: renderButtonCell,
-          },
+            editable: true,
+            renderCell: renderWeekCell,
+          })),
           { field: "total", headerName: "Итого", flex: 1.5 },
         ]}
         pageSizeOptions={[5]}
-        onCellClick={handleCellClick}
+        isCellEditable={(params) => params.row.id !== "total"}
+        processRowUpdate={(updatedRow, originalRow) => {
+          Object.keys(updatedRow).forEach((field) => {
+            if (updatedRow[field] !== originalRow[field] && field !== "id") {
+              handleCellEdit(updatedRow.id, field, updatedRow[field]);
+            }
+          });
+          return updatedRow;
+        }}
       />
-      <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
-        <DialogTitle>Детали ячейки</DialogTitle>
-        <DialogContent>
-          <pre>{JSON.stringify(dialogContent, null, 2)}</pre>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenDialog(false)}>Закрыть</Button>
-        </DialogActions>
-      </Dialog>
     </Grid>
   );
 };
