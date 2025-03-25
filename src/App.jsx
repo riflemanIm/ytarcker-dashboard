@@ -169,7 +169,12 @@ export default function YandexTracker() {
           {!state.loaded && <Loading />}
 
           {state.loaded && !isEmpty(state.data) && (
-            <TaskTable data={aggregateDurations(state.data)} />
+            <>
+              {state.userId == null && (
+                <Typography variant="h5">По всем сотрудникам</Typography>
+              )}
+              <TaskTable data={aggregateDurations(state.data)} />
+            </>
           )}
           {state.loaded && isEmpty(state.data) && (
             <Typography variant="h6">Нет данных</Typography>

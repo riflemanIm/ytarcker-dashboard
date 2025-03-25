@@ -33,8 +33,7 @@ const AutocompleteUsers: React.FC<AutocompleteUsersProps> = ({
   const value = (users || []).find((item: Users) => item.id === userId) || null;
 
   return (
-    !isEmpty(options) &&
-    users.length > 1 && (
+    !isEmpty(options) && (
       <Autocomplete
         disableClearable={disableClearable}
         autoSelect
@@ -51,13 +50,13 @@ const AutocompleteUsers: React.FC<AutocompleteUsersProps> = ({
             {option.name}
           </Typography>
         )}
-        noOptionsText={"has't USERS"}
+        noOptionsText={"Ведите имя сотрудника"}
         renderInput={(params) => (
           <TextField
             {...params}
             name="filter-users"
             margin="normal"
-            label={"Сотрудники"}
+            label={"Выбрать сотрудника"}
             fullWidth
             variant="outlined"
           />
