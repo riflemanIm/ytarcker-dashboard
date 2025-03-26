@@ -1,40 +1,32 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useCallback, useState } from "react";
 import { DataGrid } from "@mui/x-data-grid";
-import {
-  Grid2 as Grid,
-  IconButton,
-  Typography,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-} from "@mui/material";
+import { Grid2 as Grid, IconButton, Typography } from "@mui/material";
 import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import DurationAlert from "./DurationAlert";
 dayjs.extend(duration);
 dayjs.locale("ru");
 
-const IssueDisplay = ({ display, href }) => (
-  <Typography variant="body2" display="flex" alignItems="center">
-    <IconButton component="a" href={href} target="_blank">
-      <OpenInNewIcon />
-    </IconButton>
-    {display}
-  </Typography>
+const IssueDisplay = ({ display, href = null, fio = null }) => (
+  <>
+    <Typography variant="subtitle1">
+      {href && (
+        <IconButton component="a" href={href} target="_blank">
+          <OpenInNewIcon />
+        </IconButton>
+      )}
+      {display}
+    </Typography>
+    {fio && <Typography variant="subtitle2">{fio}</Typography>}
+  </>
 );
 
-const formatDuration = (isoDuration, isTotal = false) => {
-  if (!isoDuration || isoDuration === "P") return isTotal ? "" : "+";
-  return isoDuration.replace(/P|T/g, "");
-};
-
 const sumDurations = (durations) => {
-  let totalMinutes = durations.reduce((total, dur) => {
-    const parsed = dayjs.duration(dur).asMinutes();
-    return total + parsed;
-  }, 0);
+  let totalMinutes = durations.reduce(
+    (total, dur) => total + dayjs.duration(dur).asMinutes(),
+    0
+  );
 
   const days = Math.floor(totalMinutes / 1440);
   totalMinutes %= 1440;
@@ -53,7 +45,34 @@ const sumDurations = (durations) => {
   return result;
 };
 
-const transformData = (data) => {
+const isValidDuration = (duration) => {
+  const iso8601DurationRegex =
+    /^P(?=\d|T\d)(\d+D)?(T(?=\d+[HM])(\d+H)?(\d+M)?)?$/i;
+  return iso8601DurationRegex.test(duration);
+};
+
+const normalizeDuration = (input) => {
+  if (isValidDuration(input)) return input;
+
+  const regex = /^(?:(\d+)[dD])?(?:(\d+)[hH])?(?:(\d+)[mM])?$/;
+  const match = input.trim().match(regex);
+
+  if (!match || (!match[1] && !match[2] && !match[3])) {
+    return input; // невалидный формат, возвращаем исходное значение
+  }
+
+  const [, days, hours, minutes] = match;
+
+  let result = "P";
+  if (days) result += `${parseInt(days, 10)}D`;
+  if (hours || minutes) result += "T";
+  if (hours) result += `${parseInt(hours, 10)}H`;
+  if (minutes) result += `${parseInt(minutes, 10)}M`;
+
+  return result;
+};
+
+const transformData = (data, userId) => {
   const result = {};
 
   data.forEach((item) => {
@@ -61,7 +80,11 @@ const transformData = (data) => {
     if (!result[item.key]) {
       result[item.key] = {
         id: item.key,
-        issue: { display: item.issue, href: `#${item.key}` },
+        issue: {
+          display: item.issue,
+          //href: item.href,
+          fio: !userId ? item.updatedBy : null,
+        },
         key: item.key,
         monday: [],
         tuesday: [],
@@ -104,17 +127,16 @@ const transformData = (data) => {
         item.saturday,
         item.sunday,
       ].flat()
-    ),
+    ).replace(/P|T/g, ""),
   }));
 };
 
-const TaskTable = ({ data }) => {
-  const [openDialog, setOpenDialog] = useState(false);
-  const [dialogContent, setDialogContent] = useState({});
+const TaskTable = ({ data, userId }) => {
+  const [alert, setAlert] = useState(null);
+  const handleCloseAlert = () => setAlert(null);
+  const [tableRows, setTableRows] = useState(() => transformData(data, userId));
 
-  const rows = useMemo(() => transformData(data), [data]);
-
-  const totalRow = useMemo(() => {
+  const calculateTotalRow = useCallback((rows) => {
     const fields = [
       "monday",
       "tuesday",
@@ -126,128 +148,186 @@ const TaskTable = ({ data }) => {
     ];
 
     const totals = {};
+    const totalsVals = {};
     fields.forEach((field) => {
-      const fieldDurations = rows
-        .map((row) => row[field])
-        .filter(Boolean)
-        .map((dur) => `P${dur}`);
-
-      totals[field] = sumDurations(fieldDurations);
+      totals[field] = sumDurations(rows.map((row) => row[field])).replace(
+        /P|T/g,
+        ""
+      );
+      totalsVals[field] = sumDurations(rows.map((row) => row[field]));
     });
 
-    totals.total = sumDurations(Object.values(totals).map((dur) => `P${dur}`));
+    totals.total = sumDurations(Object.values(totalsVals)).replace(/P|T/g, "");
 
     return {
       id: "total",
-      issue: { display: "Итого", href: "#" },
+      issue: { display: "Итого" },
       key: "",
       ...totals,
     };
-  }, [rows]);
+  }, []);
 
-  const handleCellClick = (params) => {
-    if (
-      params.row.id !== "total" &&
-      [
-        "monday",
-        "tuesday",
-        "wednesday",
-        "thursday",
-        "friday",
-        "saturday",
-        "sunday",
-      ].includes(params.field)
-    ) {
-      setDialogContent(params);
-      setOpenDialog(true);
-    }
+  const totalRow = useMemo(
+    () => calculateTotalRow(tableRows),
+    [tableRows, calculateTotalRow]
+  );
+
+  const renderWeekCell = (params) => {
+    const val = params.value === "P" ? "+" : params.value.replace(/P|T/g, "");
+    return val;
   };
 
-  const renderButtonCell = (params) =>
-    params.row.id !== "total" ? (
-      <Button variant="outlined" size="small">
-        {formatDuration(params.value)}
-      </Button>
-    ) : (
-      formatDuration(params.value, true)
-    );
+  const handleCellEdit = useCallback((rowId, field, newValue) => {
+    const normalizedValue = normalizeDuration(newValue);
+
+    if (!isValidDuration(normalizedValue)) {
+      setAlert(
+        `Значение "${newValue}" не является корректным форматом времени.`
+      );
+      return false;
+    }
+
+    setAlert(null);
+    setTableRows((prevRows) => {
+      const updatedRows = prevRows.map((row) =>
+        row.id === rowId ? { ...row, [field]: normalizedValue } : row
+      );
+      return updatedRows;
+    });
+
+    return true;
+  }, []);
+
+  const headerWeekName = {
+    monday: "Пн",
+    tuesday: "Вт",
+    wednesday: "Ср",
+    thursday: "Чт",
+    friday: "Пт",
+    saturday: "Сб",
+    sunday: "Вс",
+  };
+
+  const columns = [
+    {
+      field: "issue",
+      headerName: "Название",
+      flex: 4,
+      sortable: false,
+      renderCell: (params) =>
+        params.row.id !== "total" ? (
+          <IssueDisplay
+            display={params.value.display}
+            href={params.value.href}
+            fio={params.value.fio}
+          />
+        ) : (
+          params.value.display
+        ),
+    },
+    { field: "key", headerName: "Key", flex: 1.5 },
+    ...[
+      "monday",
+      "tuesday",
+      "wednesday",
+      "thursday",
+      "friday",
+      "saturday",
+      "sunday",
+    ].map((day) => ({
+      field: day,
+      //headerName: day[0].toUpperCase() + day.slice(1, 2),
+      headerName: headerWeekName[day],
+      flex: 1,
+      editable: true,
+      sortable: false,
+      renderCell: renderWeekCell,
+      renderEditCell: (params) => (
+        <input
+          type="text"
+          autoFocus
+          style={{
+            border: "none",
+            outline: "none",
+            width: "100%",
+            height: "100%",
+            fontSize: "inherit",
+            fontFamily: "inherit",
+            padding: "0 8px",
+            boxSizing: "border-box",
+          }}
+          defaultValue=""
+          onBlur={(e) => {
+            params.api.setEditCellValue({
+              id: params.id,
+              field: params.field,
+              value: e.target.value,
+            });
+            params.api.stopCellEditMode({ id: params.id, field: params.field });
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              params.api.setEditCellValue({
+                id: params.id,
+                field: params.field,
+                value: e.target.value,
+              });
+              params.api.stopCellEditMode({
+                id: params.id,
+                field: params.field,
+              });
+            } else if (e.key === "Escape") {
+              params.api.stopCellEditMode({
+                id: params.id,
+                field: params.field,
+                ignoreModifications: true,
+              });
+            }
+          }}
+        />
+      ),
+    })),
+    { field: "total", headerName: "Итого", flex: 1.5 },
+  ];
 
   return (
     <Grid>
-      <DataGrid
-        rows={[...rows, totalRow]}
-        columns={[
-          {
-            field: "issue",
-            headerName: "Название",
-            flex: 4,
-            renderCell: (params) =>
-              params.row.id !== "total" ? (
-                <IssueDisplay
-                  display={params.value.display}
-                  href={params.value.href}
-                />
-              ) : (
-                params.value.display
-              ),
-          },
-          { field: "key", headerName: "Key", flex: 1.5 },
-          {
-            field: "monday",
-            headerName: "Пн",
-            flex: 1,
-            renderCell: renderButtonCell,
-          },
-          {
-            field: "tuesday",
-            headerName: "Вт",
-            flex: 1,
-            renderCell: renderButtonCell,
-          },
-          {
-            field: "wednesday",
-            headerName: "Ср",
-            flex: 1,
-            renderCell: renderButtonCell,
-          },
-          {
-            field: "thursday",
-            headerName: "Чт",
-            flex: 1,
-            renderCell: renderButtonCell,
-          },
-          {
-            field: "friday",
-            headerName: "Пт",
-            flex: 1,
-            renderCell: renderButtonCell,
-          },
-          {
-            field: "saturday",
-            headerName: "Сб",
-            flex: 1,
-            renderCell: renderButtonCell,
-          },
-          {
-            field: "sunday",
-            headerName: "Вс",
-            flex: 1,
-            renderCell: renderButtonCell,
-          },
-          { field: "total", headerName: "Итого", flex: 1.5 },
-        ]}
-        pageSizeOptions={[5]}
-        onCellClick={handleCellClick}
+      <DurationAlert
+        open={!!alert}
+        message={alert}
+        onClose={handleCloseAlert}
       />
-      <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
-        <DialogTitle>Детали ячейки</DialogTitle>
-        <DialogContent>
-          <pre>{JSON.stringify(dialogContent, null, 2)}</pre>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenDialog(false)}>Закрыть</Button>
-        </DialogActions>
-      </Dialog>
+      <DataGrid
+        rows={[...tableRows, totalRow]}
+        columns={columns}
+        disableColumnMenu
+        pageSizeOptions={[5]}
+        isCellEditable={(params) => params.row.id !== "total"}
+        onCellEditStart={(params, event) => {
+          const input = event.currentTarget.querySelector("input");
+          console.log("event.currentTarget", event.currentTarget);
+          if (input) input.value = "sss";
+        }}
+        processRowUpdate={(updatedRow, originalRow) =>
+          handleCellEdit(
+            updatedRow.id,
+            Object.keys(updatedRow).find(
+              (key) => updatedRow[key] !== originalRow[key]
+            ),
+            updatedRow[
+              Object.keys(updatedRow).find(
+                (key) => updatedRow[key] !== originalRow[key]
+              )
+            ]
+          )
+            ? updatedRow
+            : originalRow
+        }
+        getRowClassName={(params) => (params.id === "total" ? "no-hover" : "")}
+        sx={{
+          "& .no-hover:hover": { backgroundColor: "transparent !important" },
+        }}
+      />
     </Grid>
   );
 };

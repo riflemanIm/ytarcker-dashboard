@@ -53,10 +53,11 @@ app.get("/api/issues", async (req, res) => {
           duration: item.duration,
           updatedAt: item.updatedAt,
           href: item.self,
+          updatedBy: item.updatedBy.display,
         }));
 
       console.log(
-        data,
+        response.data[0],
         "startDate",
         startDate,
         "endDate",

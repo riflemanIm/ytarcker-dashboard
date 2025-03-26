@@ -1,6 +1,6 @@
 import axios from "axios";
 import { useEffect, useState } from "react";
-import TaskTable from "./components/TaskTable0";
+import TaskTable from "./components/TaskTable";
 import isEmpty, { aggregateDurations, getWeekRange } from "./helpers";
 import Loading from "./components/Loading";
 import { Button, Grid2 as Grid, Stack, Typography } from "@mui/material";
@@ -171,9 +171,14 @@ export default function YandexTracker() {
           {state.loaded && !isEmpty(state.data) && (
             <>
               {state.userId == null && (
-                <Typography variant="h5">По всем сотрудникам</Typography>
+                <Typography variant="h5" mb={2}>
+                  По всем сотрудникам
+                </Typography>
               )}
-              <TaskTable data={aggregateDurations(state.data)} />
+              <TaskTable
+                data={aggregateDurations(state.data)}
+                userId={state.userId}
+              />
             </>
           )}
           {state.loaded && isEmpty(state.data) && (
