@@ -36,7 +36,7 @@ export const setData = async ({
   comment = "",
 }) => {
   try {
-    setState((prev) => ({ ...prev, loaded: false }));
+    //setState((prev) => ({ ...prev, loaded: false }));
 
     const start = dayjs(dateCell)
       .tz("Europe/Moscow")

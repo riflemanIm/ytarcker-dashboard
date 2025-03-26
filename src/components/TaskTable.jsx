@@ -176,33 +176,37 @@ const transformData = (data, userId) => {
     result[item.key][daysMap[dayOfWeek]].push(item.duration);
   });
 
-  return Object.values(result).map((item) => ({
-    ...item,
-    monday: sumDurations(item.monday),
-    tuesday: sumDurations(item.tuesday),
-    wednesday: sumDurations(item.wednesday),
-    thursday: sumDurations(item.thursday),
-    friday: sumDurations(item.friday),
-    saturday: sumDurations(item.saturday),
-    sunday: sumDurations(item.sunday),
-    total: sumDurations([
-      item.monday,
-      item.tuesday,
-      item.wednesday,
-      item.thursday,
-      item.friday,
-      item.saturday,
-      item.sunday,
-    ]).replace(/P|T/g, ""),
-  }));
+  return Object.values(result).map((item) => {
+    const totalDurations = [
+      ...item.monday,
+      ...item.tuesday,
+      ...item.wednesday,
+      ...item.thursday,
+      ...item.friday,
+      ...item.saturday,
+      ...item.sunday,
+    ];
+    return {
+      ...item,
+      monday: sumDurations(item.monday),
+      tuesday: sumDurations(item.tuesday),
+      wednesday: sumDurations(item.wednesday),
+      thursday: sumDurations(item.thursday),
+      friday: sumDurations(item.friday),
+      saturday: sumDurations(item.saturday),
+      sunday: sumDurations(item.sunday),
+      total: sumDurations(totalDurations).replace(/P|T/g, ""),
+    };
+  });
 };
 
 const TaskTable = ({ data, userId, setState, token, setData }) => {
-  console.log("data", data);
+  //console.log("data", data);
 
   const [alert, setAlert] = useState(null);
   const handleCloseAlert = () => setAlert(null);
-  const [tableRows, setTableRows] = useState(() => transformData(data, userId));
+  const tableRows = transformData(data, userId);
+
   const [menuState, setMenuState] = useState({
     anchorEl: null,
     rowId: null,
@@ -257,52 +261,49 @@ const TaskTable = ({ data, userId, setState, token, setData }) => {
     [tableRows, calculateTotalRow]
   );
 
-  // const handleCellEdit = useCallback((rowId, field, newValue) => {
-  //   const normalizedValue = normalizeDuration(newValue);
+  const handleCellEdit = useCallback((key, field, newValue) => {
+    const normalizedValue = normalizeDuration(newValue);
+    if (normalizedValue.trim() === "") {
+      return false;
+    }
+    if (!isValidDuration(normalizedValue)) {
+      setAlert(
+        `Значение "${newValue}" не является корректным форматом времени.`
+      );
+      return false;
+    }
 
-  //   if (!isValidDuration(normalizedValue)) {
-  //     setAlert(
-  //       `Значение "${newValue}" не является корректным форматом времени.`
-  //     );
-  //     return false;
-  //   }
+    try {
+      const row = tableRows.find((row) => row.key === key);
+      const dayOfWeek =
+        Object.keys(headerWeekName).findIndex((k) => k === field) + 1;
+      const dateCell = dayjs().isoWeekday(dayOfWeek);
 
-  //   try {
-  //     const cell = tableRows.find((row) => row.id === rowId);
-  //     const dayOfWeek =
-  //       Object.keys(headerWeekName).findIndex((k) => k === field) + 1;
-  //     const dateCell = dayjs().isoWeekday(dayOfWeek);
+      //console.log("dateCell", dateCell, "dayOfWeek", dayOfWeek, "ids", ids);
 
-  //     const ids = isValidDuration(cell[field])
-  //       ? data.find((item) => item.issueId === cell.issueId)?.ids
-  //       : null;
+      setData({
+        dateCell,
+        setState,
+        token,
+        issuesId: row.issueId,
+        duration: normalizedValue,
+      });
 
-  //     console.log("dateCell", dateCell, "dayOfWeek", dayOfWeek, "ids", ids);
+      setAlert(null);
+      setData((prev) => {
+        const updatedRows = transformData(prev, userId).map((row) =>
+          row.key === key ? { ...row, [field]: normalizedValue } : row
+        );
+        return updatedRows;
+      });
+      return true;
+    } catch (err) {
+      console.log("ERROR ", err.message);
 
-  //     setData({
-  //       dateCell,
-  //       setState,
-  //       token,
-  //       issuesId: cell.issueId,
-  //       duration: normalizedValue,
-  //       ids,
-  //     });
-
-  //     setAlert(null);
-  //     setTableRows((prevRows) => {
-  //       const updatedRows = prevRows.map((row) =>
-  //         row.id === rowId ? { ...row, [field]: normalizedValue } : row
-  //       );
-  //       return updatedRows;
-  //     });
-  //     return true;
-  //   } catch (err) {
-  //     console.log("ERROR ", err.message);
-
-  //     setAlert(err.message);
-  //     return false;
-  //   }
-  // }, []);
+      setAlert(err.message);
+      return false;
+    }
+  }, []);
 
   const columns = [
     {
@@ -334,13 +335,11 @@ const TaskTable = ({ data, userId, setState, token, setData }) => {
       field: day,
       headerName: headerWeekName[day],
       flex: 1,
-      //editable: true,
+      editable: true,
       sortable: false,
       renderCell: (params) => {
-        const val = params.value.replace(/^P(?:T)?|T/g, "") || "+";
-
-        if (params.row.id === "total") return val;
-
+        const val = params.value.replace(/^P(?:T)?|T/g, "") || "";
+        if (params.row.id === "total" || val === "") return val;
         return (
           <div
             onClick={(e) => handleMenuOpen(e, params)}
@@ -350,50 +349,50 @@ const TaskTable = ({ data, userId, setState, token, setData }) => {
           </div>
         );
       },
-      // renderEditCell: (params) => (
-      //   <input
-      //     type="text"
-      //     autoFocus
-      //     style={{
-      //       border: "none",
-      //       outline: "none",
-      //       width: "100%",
-      //       height: "100%",
-      //       fontSize: "inherit",
-      //       fontFamily: "inherit",
-      //       padding: "0 8px",
-      //       boxSizing: "border-box",
-      //     }}
-      //     defaultValue=""
-      //     onBlur={(e) => {
-      //       params.api.setEditCellValue({
-      //         id: params.id,
-      //         field: params.field,
-      //         value: e.target.value,
-      //       });
-      //       params.api.stopCellEditMode({ id: params.id, field: params.field });
-      //     }}
-      //     onKeyDown={(e) => {
-      //       if (e.key === "Enter") {
-      //         params.api.setEditCellValue({
-      //           id: params.id,
-      //           field: params.field,
-      //           value: e.target.value,
-      //         });
-      //         params.api.stopCellEditMode({
-      //           id: params.id,
-      //           field: params.field,
-      //         });
-      //       } else if (e.key === "Escape") {
-      //         params.api.stopCellEditMode({
-      //           id: params.id,
-      //           field: params.field,
-      //           ignoreModifications: true,
-      //         });
-      //       }
-      //     }}
-      //   />
-      // ),
+      renderEditCell: (params) => (
+        <input
+          type="text"
+          autoFocus
+          style={{
+            border: "none",
+            outline: "none",
+            width: "100%",
+            height: "100%",
+            fontSize: "inherit",
+            fontFamily: "inherit",
+            padding: "0 8px",
+            boxSizing: "border-box",
+          }}
+          defaultValue=""
+          onBlur={(e) => {
+            params.api.setEditCellValue({
+              id: params.id,
+              field: params.field,
+              value: e.target.value,
+            });
+            params.api.stopCellEditMode({ id: params.id, field: params.field });
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              params.api.setEditCellValue({
+                id: params.id,
+                field: params.field,
+                value: e.target.value,
+              });
+              params.api.stopCellEditMode({
+                id: params.id,
+                field: params.field,
+              });
+            } else if (e.key === "Escape") {
+              params.api.stopCellEditMode({
+                id: params.id,
+                field: params.field,
+                ignoreModifications: true,
+              });
+            }
+          }}
+        />
+      ),
     })),
     { field: "total", headerName: "Итого", flex: 1.5 },
   ];
@@ -410,39 +409,25 @@ const TaskTable = ({ data, userId, setState, token, setData }) => {
         columns={columns}
         disableColumnMenu
         pageSizeOptions={[15]}
-        // onCellMouseOver={(params, event) => {
-        //   console.log("params", params);
-        //   if (
-        //     params.row.id !== "total" &&
-        //     [
-        //       "monday",
-        //       "tuesday",
-        //       "wednesday",
-        //       "thursday",
-        //       "friday",
-        //       "saturday",
-        //       "sunday",
-        //     ].includes(params.field)
-        //   ) {
-        //     handleMenuOpen(event, params);
-        //   }
-        // }}
-        //isCellEditable={(params) => params.row.id !== "total"}
-        // processRowUpdate={(updatedRow, originalRow) =>
-        //   handleCellEdit(
-        //     updatedRow.id,
-        //     Object.keys(updatedRow).find(
-        //       (key) => updatedRow[key] !== originalRow[key]
-        //     ),
-        //     updatedRow[
-        //       Object.keys(updatedRow).find(
-        //         (key) => updatedRow[key] !== originalRow[key]
-        //       )
-        //     ]
-        //   )
-        //     ? updatedRow
-        //     : originalRow
-        // }
+        isCellEditable={(params) => {
+          //console.log("isCellEditable params", params);
+          return params.value === "P";
+        }}
+        processRowUpdate={(updatedRow, originalRow) =>
+          handleCellEdit(
+            updatedRow.key,
+            Object.keys(updatedRow).find(
+              (key) => updatedRow[key] !== originalRow[key]
+            ),
+            updatedRow[
+              Object.keys(updatedRow).find(
+                (key) => updatedRow[key] !== originalRow[key]
+              )
+            ]
+          )
+            ? updatedRow
+            : originalRow
+        }
         getRowClassName={(params) => (params.id === "total" ? "no-hover" : "")}
         sx={{
           "& .no-hover:hover": { backgroundColor: "transparent !important" },

@@ -43,7 +43,7 @@ export default function YandexTracker() {
   // (state.data || []).forEach((it) => {
   //   console.log("updatedDate", dayjs(it.updatedAt).format("YYYY-MM-DD"));
   // });
-
+  //console.log("state.data", state.data);
   return (
     <Grid
       container
