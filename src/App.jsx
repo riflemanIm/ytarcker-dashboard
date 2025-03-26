@@ -1,63 +1,18 @@
-import axios from "axios";
 import { useEffect, useState } from "react";
 import TaskTable from "./components/TaskTable";
 import isEmpty, { aggregateDurations, getWeekRange } from "./helpers";
 import Loading from "./components/Loading";
-import { Button, Grid2 as Grid, Stack, Typography } from "@mui/material";
+import { Grid2 as Grid, Typography } from "@mui/material";
 import AutocompleteUsers from "./components/AutocompleteUsers";
 import WeekNavigator from "./components/WeekNavigator";
-
-const CLIENT_ID = "bbdf8a5464ba4d7f8a29e947a1a3d913";
-const REDIRECT_URI = import.meta.env.VITE_APP_REDIRECT_URI;
-const AUTH_URL = `https://oauth.yandex.ru/authorize?response_type=token&client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}`;
-
-const apiUrl = import.meta.env.VITE_APP_API_URL;
-console.log("apiUrl", apiUrl);
-const getData = async ({ state, setState, token, start, end }) => {
-  try {
-    setState({
-      ...state,
-      loaded: false,
-    });
-    console.log("state.userId", state?.userId);
-    const userId = (state.users || []).find(
-      (it) => state?.userId && it.id === state.userId
-    )?.id;
-    console.log("userId ", userId);
-    const res = await axios.get(
-      `${apiUrl}/api/issues?token=${token}&endDate=${end}&startDate=${start}&userId=${userId}`
-    );
-
-    if (res.status !== 200) {
-      throw new Error("Api issues error");
-    }
-    setState({ ...state, loaded: true, ...res.data });
-  } catch (err) {
-    console.log("ERROR ", err.message);
-    setState({ ...state, loaded: true });
-  }
-};
+import { getData, setData } from "./actions/data";
+import LogInOut from "./components/LogInOut";
 
 export default function YandexTracker() {
   const [token, setToken] = useState(localStorage.getItem("yandex_token"));
   // const [token, setToken] = useState(
   //   "y0__xD48tOlqveAAhjtmjYg4MvKyxK1MAkqmCzdKHCxTza9dSbqrC4bvA"
   // );
-
-  useEffect(() => {
-    const hash = window.location.hash;
-
-    if (hash.includes("access_token")) {
-      const params = new URLSearchParams(hash.replace("#", "?"));
-      const accessToken = params.get("access_token");
-
-      if (accessToken) {
-        setToken(accessToken);
-        localStorage.setItem("yandex_token", accessToken);
-      }
-    }
-  }, []);
-
   const [state, setState] = useState({
     loaded: true,
     userId: null,
@@ -73,26 +28,17 @@ export default function YandexTracker() {
     setWeekOffset((prev) => (prev > 0 ? prev - 1 : 0));
   };
   const { start, end } = getWeekRange(weekOffset);
+
   useEffect(() => {
     if (token) {
-      getData({ state, setState, token, start, end });
+      getData({ userId: state.userId, setState, token, start, end });
     }
   }, [token, weekOffset]);
 
-  const handleLogin = () => {
-    window.location.href = AUTH_URL;
-  };
-  const handleLogout = () => {
-    localStorage.removeItem("yandex_token");
-    window.location.href = "";
-  };
   const handleSelectedUsersChange = (userId) => {
-    const newState = { ...state, userId };
-    setState(newState);
-
-    getData({ state: newState, setState, token, start, end });
+    setState((prev) => ({ ...prev, userId }));
+    getData({ userId, setState, token, start, end });
   };
-  console.log("state", state);
 
   // (state.data || []).forEach((it) => {
   //   console.log("updatedDate", dayjs(it.updatedAt).format("YYYY-MM-DD"));
@@ -152,13 +98,7 @@ export default function YandexTracker() {
             textAlign: "center",
           }}
         >
-          {token ? (
-            <Typography variant="body1">
-              <Button onClick={handleLogout}>Выйти</Button>
-            </Typography>
-          ) : (
-            <Button onClick={handleLogin}>Войти</Button>
-          )}
+          <LogInOut token={token} setToken={setToken} />
         </Grid>
       </>
       {token && (
@@ -178,6 +118,9 @@ export default function YandexTracker() {
               <TaskTable
                 data={aggregateDurations(state.data)}
                 userId={state.userId}
+                setState={setState}
+                token={token}
+                setData={setData}
               />
             </>
           )}

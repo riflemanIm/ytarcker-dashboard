@@ -1,7 +1,23 @@
 import express from "express";
 import axios from "axios";
 import cors from "cors";
-
+function isArray(obj) {
+  return obj instanceof Array;
+}
+const isEmpty = (value) => {
+  return (
+    value == null ||
+    (typeof value === "object" && Object.keys(value).length === 0) ||
+    (typeof value === "string" && value.trim().length === 0)
+  );
+};
+const headers = (token) => ({
+  headers: {
+    Authorization: `OAuth ${token}`,
+    "X-Org-ID": "8063720",
+    Host: "api.tracker.yandex.net",
+  },
+});
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -13,7 +29,6 @@ app.get("/api/issues", async (req, res) => {
   try {
     if (token) {
       // ------------ issues filter issues -------------
-      let response = [];
 
       userId = userId !== "undefined" && userId !== "null" ? userId : null;
       // startDate = "2025-02-11";
@@ -21,7 +36,7 @@ app.get("/api/issues", async (req, res) => {
       endDate = `${endDate}T23:59`;
       const url =
         "https://api.tracker.yandex.net/v2/worklog/_search?perPage=1000";
-      response = await axios.post(
+      const response = await axios.post(
         url,
         {
           createdAt: {
@@ -29,13 +44,7 @@ app.get("/api/issues", async (req, res) => {
             to: endDate,
           },
         },
-        {
-          headers: {
-            Authorization: `OAuth ${token}`,
-            "X-Org-ID": "8063720",
-            Host: "api.tracker.yandex.net",
-          },
-        }
+        headers(token)
       );
 
       let users = response.data.map((it) => ({
@@ -45,11 +54,12 @@ app.get("/api/issues", async (req, res) => {
       users = [...new Map(users.map((item) => [item.id, item])).values()];
 
       const data = response.data
-        .filter((it) => it.createdBy.id === userId || userId == null)
+        .filter((it) => it.updatedBy.id === userId || userId == null)
         .map((item) => ({
           id: item.id,
           issue: item.issue.display,
-          key: item.issue.key,
+          key: `${item.issue.key}_${item.updatedBy.id}`,
+          issueId: item.issue.key,
           duration: item.duration,
           updatedAt: item.updatedAt,
           href: item.self,
@@ -71,6 +81,58 @@ app.get("/api/issues", async (req, res) => {
     }
   } catch (error) {
     console.log(error.message);
+    res.status(error.response?.status || 500).json({ error: error.message });
+  }
+});
+
+app.post("/api/set_time", async (req, res) => {
+  let { token, issuesId, ids, start, duration, comment } = req.body;
+
+  try {
+    if (!token) {
+      return res.status(400).json({ error: "token not passed" });
+    }
+
+    // if (typeof ids === "string") ids = ids.split(",");
+
+    // if (Array.isArray(ids) && ids.length) {
+    //   // Удаляем старые worklogs с обработкой ошибок
+    //   await Promise.all(
+    //     ids.map((id) =>
+    //       axios
+    //         .delete(
+    //           `https://api.tracker.yandex.net/v2/issues/${issuesId}/worklog/${id}`,
+    //           headers(token)
+    //         )
+    //         .catch((err) => {
+    //           console.error(`Ошибка удаления worklog ${id}:`, err.message);
+    //           throw err;
+    //         })
+    //     )
+    //   );
+    // }
+
+    // Добавляем новый worklog
+    const url = `https://api.tracker.yandex.net/v2/issues/${issuesId}/worklog`;
+    console.log("========== url =========\n", url);
+    const response = await axios.post(
+      url,
+      { start, duration, comment },
+      headers(token)
+    );
+
+    res.json({
+      id: item.id,
+      issue: item.issue.display,
+      key: `${item.issue.key}_${item.updatedBy.id}`,
+      issueId: item.issue.key,
+      duration: item.duration,
+      updatedAt: item.updatedAt,
+      href: item.self,
+      updatedBy: item.updatedBy.display,
+    });
+  } catch (error) {
+    console.error("[Ошибка в методе /api/set_time]:", error.message);
     res.status(error.response?.status || 500).json({ error: error.message });
   }
 });

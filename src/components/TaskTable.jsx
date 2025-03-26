@@ -1,13 +1,72 @@
-import React, { useMemo, useCallback, useState } from "react";
+import { useMemo, useCallback, useState } from "react";
 import { DataGrid } from "@mui/x-data-grid";
-import { Grid2 as Grid, IconButton, Typography } from "@mui/material";
-import dayjs from "dayjs";
-import duration from "dayjs/plugin/duration";
+import { IconButton } from "@mui/material";
+import Divider from "@mui/material/Divider";
+import Menu from "@mui/material/Menu";
+import MenuItem from "@mui/material/MenuItem";
+import ListItemText from "@mui/material/ListItemText";
+import ListItemIcon from "@mui/material/ListItemIcon";
+import Typography from "@mui/material/Typography";
+import ContentCut from "@mui/icons-material/ContentCut";
+import ContentCopy from "@mui/icons-material/ContentCopy";
+import ContentPaste from "@mui/icons-material/ContentPaste";
+import CloseIcon from "@mui/icons-material/Close";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import DurationAlert from "./DurationAlert";
+import dayjs from "dayjs";
+import duration from "dayjs/plugin/duration";
+import isoWeekday from "dayjs/plugin/isoWeek";
+dayjs.extend(isoWeekday);
 dayjs.extend(duration);
 dayjs.locale("ru");
 
+function MenuCell({ anchorEl, open, onClose }) {
+  return (
+    <Menu
+      anchorEl={anchorEl}
+      open={open}
+      onClose={onClose}
+      anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+      transformOrigin={{ vertical: "top", horizontal: "left" }}
+      sx={{ width: 320, maxWidth: "100%" }}
+    >
+      <MenuItem>
+        <ListItemIcon>
+          <ContentCut fontSize="small" />
+        </ListItemIcon>
+        <ListItemText>Cut</ListItemText>
+        <Typography variant="body2" sx={{ color: "text.secondary" }}>
+          ⌘X
+        </Typography>
+      </MenuItem>
+      <MenuItem>
+        <ListItemIcon>
+          <ContentCopy fontSize="small" />
+        </ListItemIcon>
+        <ListItemText>Copy</ListItemText>
+        <Typography variant="body2" sx={{ color: "text.secondary" }}>
+          ⌘C
+        </Typography>
+      </MenuItem>
+      <MenuItem>
+        <ListItemIcon>
+          <ContentPaste fontSize="small" />
+        </ListItemIcon>
+        <ListItemText>Paste</ListItemText>
+        <Typography variant="body2" sx={{ color: "text.secondary" }}>
+          ⌘V
+        </Typography>
+      </MenuItem>
+      <Divider />
+      <MenuItem onClick={onClose}>
+        <ListItemIcon>
+          <CloseIcon fontSize="small" />
+        </ListItemIcon>
+        <ListItemText>Закрыть</ListItemText>
+      </MenuItem>
+    </Menu>
+  );
+}
 const IssueDisplay = ({ display, href = null, fio = null }) => (
   <>
     <Typography variant="subtitle1">
@@ -71,10 +130,28 @@ const normalizeDuration = (input) => {
 
   return result;
 };
+const daysMap = [
+  "sunday",
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+];
+const headerWeekName = {
+  monday: "Пн",
+  tuesday: "Вт",
+  wednesday: "Ср",
+  thursday: "Чт",
+  friday: "Пт",
+  saturday: "Сб",
+  sunday: "Вс",
+};
 
 const transformData = (data, userId) => {
   const result = {};
-
+  console.log("data", data);
   data.forEach((item) => {
     const dayOfWeek = dayjs(item.updatedAt).day();
     if (!result[item.key]) {
@@ -85,7 +162,7 @@ const transformData = (data, userId) => {
           //href: item.href,
           fio: !userId ? item.updatedBy : null,
         },
-        key: item.key,
+        issueId: item.issueId,
         monday: [],
         tuesday: [],
         wednesday: [],
@@ -96,15 +173,6 @@ const transformData = (data, userId) => {
       };
     }
 
-    const daysMap = [
-      "sunday",
-      "monday",
-      "tuesday",
-      "wednesday",
-      "thursday",
-      "friday",
-      "saturday",
-    ];
     result[item.key][daysMap[dayOfWeek]].push(item.duration);
   });
 
@@ -117,24 +185,41 @@ const transformData = (data, userId) => {
     friday: sumDurations(item.friday),
     saturday: sumDurations(item.saturday),
     sunday: sumDurations(item.sunday),
-    total: sumDurations(
-      [
-        item.monday,
-        item.tuesday,
-        item.wednesday,
-        item.thursday,
-        item.friday,
-        item.saturday,
-        item.sunday,
-      ].flat()
-    ).replace(/P|T/g, ""),
+    total: sumDurations([
+      item.monday,
+      item.tuesday,
+      item.wednesday,
+      item.thursday,
+      item.friday,
+      item.saturday,
+      item.sunday,
+    ]).replace(/P|T/g, ""),
   }));
 };
 
-const TaskTable = ({ data, userId }) => {
+const TaskTable = ({ data, userId, setState, token, setData }) => {
+  console.log("data", data);
+
   const [alert, setAlert] = useState(null);
   const handleCloseAlert = () => setAlert(null);
   const [tableRows, setTableRows] = useState(() => transformData(data, userId));
+  const [menuState, setMenuState] = useState({
+    anchorEl: null,
+    rowId: null,
+    field: null,
+  });
+  const handleMenuOpen = (event, params) => {
+    console.log("handleMenuOpen", params);
+    if (params.row.id === "total") return; // Исключаем строку "Итого"
+    setMenuState({
+      anchorEl: event.currentTarget,
+      rowId: params.row.id,
+      field: params.field,
+    });
+  };
+
+  const handleMenuClose = () =>
+    setMenuState({ anchorEl: null, rowId: null, field: null });
 
   const calculateTotalRow = useCallback((rows) => {
     const fields = [
@@ -162,7 +247,7 @@ const TaskTable = ({ data, userId }) => {
     return {
       id: "total",
       issue: { display: "Итого" },
-      key: "",
+      issueId: "",
       ...totals,
     };
   }, []);
@@ -172,41 +257,52 @@ const TaskTable = ({ data, userId }) => {
     [tableRows, calculateTotalRow]
   );
 
-  const renderWeekCell = (params) => {
-    const val = params.value === "P" ? "+" : params.value.replace(/P|T/g, "");
-    return val;
-  };
+  // const handleCellEdit = useCallback((rowId, field, newValue) => {
+  //   const normalizedValue = normalizeDuration(newValue);
 
-  const handleCellEdit = useCallback((rowId, field, newValue) => {
-    const normalizedValue = normalizeDuration(newValue);
+  //   if (!isValidDuration(normalizedValue)) {
+  //     setAlert(
+  //       `Значение "${newValue}" не является корректным форматом времени.`
+  //     );
+  //     return false;
+  //   }
 
-    if (!isValidDuration(normalizedValue)) {
-      setAlert(
-        `Значение "${newValue}" не является корректным форматом времени.`
-      );
-      return false;
-    }
+  //   try {
+  //     const cell = tableRows.find((row) => row.id === rowId);
+  //     const dayOfWeek =
+  //       Object.keys(headerWeekName).findIndex((k) => k === field) + 1;
+  //     const dateCell = dayjs().isoWeekday(dayOfWeek);
 
-    setAlert(null);
-    setTableRows((prevRows) => {
-      const updatedRows = prevRows.map((row) =>
-        row.id === rowId ? { ...row, [field]: normalizedValue } : row
-      );
-      return updatedRows;
-    });
+  //     const ids = isValidDuration(cell[field])
+  //       ? data.find((item) => item.issueId === cell.issueId)?.ids
+  //       : null;
 
-    return true;
-  }, []);
+  //     console.log("dateCell", dateCell, "dayOfWeek", dayOfWeek, "ids", ids);
 
-  const headerWeekName = {
-    monday: "Пн",
-    tuesday: "Вт",
-    wednesday: "Ср",
-    thursday: "Чт",
-    friday: "Пт",
-    saturday: "Сб",
-    sunday: "Вс",
-  };
+  //     setData({
+  //       dateCell,
+  //       setState,
+  //       token,
+  //       issuesId: cell.issueId,
+  //       duration: normalizedValue,
+  //       ids,
+  //     });
+
+  //     setAlert(null);
+  //     setTableRows((prevRows) => {
+  //       const updatedRows = prevRows.map((row) =>
+  //         row.id === rowId ? { ...row, [field]: normalizedValue } : row
+  //       );
+  //       return updatedRows;
+  //     });
+  //     return true;
+  //   } catch (err) {
+  //     console.log("ERROR ", err.message);
+
+  //     setAlert(err.message);
+  //     return false;
+  //   }
+  // }, []);
 
   const columns = [
     {
@@ -225,7 +321,7 @@ const TaskTable = ({ data, userId }) => {
           params.value.display
         ),
     },
-    { field: "key", headerName: "Key", flex: 1.5 },
+    { field: "issueId", headerName: "Issue Id", flex: 1.5 },
     ...[
       "monday",
       "tuesday",
@@ -236,62 +332,74 @@ const TaskTable = ({ data, userId }) => {
       "sunday",
     ].map((day) => ({
       field: day,
-      //headerName: day[0].toUpperCase() + day.slice(1, 2),
       headerName: headerWeekName[day],
       flex: 1,
-      editable: true,
+      //editable: true,
       sortable: false,
-      renderCell: renderWeekCell,
-      renderEditCell: (params) => (
-        <input
-          type="text"
-          autoFocus
-          style={{
-            border: "none",
-            outline: "none",
-            width: "100%",
-            height: "100%",
-            fontSize: "inherit",
-            fontFamily: "inherit",
-            padding: "0 8px",
-            boxSizing: "border-box",
-          }}
-          defaultValue=""
-          onBlur={(e) => {
-            params.api.setEditCellValue({
-              id: params.id,
-              field: params.field,
-              value: e.target.value,
-            });
-            params.api.stopCellEditMode({ id: params.id, field: params.field });
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              params.api.setEditCellValue({
-                id: params.id,
-                field: params.field,
-                value: e.target.value,
-              });
-              params.api.stopCellEditMode({
-                id: params.id,
-                field: params.field,
-              });
-            } else if (e.key === "Escape") {
-              params.api.stopCellEditMode({
-                id: params.id,
-                field: params.field,
-                ignoreModifications: true,
-              });
-            }
-          }}
-        />
-      ),
+      renderCell: (params) => {
+        const val = params.value.replace(/^P(?:T)?|T/g, "") || "+";
+
+        if (params.row.id === "total") return val;
+
+        return (
+          <div
+            onClick={(e) => handleMenuOpen(e, params)}
+            style={{ cursor: "pointer", width: "100%" }}
+          >
+            {val}
+          </div>
+        );
+      },
+      // renderEditCell: (params) => (
+      //   <input
+      //     type="text"
+      //     autoFocus
+      //     style={{
+      //       border: "none",
+      //       outline: "none",
+      //       width: "100%",
+      //       height: "100%",
+      //       fontSize: "inherit",
+      //       fontFamily: "inherit",
+      //       padding: "0 8px",
+      //       boxSizing: "border-box",
+      //     }}
+      //     defaultValue=""
+      //     onBlur={(e) => {
+      //       params.api.setEditCellValue({
+      //         id: params.id,
+      //         field: params.field,
+      //         value: e.target.value,
+      //       });
+      //       params.api.stopCellEditMode({ id: params.id, field: params.field });
+      //     }}
+      //     onKeyDown={(e) => {
+      //       if (e.key === "Enter") {
+      //         params.api.setEditCellValue({
+      //           id: params.id,
+      //           field: params.field,
+      //           value: e.target.value,
+      //         });
+      //         params.api.stopCellEditMode({
+      //           id: params.id,
+      //           field: params.field,
+      //         });
+      //       } else if (e.key === "Escape") {
+      //         params.api.stopCellEditMode({
+      //           id: params.id,
+      //           field: params.field,
+      //           ignoreModifications: true,
+      //         });
+      //       }
+      //     }}
+      //   />
+      // ),
     })),
     { field: "total", headerName: "Итого", flex: 1.5 },
   ];
 
   return (
-    <Grid>
+    <>
       <DurationAlert
         open={!!alert}
         message={alert}
@@ -301,34 +409,51 @@ const TaskTable = ({ data, userId }) => {
         rows={[...tableRows, totalRow]}
         columns={columns}
         disableColumnMenu
-        pageSizeOptions={[5]}
-        isCellEditable={(params) => params.row.id !== "total"}
-        onCellEditStart={(params, event) => {
-          const input = event.currentTarget.querySelector("input");
-          console.log("event.currentTarget", event.currentTarget);
-          if (input) input.value = "sss";
-        }}
-        processRowUpdate={(updatedRow, originalRow) =>
-          handleCellEdit(
-            updatedRow.id,
-            Object.keys(updatedRow).find(
-              (key) => updatedRow[key] !== originalRow[key]
-            ),
-            updatedRow[
-              Object.keys(updatedRow).find(
-                (key) => updatedRow[key] !== originalRow[key]
-              )
-            ]
-          )
-            ? updatedRow
-            : originalRow
-        }
+        pageSizeOptions={[15]}
+        // onCellMouseOver={(params, event) => {
+        //   console.log("params", params);
+        //   if (
+        //     params.row.id !== "total" &&
+        //     [
+        //       "monday",
+        //       "tuesday",
+        //       "wednesday",
+        //       "thursday",
+        //       "friday",
+        //       "saturday",
+        //       "sunday",
+        //     ].includes(params.field)
+        //   ) {
+        //     handleMenuOpen(event, params);
+        //   }
+        // }}
+        //isCellEditable={(params) => params.row.id !== "total"}
+        // processRowUpdate={(updatedRow, originalRow) =>
+        //   handleCellEdit(
+        //     updatedRow.id,
+        //     Object.keys(updatedRow).find(
+        //       (key) => updatedRow[key] !== originalRow[key]
+        //     ),
+        //     updatedRow[
+        //       Object.keys(updatedRow).find(
+        //         (key) => updatedRow[key] !== originalRow[key]
+        //       )
+        //     ]
+        //   )
+        //     ? updatedRow
+        //     : originalRow
+        // }
         getRowClassName={(params) => (params.id === "total" ? "no-hover" : "")}
         sx={{
           "& .no-hover:hover": { backgroundColor: "transparent !important" },
         }}
       />
-    </Grid>
+      <MenuCell
+        anchorEl={menuState.anchorEl}
+        open={Boolean(menuState.anchorEl)}
+        onClose={handleMenuClose}
+      />
+    </>
   );
 };
 

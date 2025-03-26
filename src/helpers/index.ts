@@ -24,25 +24,10 @@ export function getWeekRange(historyNumWeek: number | null = null): {
 }
 
 export function sumDurations(durations: string[]): string {
-  let totalMinutes = 0;
-
-  durations.forEach((duration) => {
-    const dayMatch = duration.match(/(\d+)D/);
-    const hourMatch = duration.match(/(\d+)H/);
-    const minuteMatch = duration.match(/(\d+)M/);
-
-    if (dayMatch) {
-      totalMinutes += parseInt(dayMatch[1], 10) * 1440; // 1 день = 1440 минут
-    }
-
-    if (hourMatch) {
-      totalMinutes += parseInt(hourMatch[1], 10) * 60;
-    }
-
-    if (minuteMatch) {
-      totalMinutes += parseInt(minuteMatch[1], 10);
-    }
-  });
+  let totalMinutes = durations.reduce(
+    (total, dur) => total + dayjs.duration(dur).asMinutes(),
+    0
+  );
 
   const days = Math.floor(totalMinutes / 1440);
   totalMinutes %= 1440;
@@ -52,7 +37,6 @@ export function sumDurations(durations: string[]): string {
 
   let result = "P";
   if (days > 0) result += `${days}D`;
-
   if (hours > 0 || minutes > 0) {
     result += "T";
     if (hours > 0) result += `${hours}H`;
@@ -74,6 +58,8 @@ export function aggregateDurations<
   return Object.keys(grouped).map((key) => ({
     ...grouped[key][0],
     duration: sumDurations(grouped[key].map((i) => i.duration)),
+    ids: grouped[key].map((i) => i.id),
+    durations: grouped[key].map((i) => i.duration),
   }));
 }
 
@@ -110,6 +96,7 @@ const isEmpty = (value: unknown) => {
     (typeof value === "string" && value.trim().length === 0)
   );
 };
+
 export const ifEmptyArr = (value: unknown) => {
   return !isEmpty(value) ? value : [];
 };
