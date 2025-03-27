@@ -6,24 +6,43 @@ import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import ListItemText from "@mui/material/ListItemText";
 import ListItemIcon from "@mui/material/ListItemIcon";
+
 import Typography from "@mui/material/Typography";
 import ContentCut from "@mui/icons-material/ContentCut";
 import ContentCopy from "@mui/icons-material/ContentCopy";
 import ContentPaste from "@mui/icons-material/ContentPaste";
 import CloseIcon from "@mui/icons-material/Close";
+import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import DurationAlert from "./DurationAlert";
 import dayjs from "dayjs";
-import duration from "dayjs/plugin/duration";
-import isoWeekday from "dayjs/plugin/isoWeek";
-dayjs.extend(isoWeekday);
-dayjs.extend(duration);
+import utc from "dayjs/plugin/utc"; // ✅ добавляем utc
+import { daysMap, getDateOfWeekday, sumDurations } from "@/helpers";
 dayjs.locale("ru");
+dayjs.extend(utc); // ✅ расширяем
 
-function MenuCell({ anchorEl, open, onClose }) {
+function MenuCell({
+  open,
+  onClose,
+  menuState,
+  setState,
+  deleteData,
+  token,
+  setData,
+}) {
+  const onDeleteAll = () => {
+    console.log("onDeleteAll--");
+    deleteData({
+      token,
+      setState,
+      issueId: menuState.issueId,
+      ids: menuState.durations.map((item) => item.id),
+    });
+    onClose();
+  };
   return (
     <Menu
-      anchorEl={anchorEl}
+      anchorEl={menuState.anchorEl}
       open={open}
       onClose={onClose}
       anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
@@ -58,6 +77,12 @@ function MenuCell({ anchorEl, open, onClose }) {
         </Typography>
       </MenuItem>
       <Divider />
+      <MenuItem onClick={onDeleteAll}>
+        <ListItemIcon>
+          <DeleteForeverIcon fontSize="small" />
+        </ListItemIcon>
+        <ListItemText>Удалить все</ListItemText>
+      </MenuItem>
       <MenuItem onClick={onClose}>
         <ListItemIcon>
           <CloseIcon fontSize="small" />
@@ -80,29 +105,6 @@ const IssueDisplay = ({ display, href = null, fio = null }) => (
     {fio && <Typography variant="subtitle2">{fio}</Typography>}
   </>
 );
-
-const sumDurations = (durations) => {
-  let totalMinutes = durations.reduce(
-    (total, dur) => total + dayjs.duration(dur).asMinutes(),
-    0
-  );
-
-  const days = Math.floor(totalMinutes / 1440);
-  totalMinutes %= 1440;
-
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-
-  let result = "P";
-  if (days > 0) result += `${days}D`;
-  if (hours > 0 || minutes > 0) {
-    result += "T";
-    if (hours > 0) result += `${hours}H`;
-    if (minutes > 0) result += `${minutes}M`;
-  }
-
-  return result;
-};
 
 const isValidDuration = (duration) => {
   const iso8601DurationRegex =
@@ -130,15 +132,7 @@ const normalizeDuration = (input) => {
 
   return result;
 };
-const daysMap = [
-  "sunday",
-  "monday",
-  "tuesday",
-  "wednesday",
-  "thursday",
-  "friday",
-  "saturday",
-];
+
 const headerWeekName = {
   monday: "Пн",
   tuesday: "Вт",
@@ -153,7 +147,7 @@ const transformData = (data, userId) => {
   const result = {};
   console.log("data", data);
   data.forEach((item) => {
-    const dayOfWeek = dayjs(item.updatedAt).day();
+    const dayOfWeek = dayjs.utc(item.updatedAt).isoWeekday();
     if (!result[item.key]) {
       result[item.key] = {
         id: item.key,
@@ -173,7 +167,7 @@ const transformData = (data, userId) => {
       };
     }
 
-    result[item.key][daysMap[dayOfWeek]].push(item.duration);
+    result[item.key][daysMap[dayOfWeek - 1]].push(item.duration);
   });
 
   return Object.values(result).map((item) => {
@@ -200,7 +194,7 @@ const transformData = (data, userId) => {
   });
 };
 
-const TaskTable = ({ data, userId, setState, token, setData }) => {
+const TaskTable = ({ data, userId, setState, token, setData, deleteData }) => {
   //console.log("data", data);
 
   const [alert, setAlert] = useState(null);
@@ -211,19 +205,28 @@ const TaskTable = ({ data, userId, setState, token, setData }) => {
     anchorEl: null,
     rowId: null,
     field: null,
+    issueId: null,
+    durations: null,
   });
+
   const handleMenuOpen = (event, params) => {
-    console.log("handleMenuOpen", params);
-    if (params.row.id === "total") return; // Исключаем строку "Итого"
     setMenuState({
       anchorEl: event.currentTarget,
       rowId: params.row.id,
       field: params.field,
+      issueId: params.row.issueId,
+      durations: data.find((row) => row.key === params.row.id).durations,
     });
   };
 
   const handleMenuClose = () =>
-    setMenuState({ anchorEl: null, rowId: null, field: null });
+    setMenuState({
+      anchorEl: null,
+      rowId: null,
+      field: null,
+      issueId: null,
+      durations: null,
+    });
 
   const calculateTotalRow = useCallback((rows) => {
     const fields = [
@@ -261,9 +264,13 @@ const TaskTable = ({ data, userId, setState, token, setData }) => {
     [tableRows, calculateTotalRow]
   );
 
-  const handleCellEdit = useCallback((key, field, newValue) => {
+  const handleCellEdit = useCallback((key, field, newValue, issueId) => {
     const normalizedValue = normalizeDuration(newValue);
-    if (normalizedValue.trim() === "") {
+    if (
+      normalizedValue.trim() === "" ||
+      normalizedValue === "P" ||
+      token == null
+    ) {
       return false;
     }
     if (!isValidDuration(normalizedValue)) {
@@ -274,18 +281,16 @@ const TaskTable = ({ data, userId, setState, token, setData }) => {
     }
 
     try {
-      const row = tableRows.find((row) => row.key === key);
-      const dayOfWeek =
-        Object.keys(headerWeekName).findIndex((k) => k === field) + 1;
-      const dateCell = dayjs().isoWeekday(dayOfWeek);
+      const dayOfWeek = daysMap.findIndex((k) => k === field);
+      const dateCell = getDateOfWeekday(dayOfWeek);
 
-      //console.log("dateCell", dateCell, "dayOfWeek", dayOfWeek, "ids", ids);
+      console.log("dayOfWeek", dayOfWeek, "dateCell", dateCell);
 
       setData({
         dateCell,
         setState,
         token,
-        issuesId: row.issueId,
+        issueId,
         duration: normalizedValue,
       });
 
@@ -415,7 +420,7 @@ const TaskTable = ({ data, userId, setState, token, setData }) => {
         }}
         processRowUpdate={(updatedRow, originalRow) =>
           handleCellEdit(
-            updatedRow.key,
+            updatedRow.id,
             Object.keys(updatedRow).find(
               (key) => updatedRow[key] !== originalRow[key]
             ),
@@ -423,7 +428,8 @@ const TaskTable = ({ data, userId, setState, token, setData }) => {
               Object.keys(updatedRow).find(
                 (key) => updatedRow[key] !== originalRow[key]
               )
-            ]
+            ],
+            updatedRow.issueId
           )
             ? updatedRow
             : originalRow
@@ -434,9 +440,13 @@ const TaskTable = ({ data, userId, setState, token, setData }) => {
         }}
       />
       <MenuCell
-        anchorEl={menuState.anchorEl}
         open={Boolean(menuState.anchorEl)}
         onClose={handleMenuClose}
+        menuState={menuState}
+        deleteData={deleteData}
+        token={token}
+        setData={setData}
+        setState={setState}
       />
     </>
   );

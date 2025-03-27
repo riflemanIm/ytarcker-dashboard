@@ -30,11 +30,14 @@ export const setData = async ({
   dateCell,
   setState,
   token,
-  issuesId,
+  issueId,
   duration,
-  ids = null,
   comment = "",
 }) => {
+  if (token == null) {
+    return;
+  }
+
   try {
     //setState((prev) => ({ ...prev, loaded: false }));
 
@@ -44,15 +47,13 @@ export const setData = async ({
 
     const payload = {
       token,
-      issuesId,
+      issueId,
       start,
       duration,
       comment,
     };
 
-    if (!isEmpty(ids)) payload.ids = ids.join(",");
-
-    const res = await axios.post(`${apiUrl}/api/set_time`, payload);
+    const res = await axios.post(`${apiUrl}/api/add_time`, payload);
 
     if (res.status !== 200) {
       throw new Error("Api set data error");
@@ -67,6 +68,33 @@ export const setData = async ({
     } else {
       setState((prev) => ({ ...prev, loaded: true }));
     }
+  } catch (err) {
+    console.error("ERROR", err.message);
+    setState((prev) => ({ ...prev, loaded: true }));
+  }
+};
+
+export const deleteData = async ({ token, setState, issueId, ids }) => {
+  if (token == null) {
+    return;
+  }
+  console.error("deleteData");
+  try {
+    const payload = {
+      issueId,
+      ids,
+      token,
+    };
+    const res = await axios.post(`${apiUrl}/api/delete_all`, payload);
+    if (res.status !== 200) {
+      throw new Error("Api delete Data error");
+    }
+    console.log("res", res);
+    setState((prev) => ({
+      ...prev,
+      loaded: true,
+      data: [...prev.data.filter((item) => !ids.includes(item.id))],
+    }));
   } catch (err) {
     console.error("ERROR", err.message);
     setState((prev) => ({ ...prev, loaded: true }));

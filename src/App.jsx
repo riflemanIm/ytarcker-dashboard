@@ -5,7 +5,7 @@ import Loading from "./components/Loading";
 import { Grid2 as Grid, Typography } from "@mui/material";
 import AutocompleteUsers from "./components/AutocompleteUsers";
 import WeekNavigator from "./components/WeekNavigator";
-import { getData, setData } from "./actions/data";
+import { deleteData, getData, setData } from "./actions/data";
 import LogInOut from "./components/LogInOut";
 
 export default function YandexTracker() {
@@ -30,20 +30,17 @@ export default function YandexTracker() {
   const { start, end } = getWeekRange(weekOffset);
 
   useEffect(() => {
-    if (token) {
+    if (token != null) {
       getData({ userId: state.userId, setState, token, start, end });
     }
-  }, [token, weekOffset]);
+  }, [weekOffset]);
 
   const handleSelectedUsersChange = (userId) => {
     setState((prev) => ({ ...prev, userId }));
     getData({ userId, setState, token, start, end });
   };
 
-  // (state.data || []).forEach((it) => {
-  //   console.log("updatedDate", dayjs(it.updatedAt).format("YYYY-MM-DD"));
-  // });
-  //console.log("state.data", state.data);
+  console.log("state.data", state.data);
   return (
     <Grid
       container
@@ -121,6 +118,7 @@ export default function YandexTracker() {
                 setState={setState}
                 token={token}
                 setData={setData}
+                deleteData={deleteData}
               />
             </>
           )}

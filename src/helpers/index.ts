@@ -1,17 +1,55 @@
 import dayjs from "dayjs";
 import isoWeek from "dayjs/plugin/isoWeek";
+import duration from "dayjs/plugin/duration";
+import utc from "dayjs/plugin/utc"; // ✅ добавляем utc
+
 dayjs.extend(isoWeek);
+dayjs.extend(duration);
+dayjs.extend(utc); // ✅ расширяем
+dayjs.locale("ru");
+
+export const daysMap = [
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+  "sunday",
+];
+
+interface GetDateOfWeekday {
+  (isoDay: number): dayjs.Dayjs;
+}
+
+export const dayToNumber = (dayName: string): number => {
+  return daysMap.indexOf(dayName.toLowerCase()) + 1; // ISO-нумерация
+};
+
+export const getDateOfDayName = (dayName: string): dayjs.Dayjs => {
+  const isoDay = dayToNumber(dayName);
+  return dayjs()
+    .startOf("isoWeek")
+    .add(isoDay - 1, "day"); // локально — ОК
+};
+
+export const getDateOfWeekday: GetDateOfWeekday = (
+  isoDay: number
+): dayjs.Dayjs => {
+  return dayjs()
+    .startOf("isoWeek")
+    .add(isoDay - 1, "day"); // локально — ОК
+};
 
 /**
  * Возвращает даты начала и конца недели.
  * @param historyNumWeek - Количество недель назад (null - текущая неделя)
- * @returns объект с датами начала и конца недели
  */
 export function getWeekRange(historyNumWeek: number | null = null): {
   start: string;
   end: string;
 } {
-  let date = dayjs();
+  let date = dayjs(); // локально — ОК, для текущей даты пользователя
 
   if (typeof historyNumWeek === "number" && historyNumWeek > 0) {
     date = date.subtract(historyNumWeek, "week");
@@ -45,49 +83,63 @@ export function sumDurations(durations: string[]): string {
 
   return result;
 }
+
 export function aggregateDurations<
-  T extends { key: string; duration: string; [key: string]: any },
->(data: T[]): T[] {
-  const grouped: Record<string, T[]> = {};
+  T extends {
+    id: string;
+    duration: string;
+    updatedAt: string;
+    issue: { display: string; key: string };
+    updatedBy: { id: string; display: string };
+    self: string;
+    [key: string]: any;
+  },
+>(
+  data: T[]
+): (T & { durations: { id: string; duration: string }[]; duration: string })[] {
+  // ✅ используем UTC при парсинге даты
+  const grouped = data.reduce(
+    (acc, item) => {
+      const dateKey = dayjs.utc(item.updatedAt).format("YYYY-MM-DD"); // <-- заменено
+      const groupKey = `${item.issue.key}_${item.updatedBy.id}_${dateKey}`;
+      const groupItem = {
+        id: item.id,
+        issue: item.issue.display,
+        key: groupKey,
+        issueId: item.issue.key,
+        duration: item.duration,
+        updatedAt: item.updatedAt,
+        href: item.self,
+        updatedBy: item.updatedBy.display,
+      };
 
-  data.forEach((item) => {
-    if (!grouped[item.key]) grouped[item.key] = [];
-    grouped[item.key].push(item);
+      if (!acc[groupKey]) {
+        acc[groupKey] = [groupItem as unknown as T];
+      } else {
+        acc[groupKey].push(groupItem as unknown as T);
+      }
+      return acc;
+    },
+    {} as Record<string, typeof data>
+  );
+
+  return Object.values(grouped).map((group) => {
+    const durations = group.map((i) => ({ id: i.id, duration: i.duration }));
+    const totalDuration = sumDurations(group.map((i) => i.duration));
+
+    return {
+      ...group[0],
+      duration: totalDuration,
+      durations,
+    };
   });
-
-  return Object.keys(grouped).map((key) => ({
-    ...grouped[key][0],
-    duration: sumDurations(grouped[key].map((i) => i.duration)),
-    ids: grouped[key].map((i) => i.id),
-    durations: grouped[key].map((i) => i.duration),
-  }));
 }
 
-// Пример использования:
-const durations = ["P1D", "PT4H", "PT45M", "PT2H30M"];
-const result = sumDurations(durations);
+//  Пример использования:
+// const durations = ["P1D", "PT4H", "PT45M", "PT2H30M"];
+// const result = sumDurations(durations);
 
-console.log(result); // Выведет максимально возможный формат, например "P1DT7H15M"
-
-export function currencyFormat(num: number | string) {
-  return parseFloat(`${num}`)
-    .toFixed(2)
-    .replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1,");
-}
-
-export function isPetKey(key: string, pet = true) {
-  return `${key}${pet ? "_PET" : ""}`;
-}
-
-export function getYearNow() {
-  const dateNow = new Date();
-  return dateNow.getFullYear();
-}
-
-export function getNumber(value: unknown, defaultValue: number | null = null) {
-  const num = parseInt(String(value), 10);
-  return isNaN(num) ? defaultValue : num;
-}
+// console.log(result); // Выведет максимально возможный формат, например "P1DT7H15M"
 
 const isEmpty = (value: unknown) => {
   return (
@@ -97,9 +149,6 @@ const isEmpty = (value: unknown) => {
   );
 };
 
-export const ifEmptyArr = (value: unknown) => {
-  return !isEmpty(value) ? value : [];
-};
 export const ifEmptyObj = (value: unknown) => {
   return !isEmpty(value) ? value : {};
 };
@@ -113,61 +162,6 @@ export const isObject = (obj: unknown): obj is Record<string, unknown> =>
 
 export function isNumeric(n: string | number) {
   return !isNaN(parseFloat(n as string)) && isFinite(n as number);
-}
-
-// const groupBys = <T, K extends keyof any>(
-//   list: T[],
-//   getKey: (item: T) => K,
-// ) =>
-//   list.reduce((previous, currentItem) => {
-//     const group = getKey(currentItem);
-//     if (!previous[group]) previous[group] = [];
-//     previous[group].push(currentItem);
-//     return previous;
-//   }, {} as Record<K, T[]>);
-
-export function groupBy<T, K extends keyof T>(
-  arr: T[],
-  key: K,
-  convertKeyVal?: (val: T[K]) => string
-) {
-  const initialValue: Record<string, T[]> = {};
-  return arr.reduce((acc, item) => {
-    const convKey =
-      convertKeyVal != null ? convertKeyVal(item[key]) : item[key];
-    acc[String(convKey)] = [...(acc[String(convKey)] || []), item];
-    return acc;
-  }, initialValue);
-}
-
-// export function groupByKey<T, K extends keyof T>(
-//   list: T[],
-//   key: K,
-//   { omitKey = false },
-// ) {
-//   return list.reduce(
-//     (hash, { [key]: value, ...rest }) => ({
-//       ...hash,
-//       [value]: (hash[value] || []).concat(
-//         omitKey ? { ...rest } : { [key]: value, ...rest },
-//       ),
-//     }),
-//     {},
-//   );
-// }
-
-export function chunksArray<T>(inputArray: T[], perChunk: number) {
-  return inputArray.reduce((resultArray: T[][], item: T, index: number) => {
-    const chunkIndex = Math.floor(index / perChunk);
-
-    if (!resultArray[chunkIndex]) {
-      resultArray[chunkIndex] = [] as T[]; // start a new chunk
-    }
-
-    resultArray[chunkIndex].push(item);
-
-    return resultArray;
-  }, []);
 }
 
 export function isArray(obj: []) {
