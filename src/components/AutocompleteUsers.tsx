@@ -36,6 +36,8 @@ const AutocompleteUsers: React.FC<AutocompleteUsersProps> = ({
     !isEmpty(options) && (
       <Autocomplete
         disableClearable={disableClearable}
+        blurOnSelect
+        clearOnBlur
         autoSelect
         disabled={disabled}
         value={value}

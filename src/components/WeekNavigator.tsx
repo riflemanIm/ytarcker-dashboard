@@ -20,13 +20,13 @@ const WeekNavigator: React.FC<WeekNavigatorProps> = ({
   return (
     <Stack direction="row" spacing={2} alignSelf="center">
       <Button variant="contained" onClick={onPrevious}>
-        Previous Week
+        Пред. неделя
       </Button>
       <Typography variant="h5">
         {dayjs(start).format("DD.MM.YYYY")} - {dayjs(end).format("DD.MM.YYYY")}
       </Typography>
       <Button variant="contained" onClick={onNext} disabled={disableNext}>
-        Next Week
+        След. неделя
       </Button>
     </Stack>
   );
