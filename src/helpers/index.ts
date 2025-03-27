@@ -17,7 +17,14 @@ export const daysMap = [
   "saturday",
   "sunday",
 ];
-
+export const displayDuration = (duration: string): string => {
+  return duration.replace(/^P(?:T)?|T/g, "") || "";
+};
+export const dayOfWeekNameByDate = (data: string): string => {
+  const dayOfWeek = dayjs.utc(data).isoWeekday();
+  const dayOfWeekName = daysMap[dayOfWeek - 1];
+  return dayOfWeekName;
+};
 interface GetDateOfWeekday {
   (isoDay: number): dayjs.Dayjs;
 }
@@ -36,9 +43,7 @@ export const getDateOfDayName = (dayName: string): dayjs.Dayjs => {
 export const getDateOfWeekday: GetDateOfWeekday = (
   isoDay: number
 ): dayjs.Dayjs => {
-  return dayjs()
-    .startOf("isoWeek")
-    .add(isoDay - 1, "day"); // локально — ОК
+  return dayjs().startOf("isoWeek").add(isoDay, "day"); // локально — ОК
 };
 
 /**
@@ -88,7 +93,7 @@ export function aggregateDurations<
   T extends {
     id: string;
     duration: string;
-    updatedAt: string;
+    start: string;
     issue: { display: string; key: string };
     updatedBy: { id: string; display: string };
     self: string;
@@ -100,15 +105,17 @@ export function aggregateDurations<
   // ✅ используем UTC при парсинге даты
   const grouped = data.reduce(
     (acc, item) => {
-      const dateKey = dayjs.utc(item.updatedAt).format("YYYY-MM-DD"); // <-- заменено
-      const groupKey = `${item.issue.key}_${item.updatedBy.id}_${dateKey}`;
+      //const dateKey = dayjs.utc(item.start).format("YYYY-MM-DD"); // <-- заменено
+      const dayOfWeekName = dayOfWeekNameByDate(item.start);
+      const groupKey = `${item.issue.key}_${item.updatedBy.id}_${dayOfWeekName}`;
       const groupItem = {
         id: item.id,
         issue: item.issue.display,
-        key: groupKey,
+
+        key: `${item.issue.key}_${item.updatedBy.id}`,
         issueId: item.issue.key,
         duration: item.duration,
-        updatedAt: item.updatedAt,
+        start: item.start,
         href: item.self,
         updatedBy: item.updatedBy.display,
       };

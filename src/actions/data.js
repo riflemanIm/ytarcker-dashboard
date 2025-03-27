@@ -29,6 +29,7 @@ export const getData = async ({ userId, setState, token, start, end }) => {
 export const setData = async ({
   dateCell,
   setState,
+  setAlert,
   token,
   issueId,
   duration,
@@ -42,7 +43,7 @@ export const setData = async ({
     //setState((prev) => ({ ...prev, loaded: false }));
 
     const start = dayjs(dateCell)
-      .tz("Europe/Moscow")
+      .add(8, "hours")
       .format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
 
     const payload = {
@@ -63,18 +64,30 @@ export const setData = async ({
       setState((prev) => ({
         ...prev,
         loaded: true,
-        data: [...prev.data, res.data],
+        data: [...prev.data, { ...res.data }],
       }));
+      setAlert({
+        open: true,
+        severity: "success",
+        message: "Данные успешно добавлены",
+      });
     } else {
-      setState((prev) => ({ ...prev, loaded: true }));
+      throw new Error("Ошибка добавления данных");
     }
   } catch (err) {
     console.error("ERROR", err.message);
     setState((prev) => ({ ...prev, loaded: true }));
+    setAlert({ open: true, severity: "error", message: err.message });
   }
 };
 
-export const deleteData = async ({ token, setState, issueId, ids }) => {
+export const deleteData = async ({
+  token,
+  setState,
+  setAlert,
+  issueId,
+  ids,
+}) => {
   if (token == null) {
     return;
   }
@@ -87,16 +100,26 @@ export const deleteData = async ({ token, setState, issueId, ids }) => {
     };
     const res = await axios.post(`${apiUrl}/api/delete_all`, payload);
     if (res.status !== 200) {
-      throw new Error("Api delete Data error");
+      throw new Error("Ошибка удаления данных");
     }
-    console.log("res", res);
-    setState((prev) => ({
-      ...prev,
-      loaded: true,
-      data: [...prev.data.filter((item) => !ids.includes(item.id))],
-    }));
+    console.log("===data==", res.data);
+    if (res.data === true) {
+      setState((prev) => ({
+        ...prev,
+        loaded: true,
+        data: [...prev.data.filter((item) => !ids.includes(item.id))],
+      }));
+      setAlert({
+        open: true,
+        severity: "success",
+        message: "Данные успешно удалены",
+      });
+    } else {
+      throw new Error("Ошибка удаления данных");
+    }
   } catch (err) {
     console.error("ERROR", err.message);
     setState((prev) => ({ ...prev, loaded: true }));
+    setAlert({ open: true, severity: "error", message: err.message });
   }
 };

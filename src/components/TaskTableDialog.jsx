@@ -57,7 +57,7 @@ const transformData = (data) => {
   const result = {};
 
   data.forEach((item) => {
-    const dayOfWeek = dayjs(item.updatedAt).day();
+    const dayOfWeek = dayjs(item.start).day();
     if (!result[item.key]) {
       result[item.key] = {
         id: item.key,

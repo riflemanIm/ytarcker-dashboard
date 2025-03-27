@@ -1,6 +1,6 @@
-import { useMemo, useCallback, useState } from "react";
+import { useMemo, useCallback, useState, Fragment } from "react";
 import { DataGrid } from "@mui/x-data-grid";
-import { IconButton } from "@mui/material";
+import { Grid2 as Grid, IconButton, Input } from "@mui/material";
 import Divider from "@mui/material/Divider";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
@@ -8,16 +8,22 @@ import ListItemText from "@mui/material/ListItemText";
 import ListItemIcon from "@mui/material/ListItemIcon";
 
 import Typography from "@mui/material/Typography";
-import ContentCut from "@mui/icons-material/ContentCut";
-import ContentCopy from "@mui/icons-material/ContentCopy";
-import ContentPaste from "@mui/icons-material/ContentPaste";
 import CloseIcon from "@mui/icons-material/Close";
 import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
+import CheckIcon from "@mui/icons-material/Check";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import DurationAlert from "./DurationAlert";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc"; // ✅ добавляем utc
-import { daysMap, getDateOfWeekday, sumDurations } from "@/helpers";
+import {
+  dayOfWeekNameByDate,
+  daysMap,
+  displayDuration,
+  getDateOfWeekday,
+  sumDurations,
+} from "@/helpers";
+
 dayjs.locale("ru");
 dayjs.extend(utc); // ✅ расширяем
 
@@ -29,17 +35,20 @@ function MenuCell({
   deleteData,
   token,
   setData,
+  setAlert,
 }) {
   const onDeleteAll = () => {
-    console.log("onDeleteAll--");
+    console.log("onDeleteAll--", menuState);
     deleteData({
       token,
       setState,
+      setAlert,
       issueId: menuState.issueId,
       ids: menuState.durations.map((item) => item.id),
     });
     onClose();
   };
+  console.log("menuState--", menuState);
   return (
     <Menu
       anchorEl={menuState.anchorEl}
@@ -47,35 +56,27 @@ function MenuCell({
       onClose={onClose}
       anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
       transformOrigin={{ vertical: "top", horizontal: "left" }}
-      sx={{ width: 320, maxWidth: "100%" }}
+      sx={{ minWidth: 220 }}
     >
-      <MenuItem>
-        <ListItemIcon>
-          <ContentCut fontSize="small" />
-        </ListItemIcon>
-        <ListItemText>Cut</ListItemText>
-        <Typography variant="body2" sx={{ color: "text.secondary" }}>
-          ⌘X
-        </Typography>
-      </MenuItem>
-      <MenuItem>
-        <ListItemIcon>
-          <ContentCopy fontSize="small" />
-        </ListItemIcon>
-        <ListItemText>Copy</ListItemText>
-        <Typography variant="body2" sx={{ color: "text.secondary" }}>
-          ⌘C
-        </Typography>
-      </MenuItem>
-      <MenuItem>
-        <ListItemIcon>
-          <ContentPaste fontSize="small" />
-        </ListItemIcon>
-        <ListItemText>Paste</ListItemText>
-        <Typography variant="body2" sx={{ color: "text.secondary" }}>
-          ⌘V
-        </Typography>
-      </MenuItem>
+      <Grid container spacing={3} sx={{ padding: 3 }}>
+        {(menuState.durations || []).map((item) => (
+          <Fragment key={item.id}>
+            <Grid item size={6}>
+              <Input value={displayDuration(item.duration)} />
+            </Grid>
+            <Grid item size={3}>
+              <IconButton>
+                <CheckIcon />
+              </IconButton>
+            </Grid>
+            <Grid item size={3}>
+              <IconButton>
+                <DeleteOutlineIcon />
+              </IconButton>
+            </Grid>
+          </Fragment>
+        ))}
+      </Grid>
       <Divider />
       <MenuItem onClick={onDeleteAll}>
         <ListItemIcon>
@@ -145,9 +146,9 @@ const headerWeekName = {
 
 const transformData = (data, userId) => {
   const result = {};
-  console.log("data", data);
+
   data.forEach((item) => {
-    const dayOfWeek = dayjs.utc(item.updatedAt).isoWeekday();
+    const dayOfWeekName = dayOfWeekNameByDate(item.start);
     if (!result[item.key]) {
       result[item.key] = {
         id: item.key,
@@ -167,7 +168,7 @@ const transformData = (data, userId) => {
       };
     }
 
-    result[item.key][daysMap[dayOfWeek - 1]].push(item.duration);
+    result[item.key][dayOfWeekName].push(item.duration);
   });
 
   return Object.values(result).map((item) => {
@@ -189,18 +190,29 @@ const transformData = (data, userId) => {
       friday: sumDurations(item.friday),
       saturday: sumDurations(item.saturday),
       sunday: sumDurations(item.sunday),
-      total: sumDurations(totalDurations).replace(/P|T/g, ""),
+      total: displayDuration(sumDurations(totalDurations)),
     };
   });
 };
 
 const TaskTable = ({ data, userId, setState, token, setData, deleteData }) => {
-  //console.log("data", data);
+  console.log("data", data);
 
-  const [alert, setAlert] = useState(null);
-  const handleCloseAlert = () => setAlert(null);
+  const [alert, setAlert] = useState({
+    open: false,
+    severity: "",
+    message: "",
+  });
+  const handleCloseAlert = () => {
+    setAlert({
+      open: false,
+      severity: "",
+      message: "",
+    });
+  };
+
   const tableRows = transformData(data, userId);
-
+  console.log("tableRows", tableRows);
   const [menuState, setMenuState] = useState({
     anchorEl: null,
     rowId: null,
@@ -210,12 +222,16 @@ const TaskTable = ({ data, userId, setState, token, setData, deleteData }) => {
   });
 
   const handleMenuOpen = (event, params) => {
+    //console.log("handleMenuOpen params", params);
+
     setMenuState({
       anchorEl: event.currentTarget,
       rowId: params.row.id,
       field: params.field,
       issueId: params.row.issueId,
-      durations: data.find((row) => row.key === params.row.id).durations,
+      durations: data.find(
+        (row) => dayOfWeekNameByDate(row.start) === params.field
+      ).durations,
     });
   };
 
@@ -242,14 +258,13 @@ const TaskTable = ({ data, userId, setState, token, setData, deleteData }) => {
     const totals = {};
     const totalsVals = {};
     fields.forEach((field) => {
-      totals[field] = sumDurations(rows.map((row) => row[field])).replace(
-        /P|T/g,
-        ""
+      totals[field] = displayDuration(
+        sumDurations(rows.map((row) => row[field]))
       );
       totalsVals[field] = sumDurations(rows.map((row) => row[field]));
     });
 
-    totals.total = sumDurations(Object.values(totalsVals)).replace(/P|T/g, "");
+    totals.total = displayDuration(sumDurations(Object.values(totalsVals)));
 
     return {
       id: "total",
@@ -264,7 +279,7 @@ const TaskTable = ({ data, userId, setState, token, setData, deleteData }) => {
     [tableRows, calculateTotalRow]
   );
 
-  const handleCellEdit = useCallback((key, field, newValue, issueId) => {
+  const handleCellEdit = useCallback((field, newValue, issueId) => {
     const normalizedValue = normalizeDuration(newValue);
     if (
       normalizedValue.trim() === "" ||
@@ -274,9 +289,12 @@ const TaskTable = ({ data, userId, setState, token, setData, deleteData }) => {
       return false;
     }
     if (!isValidDuration(normalizedValue)) {
-      setAlert(
-        `Значение "${newValue}" не является корректным форматом времени.`
-      );
+      setAlert({
+        open: true,
+        severity: "error",
+        message: `Значение "${newValue}" не является корректным форматом времени.`,
+      });
+
       return false;
     }
 
@@ -289,23 +307,17 @@ const TaskTable = ({ data, userId, setState, token, setData, deleteData }) => {
       setData({
         dateCell,
         setState,
+        setAlert,
         token,
         issueId,
         duration: normalizedValue,
       });
 
-      setAlert(null);
-      setData((prev) => {
-        const updatedRows = transformData(prev, userId).map((row) =>
-          row.key === key ? { ...row, [field]: normalizedValue } : row
-        );
-        return updatedRows;
-      });
       return true;
     } catch (err) {
       console.log("ERROR ", err.message);
 
-      setAlert(err.message);
+      setAlert({ open: true, severity: "error", message: err.message });
       return false;
     }
   }, []);
@@ -343,7 +355,7 @@ const TaskTable = ({ data, userId, setState, token, setData, deleteData }) => {
       editable: true,
       sortable: false,
       renderCell: (params) => {
-        const val = params.value.replace(/^P(?:T)?|T/g, "") || "";
+        const val = displayDuration(params.value);
         if (params.row.id === "total" || val === "") return val;
         return (
           <div
@@ -405,8 +417,9 @@ const TaskTable = ({ data, userId, setState, token, setData, deleteData }) => {
   return (
     <>
       <DurationAlert
-        open={!!alert}
-        message={alert}
+        open={alert.open}
+        message={alert.message}
+        severity={alert.severity}
         onClose={handleCloseAlert}
       />
       <DataGrid
@@ -420,7 +433,6 @@ const TaskTable = ({ data, userId, setState, token, setData, deleteData }) => {
         }}
         processRowUpdate={(updatedRow, originalRow) =>
           handleCellEdit(
-            updatedRow.id,
             Object.keys(updatedRow).find(
               (key) => updatedRow[key] !== originalRow[key]
             ),
@@ -447,6 +459,7 @@ const TaskTable = ({ data, userId, setState, token, setData, deleteData }) => {
         token={token}
         setData={setData}
         setState={setState}
+        setAlert={setAlert}
       />
     </>
   );

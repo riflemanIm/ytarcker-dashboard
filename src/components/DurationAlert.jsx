@@ -1,6 +1,12 @@
 import { Snackbar, Alert } from "@mui/material";
 
-const DurationAlert = ({ open, message, onClose, duration = 10000 }) => (
+const DurationAlert = ({
+  open,
+  message,
+  onClose,
+  duration = 10000,
+  severity = "error",
+}) => (
   <Snackbar
     open={open}
     autoHideDuration={duration}
@@ -8,7 +14,7 @@ const DurationAlert = ({ open, message, onClose, duration = 10000 }) => (
     anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
     TransitionProps={{ timeout: { enter: 500, exit: 500 } }}
   >
-    <Alert severity="error" variant="filled" onClose={onClose}>
+    <Alert severity={severity} variant="filled" onClose={onClose}>
       {message}
     </Alert>
   </Snackbar>

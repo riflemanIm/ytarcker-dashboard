@@ -93,7 +93,7 @@ app.post("/api/add_time", async (req, res) => {
 
     res.json(data);
   } catch (error) {
-    console.error("[Ошибка в методе /api/add_time]:", error.message);
+    console.error("[Ошибка в методе /api/add_time]:", error);
     res.status(error.response?.status || 500).json({ error: error.message });
   }
 });
@@ -123,63 +123,11 @@ app.post("/api/delete_all", async (req, res) => {
       );
     }
 
-    res.json({ data: true });
+    res.json(true);
   } catch (error) {
     console.error("[Ошибка в методе /api/add_time]:", error.message);
     res.status(error.response?.status || 500).json({ error: error.message });
   }
 });
-
-// app.post("/api/set_time", async (req, res) => {
-//   let { token, issueId, ids, start, duration, comment } = req.body;
-
-//   try {
-//     if (!token) {
-//       return res.status(400).json({ error: "token not passed" });
-//     }
-
-//     if (typeof ids === "string") ids = ids.split(",");
-
-//     if (Array.isArray(ids) && ids.length) {
-//       // Удаляем старые worklogs с обработкой ошибок
-//       await Promise.all(
-//         ids.map((id) =>
-//           axios
-//             .delete(
-//               `https://api.tracker.yandex.net/v2/issues/${issueId}/worklog/${id}`,
-//               headers(token)
-//             )
-//             .catch((err) => {
-//               console.error(`Ошибка удаления worklog ${id}:`, err.message);
-//               throw err;
-//             })
-//         )
-//       );
-//     }
-
-//     // Добавляем новый worklog
-//     const url = `https://api.tracker.yandex.net/v2/issues/${issueId}/worklog`;
-//     console.log("========== url =========\n", url);
-//     const { data } = await axios.post(
-//       url,
-//       { start, duration, comment },
-//       headers(token)
-//     );
-
-//     res.json({
-//       id: data.id,
-//       issue: data.issue.display,
-//       key: `${data.issue.k.ey}_${data.updatedBy.id}`,
-//       issueId: data.issue.key,
-//       duration: data.duration,
-//       updatedAt: data.updatedAt,
-//       href: data.self,
-//       updatedBy: data.updatedBy.display,
-//     });
-//   } catch (error) {
-//     console.error("[Ошибка в методе /api/set_time]:", error.message);
-//     res.status(error.response?.status || 500).json({ error: error.message });
-//   }
-// });
 
 app.listen(4000, () => console.log("Proxy server running on port 4000"));
