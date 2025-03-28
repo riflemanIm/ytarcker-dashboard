@@ -1,98 +1,27 @@
-import { useMemo, useCallback, useState, Fragment } from "react";
+import { IconButton } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
-import { Grid2 as Grid, IconButton, Input } from "@mui/material";
-import Divider from "@mui/material/Divider";
-import Menu from "@mui/material/Menu";
-import MenuItem from "@mui/material/MenuItem";
-import ListItemText from "@mui/material/ListItemText";
-import ListItemIcon from "@mui/material/ListItemIcon";
+import { useCallback, useMemo, useState } from "react";
 
-import Typography from "@mui/material/Typography";
-import CloseIcon from "@mui/icons-material/Close";
-import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
-import CheckIcon from "@mui/icons-material/Check";
-import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
-import OpenInNewIcon from "@mui/icons-material/OpenInNew";
-import DurationAlert from "./DurationAlert";
-import dayjs from "dayjs";
-import utc from "dayjs/plugin/utc"; // ✅ добавляем utc
 import {
+  aggregateDurations,
   dayOfWeekNameByDate,
   daysMap,
   displayDuration,
   getDateOfWeekday,
+  isValidDuration,
+  normalizeDuration,
   sumDurations,
 } from "@/helpers";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import Typography from "@mui/material/Typography";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc"; // ✅ добавляем utc
+import DurationAlert from "./DurationAlert";
+import TableCellMenu from "./TableCellMenu";
 
 dayjs.locale("ru");
 dayjs.extend(utc); // ✅ расширяем
 
-function MenuCell({
-  open,
-  onClose,
-  menuState,
-  setState,
-  deleteData,
-  token,
-  setData,
-  setAlert,
-}) {
-  const onDeleteAll = () => {
-    console.log("onDeleteAll--", menuState);
-    deleteData({
-      token,
-      setState,
-      setAlert,
-      issueId: menuState.issueId,
-      ids: menuState.durations.map((item) => item.id),
-    });
-    onClose();
-  };
-  console.log("menuState--", menuState);
-  return (
-    <Menu
-      anchorEl={menuState.anchorEl}
-      open={open}
-      onClose={onClose}
-      anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
-      transformOrigin={{ vertical: "top", horizontal: "left" }}
-      sx={{ minWidth: 220 }}
-    >
-      <Grid container spacing={3} sx={{ padding: 3 }}>
-        {(menuState.durations || []).map((item) => (
-          <Fragment key={item.id}>
-            <Grid item size={6}>
-              <Input value={displayDuration(item.duration)} />
-            </Grid>
-            <Grid item size={3}>
-              <IconButton>
-                <CheckIcon />
-              </IconButton>
-            </Grid>
-            <Grid item size={3}>
-              <IconButton>
-                <DeleteOutlineIcon />
-              </IconButton>
-            </Grid>
-          </Fragment>
-        ))}
-      </Grid>
-      <Divider />
-      <MenuItem onClick={onDeleteAll}>
-        <ListItemIcon>
-          <DeleteForeverIcon fontSize="small" />
-        </ListItemIcon>
-        <ListItemText>Удалить все</ListItemText>
-      </MenuItem>
-      <MenuItem onClick={onClose}>
-        <ListItemIcon>
-          <CloseIcon fontSize="small" />
-        </ListItemIcon>
-        <ListItemText>Закрыть</ListItemText>
-      </MenuItem>
-    </Menu>
-  );
-}
 const IssueDisplay = ({ display, href = null, fio = null }) => (
   <>
     <Typography variant="subtitle1">
@@ -103,36 +32,9 @@ const IssueDisplay = ({ display, href = null, fio = null }) => (
       )}
       {display}
     </Typography>
-    {fio && <Typography variant="subtitle2">{fio}</Typography>}
+    <Typography variant="subtitle2">{fio}</Typography>
   </>
 );
-
-const isValidDuration = (duration) => {
-  const iso8601DurationRegex =
-    /^P(?=\d|T\d)(\d+D)?(T(?=\d+[HM])(\d+H)?(\d+M)?)?$/i;
-  return iso8601DurationRegex.test(duration);
-};
-
-const normalizeDuration = (input) => {
-  if (isValidDuration(input)) return input;
-
-  const regex = /^(?:(\d+)[dD])?(?:(\d+)[hH])?(?:(\d+)[mM])?$/;
-  const match = input.trim().match(regex);
-
-  if (!match || (!match[1] && !match[2] && !match[3])) {
-    return input; // невалидный формат, возвращаем исходное значение
-  }
-
-  const [, days, hours, minutes] = match;
-
-  let result = "P";
-  if (days) result += `${parseInt(days, 10)}D`;
-  if (hours || minutes) result += "T";
-  if (hours) result += `${parseInt(hours, 10)}H`;
-  if (minutes) result += `${parseInt(minutes, 10)}M`;
-
-  return result;
-};
 
 const headerWeekName = {
   monday: "Пн",
@@ -144,7 +46,7 @@ const headerWeekName = {
   sunday: "Вс",
 };
 
-const transformData = (data, userId) => {
+const transformData = (data) => {
   const result = {};
 
   data.forEach((item) => {
@@ -155,7 +57,7 @@ const transformData = (data, userId) => {
         issue: {
           display: item.issue,
           //href: item.href,
-          fio: !userId ? item.updatedBy : null,
+          fio: item.updatedBy,
         },
         issueId: item.issueId,
         monday: [],
@@ -211,7 +113,7 @@ const TaskTable = ({ data, userId, setState, token, setData, deleteData }) => {
     });
   };
 
-  const tableRows = transformData(data, userId);
+  const tableRows = transformData(data);
   console.log("tableRows", tableRows);
   const [menuState, setMenuState] = useState({
     anchorEl: null,
@@ -451,7 +353,7 @@ const TaskTable = ({ data, userId, setState, token, setData, deleteData }) => {
           "& .no-hover:hover": { backgroundColor: "transparent !important" },
         }}
       />
-      <MenuCell
+      <TableCellMenu
         open={Boolean(menuState.anchorEl)}
         onClose={handleMenuClose}
         menuState={menuState}

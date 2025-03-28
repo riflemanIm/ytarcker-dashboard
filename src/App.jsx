@@ -1,24 +1,33 @@
+import { Grid2 as Grid, Typography, Button, IconButton } from "@mui/material"; // ...existing code...
+import RefreshIcon from "@mui/icons-material/Refresh";
 import { useEffect, useState } from "react";
-import TaskTable from "./components/TaskTable";
-import isEmpty, { aggregateDurations, getWeekRange } from "./helpers";
-import Loading from "./components/Loading";
-import { Grid2 as Grid, Typography } from "@mui/material";
-import AutocompleteUsers from "./components/AutocompleteUsers";
-import WeekNavigator from "./components/WeekNavigator";
 import { deleteData, getData, setData } from "./actions/data";
+import AutocompleteUsers from "./components/AutocompleteUsers";
+import Loading from "./components/Loading";
 import LogInOut from "./components/LogInOut";
+import TaskTable from "./components/TaskTable";
+import WeekNavigator from "./components/WeekNavigator";
+import isEmpty, { aggregateDurations, getWeekRange } from "./helpers";
 
 export default function YandexTracker() {
   const [token, setToken] = useState(localStorage.getItem("yandex_token"));
   // const [token, setToken] = useState(
   //   "y0__xD48tOlqveAAhjtmjYg4MvKyxK1MAkqmCzdKHCxTza9dSbqrC4bvA"
   // );
+  let login = localStorage.getItem("yandex_login");
+  login = login ? login.split("@")[0] : login;
+
   const [state, setState] = useState({
     loaded: true,
     userId: null,
     users: null,
     data: null,
   });
+
+  const [fetchByLogin, setFetchByLogin] = useState(true);
+  const toggleFetchMode = () => {
+    setFetchByLogin((prev) => !prev);
+  };
 
   const [weekOffset, setWeekOffset] = useState(0);
   const handlePrevious = () => {
@@ -29,15 +38,56 @@ export default function YandexTracker() {
   };
   const { start, end } = getWeekRange(weekOffset);
 
+  // При первом рендере
   useEffect(() => {
     if (token != null) {
-      getData({ userId: state.userId, setState, token, start, end });
+      getData({
+        userId: fetchByLogin ? null : state.userId,
+        setState,
+        token,
+        start,
+        end,
+        login: fetchByLogin ? login : undefined,
+      });
     }
-  }, [weekOffset]);
+  }, []);
+
+  useEffect(() => {
+    if (token != null) {
+      getData({
+        userId: fetchByLogin ? null : state.userId,
+        setState,
+        token,
+        start,
+        end,
+        login: fetchByLogin ? login : undefined,
+      });
+    }
+  }, [weekOffset, fetchByLogin]);
 
   const handleSelectedUsersChange = (userId) => {
     setState((prev) => ({ ...prev, userId }));
-    getData({ userId, setState, token, start, end });
+    getData({
+      userId: fetchByLogin ? null : userId,
+      setState,
+      token,
+      start,
+      end,
+      login: fetchByLogin ? login : undefined,
+    });
+  };
+
+  // Функция для обновления state
+  const handleRefresh = () => {
+    setState((prev) => ({ ...prev, loaded: false }));
+    getData({
+      userId: fetchByLogin ? null : state.userId,
+      setState,
+      token,
+      start,
+      end,
+      login: fetchByLogin ? login : undefined,
+    });
   };
 
   console.log("state.data", state.data);
@@ -74,18 +124,46 @@ export default function YandexTracker() {
           </Grid>
         )}
         {state.loaded && !isEmpty(state.users) && (
-          <Grid
-            size="grow"
-            alignSelf="center"
-            justifySelf="center"
-            textAlign="center"
-          >
-            <AutocompleteUsers
-              userId={state.userId}
-              handleSelectedUsersChange={handleSelectedUsersChange}
-              users={state.users}
-            />
-          </Grid>
+          <>
+            <Grid
+              size={1}
+              alignSelf="center"
+              justifySelf="center"
+              textAlign="center"
+            >
+              {/* IconButton для обновления состояния */}
+              <IconButton onClick={handleRefresh} color="primary">
+                <RefreshIcon />
+              </IconButton>
+            </Grid>
+            <Grid
+              size="1"
+              alignSelf="center"
+              justifySelf="center"
+              textAlign="center"
+            >
+              <Button
+                onClick={toggleFetchMode}
+                variant={fetchByLogin ? "contained" : "outlined"}
+                size="small"
+              >
+                {fetchByLogin ? "По сотруднику" : "По своему логину"}
+              </Button>
+            </Grid>
+            <Grid
+              size="grow"
+              alignSelf="center"
+              justifySelf="center"
+              textAlign="center"
+            >
+              <AutocompleteUsers
+                userId={state.userId}
+                handleSelectedUsersChange={handleSelectedUsersChange}
+                users={state.users}
+                disabled={!state.loaded || fetchByLogin}
+              />
+            </Grid>
+          </>
         )}
         <Grid
           size={2}
@@ -104,7 +182,6 @@ export default function YandexTracker() {
           sx={{ height: "80vh", background: "white", mx: "auto" }}
         >
           {!state.loaded && <Loading />}
-
           {state.loaded && !isEmpty(state.data) && (
             <>
               {state.userId == null && (

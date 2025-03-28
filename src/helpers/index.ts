@@ -1,6 +1,6 @@
 import dayjs from "dayjs";
-import isoWeek from "dayjs/plugin/isoWeek";
 import duration from "dayjs/plugin/duration";
+import isoWeek from "dayjs/plugin/isoWeek";
 import utc from "dayjs/plugin/utc"; // ✅ добавляем utc
 
 dayjs.extend(isoWeek);
@@ -8,6 +8,43 @@ dayjs.extend(duration);
 dayjs.extend(utc); // ✅ расширяем
 dayjs.locale("ru");
 
+export const isValidDuration = (duration: string): boolean => {
+  // Updated regex to support years (Y), weeks (W), days (D) and time (hours, minutes, seconds)
+  const iso8601DurationRegex =
+    /^P(?=\d|T\d)(?:(\d+Y)?(\d+W)?(\d+D)?)(?:T(?=\d+[HMS])(?:(\d+H)?(\d+M)?(\d+S)?))?$/i;
+  return iso8601DurationRegex.test(duration);
+};
+
+export const normalizeDuration = (input: string): string => {
+  if (isValidDuration(input)) return input;
+
+  // Regex to capture years, weeks, days, hours, minutes, and seconds in a flexible input format
+  const regex =
+    /^(?:(\d+)[yY])?(?:(\d+)[wW])?(?:(\d+)[dD])?(?:(\d+)[hH])?(?:(\d+)[mM])?(?:(\d+)[sS])?$/;
+  const match = input.trim().match(regex);
+
+  // Ensure at least one valid value is provided
+  if (!match || match.slice(1).every((v) => !v)) {
+    return input; // невалидный формат, возвращаем исходное значение
+  }
+
+  const [, years, weeks, days, hours, minutes, seconds] = match;
+
+  let result = "P";
+  if (years) result += `${parseInt(years, 10)}Y`;
+  if (weeks) result += `${parseInt(weeks, 10)}W`;
+  if (days) result += `${parseInt(days, 10)}D`;
+
+  // Append time part if any time component is provided
+  if (hours || minutes || seconds) {
+    result += "T";
+    if (hours) result += `${parseInt(hours, 10)}H`;
+    if (minutes) result += `${parseInt(minutes, 10)}M`;
+    if (seconds) result += `${parseInt(seconds, 10)}S`;
+  }
+
+  return result;
+};
 export const daysMap = [
   "monday",
   "tuesday",
@@ -18,7 +55,23 @@ export const daysMap = [
   "sunday",
 ];
 export const displayDuration = (duration: string): string => {
-  return duration.replace(/^P(?:T)?|T/g, "") || "";
+  if (duration === "P") return "";
+  // Регулярное выражение для ISO8601 длительности с учетом лет, недель, дней, часов, минут и секунд
+  const regex =
+    /^P(?:([0-9]+)Y)?(?:([0-9]+)W)?(?:([0-9]+)D)?(?:T(?:([0-9]+)H)?(?:([0-9]+)M)?(?:([0-9]+)S)?)?$/;
+  const matches = duration.match(regex);
+  if (!matches) return duration;
+
+  const [, years, weeks, days, hours, minutes, seconds] = matches;
+  const parts = [];
+  if (years) parts.push(`${years}y`);
+  if (weeks) parts.push(`${weeks}w`);
+  if (days) parts.push(`${days}d`);
+  if (hours) parts.push(`${hours}h`);
+  if (minutes) parts.push(`${minutes}m`);
+  if (seconds) parts.push(`${seconds}s`);
+
+  return parts.join(" ");
 };
 export const dayOfWeekNameByDate = (data: string): string => {
   const dayOfWeek = dayjs.utc(data).isoWeekday();

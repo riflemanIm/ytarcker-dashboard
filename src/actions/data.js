@@ -9,12 +9,19 @@ dayjs.extend(timezone);
 const apiUrl = import.meta.env.VITE_APP_API_URL;
 console.log("apiUrl", apiUrl);
 
-export const getData = async ({ userId, setState, token, start, end }) => {
+export const getData = async ({
+  userId,
+  setState,
+  token,
+  start,
+  end,
+  login,
+}) => {
   try {
     setState((prev) => ({ ...prev, loaded: false }));
 
     const res = await axios.get(
-      `${apiUrl}/api/issues?token=${token}&endDate=${end}&startDate=${start}&userId=${userId}`
+      `${apiUrl}/api/issues?token=${token}&endDate=${end}&startDate=${start}&userId=${userId}&login=${login}`
     );
 
     if (res.status !== 200) {

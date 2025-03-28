@@ -23,39 +23,57 @@ app.use(cors());
 app.use(express.json());
 
 app.get("/api/issues", async (req, res) => {
-  let { token, startDate, endDate, userId } = req.query;
+  let { token, startDate, endDate, userId, login } = req.query;
   console.log("token", token);
 
   try {
     if (token) {
-      // ------------ issues filter issues -------------
+      // Очистка параметров
+      userId =
+        userId != null && userId !== "undefined" && userId !== "null"
+          ? userId
+          : null;
+      login =
+        login != null && login !== "undefined" && login !== "null"
+          ? login
+          : null;
 
-      userId = userId !== "undefined" && userId !== "null" ? userId : null;
-      // startDate = "2025-02-11";
-      // endDate = "2025-03-21";
+      // Форматирование даты
       endDate = `${endDate}T23:59`;
+
+      // Формируем тело запроса
+      let requestBody = {
+        createdAt: {
+          from: startDate,
+          to: endDate,
+        },
+      };
+      // Если логин передан, добавляем его в запрос
+      if (login) {
+        requestBody.createdBy = login;
+      }
+      console.log(requestBody);
       const url =
         "https://api.tracker.yandex.net/v2/worklog/_search?perPage=1000";
-      const response = await axios.post(
-        url,
-        {
-          createdAt: {
-            from: startDate,
-            to: endDate,
-          },
-        },
-        headers(token)
-      );
+      const response = await axios.post(url, requestBody, headers(token));
 
+      // Формируем список пользователей без повторов
       let users = response.data.map((it) => ({
         id: parseInt(it.updatedBy.id),
         name: it.updatedBy.display,
       }));
       users = [...new Map(users.map((item) => [item.id, item])).values()];
 
-      const data = response.data.filter(
-        (it) => it.updatedBy.id === userId || userId == null
-      );
+      // Если login не передан, но указан userId, фильтруем данные по userId
+      let data = [];
+      if (!login && userId) {
+        data = response.data.filter(
+          (it) => parseInt(it.updatedBy.id) === Number(userId)
+        );
+      } else {
+        data = response.data;
+      }
+
       console.log(
         response.data[0],
         "startDate",
@@ -63,11 +81,13 @@ app.get("/api/issues", async (req, res) => {
         "endDate",
         endDate,
         "userId",
-        userId
+        userId,
+        "login",
+        login
       );
       res.json({ data, users });
     } else {
-      res.status(400).json({ error: "token not pass " });
+      res.status(400).json({ error: "token not pass" });
     }
   } catch (error) {
     console.log(error.message);
