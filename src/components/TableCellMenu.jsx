@@ -11,6 +11,7 @@ import {
   DialogContentText,
   DialogTitle,
   Divider,
+  FormHelperText,
   Grid2 as Grid,
   IconButton,
   ListItemIcon,
@@ -164,7 +165,6 @@ function TableCellMenu({
                   value={displayDuration(item.duration)}
                   onChange={(e) => handleDurationChange(item, e)}
                   error={Boolean(validationErrors[item.id])}
-                  helperText={validationErrors[item.id] || ""}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       handleSumbitItem(item);
@@ -188,6 +188,7 @@ function TableCellMenu({
                   }}
                 />
               </Grid>
+
               <Grid item size={1.5}>
                 <IconButton
                   onClick={() => handleSumbitItem(item)}
@@ -205,6 +206,11 @@ function TableCellMenu({
                 <IconButton onClick={() => handleDeleteItem(item)}>
                   <DeleteOutlineIcon color="error" />
                 </IconButton>
+              </Grid>
+              <Grid item size={12}>
+                <FormHelperText error>
+                  {validationErrors[item.id] || ""}
+                </FormHelperText>
               </Grid>
             </Fragment>
           ))}

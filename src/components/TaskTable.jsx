@@ -113,7 +113,7 @@ const TaskTable = ({ data, userId, setState, token, setData, deleteData }) => {
   };
 
   const tableRows = transformData(data);
-  console.log("tableRows", tableRows);
+
   const [menuState, setMenuState] = useState({
     anchorEl: null,
     issue: null,
@@ -267,7 +267,7 @@ const TaskTable = ({ data, userId, setState, token, setData, deleteData }) => {
             href="#basic-chip"
             variant="outlined"
             clickable
-            color="primary"
+            color="warning"
             onClick={(e) => handleMenuOpen(e, params)}
           />
         );
