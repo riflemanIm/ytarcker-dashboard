@@ -16,17 +16,17 @@ const handleLogout = () => {
   window.location.href = "";
 };
 
-const LogInOut = ({ token, setToken }) => {
+const LogInOut = ({ token, setAuth }) => {
   useEffect(() => {
     const hash = window.location.hash;
 
     if (hash.includes("access_token")) {
       const params = new URLSearchParams(hash.replace("#", "?"));
-      const accessToken = params.get("access_token");
+      const token = params.get("access_token");
 
-      if (accessToken) {
-        setToken(accessToken);
-        localStorage.setItem("yandex_token", accessToken);
+      if (token) {
+        setAuth({ token });
+        localStorage.setItem("yandex_token", token);
 
         // Получаем логин пользователя
         const fetchLogin = async () => {
@@ -35,15 +35,19 @@ const LogInOut = ({ token, setToken }) => {
               "https://login.yandex.ru/info?format=json",
               {
                 headers: {
-                  Authorization: `OAuth ${accessToken}`,
+                  Authorization: `OAuth ${token}`,
                 },
               }
             );
 
-            const login = response.data.login;
+            const login = response.data.login
+              ? response.data.login.split("@")[0]
+              : response.data.login;
             if (login) {
               localStorage.setItem("yandex_login", login);
               console.log("Yandex login:", login);
+
+              setAuth((prev) => ({ ...prev, login }));
             }
           } catch (error) {
             console.error(
@@ -56,7 +60,7 @@ const LogInOut = ({ token, setToken }) => {
         fetchLogin();
       }
     }
-  }, [setToken]);
+  }, []);
 
   return token ? (
     <Typography variant="body1">

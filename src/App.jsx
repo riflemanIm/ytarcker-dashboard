@@ -17,10 +17,12 @@ import WeekNavigator from "./components/WeekNavigator";
 import isEmpty, { aggregateDurations, getWeekRange } from "./helpers";
 
 export default function YandexTracker() {
-  const [token, setToken] = useState(localStorage.getItem("yandex_token"));
-  // const [token, setToken] = useState("y0__xD48tOlqveAAhjtmjYg4MvKyxK1MAkqmCzdKHCxTza9dSbqrC4bvA");
-  let login = localStorage.getItem("yandex_login");
-  login = login ? login.split("@")[0] : login;
+  const [auth, setAuth] = useState({
+    token: localStorage.getItem("yandex_token"),
+    login: null,
+  });
+  const { token, login } = auth;
+  // const [token, setAuth] = useState("y0__xD48tOlqveAAhjtmjYg4MvKyxK1MAkqmCzdKHCxTza9dSbqrC4bvA");
 
   const [state, setState] = useState({
     loaded: true,
@@ -49,21 +51,9 @@ export default function YandexTracker() {
   const { start, end } = getWeekRange(weekOffset);
 
   // При первом рендере
-  useEffect(() => {
-    if (token != null) {
-      getData({
-        userId: state.fetchByLogin ? null : state.userId,
-        setState,
-        token,
-        start,
-        end,
-        login: state.fetchByLogin ? login : undefined,
-      });
-    }
-  }, []);
 
   useEffect(() => {
-    if (token != null) {
+    if (login != null && token != null) {
       setState((prev) => ({ ...prev, userId: null, data: null }));
       getData({
         userId: state.fetchByLogin ? null : state.userId,
@@ -74,7 +64,7 @@ export default function YandexTracker() {
         login: state.fetchByLogin ? login : undefined,
       });
     }
-  }, [weekOffset, state.fetchByLogin]);
+  }, [login, weekOffset, state.fetchByLogin]);
 
   const handleSelectedUsersChange = (userId) => {
     setState((prev) => ({ ...prev, userId, data: null }));
@@ -119,7 +109,7 @@ export default function YandexTracker() {
         spacing={2}
       >
         <>
-          {token && (
+          {token && state.loaded && (
             <Grid
               size={5}
               alignSelf="center"
@@ -135,7 +125,7 @@ export default function YandexTracker() {
               />
             </Grid>
           )}
-          {state.loaded && (
+          {token && state.loaded && (
             <>
               <Grid
                 size={1}
@@ -197,15 +187,15 @@ export default function YandexTracker() {
               textAlign: "center",
             }}
           >
-            <LogInOut token={token} setToken={setToken} />
+            <LogInOut token={token} setAuth={setAuth} />
           </Grid>
         </>
-        {token && (
+        {token && state.loaded && (
           <Grid
             size={12}
             sx={{ height: "80vh", background: "white", mx: "auto" }}
           >
-            {state.loaded && !isEmpty(state.data) && (
+            {!isEmpty(state.data) && (
               <>
                 <Typography variant="h5" mb={2}>
                   Отметки времени по{" "}
@@ -221,7 +211,7 @@ export default function YandexTracker() {
                 />
               </>
             )}
-            {state.loaded && isEmpty(state.data) && (
+            {isEmpty(state.data) && (
               <Typography variant="h6">Нет данных</Typography>
             )}
           </Grid>
