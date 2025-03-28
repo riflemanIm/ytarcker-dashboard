@@ -123,7 +123,7 @@ export default function YandexTracker() {
             />
           </Grid>
         )}
-        {state.loaded && !isEmpty(state.users) && (
+        {state.loaded && (
           <>
             <Grid
               size={1}
@@ -145,7 +145,6 @@ export default function YandexTracker() {
               <Button
                 onClick={toggleFetchMode}
                 variant={fetchByLogin ? "contained" : "outlined"}
-                size="small"
               >
                 {fetchByLogin ? "По сотруднику" : "По своему логину"}
               </Button>

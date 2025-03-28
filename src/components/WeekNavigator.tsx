@@ -22,7 +22,7 @@ const WeekNavigator: React.FC<WeekNavigatorProps> = ({
       <Button variant="contained" onClick={onPrevious}>
         Пред. неделя
       </Button>
-      <Typography variant="h5">
+      <Typography variant="h5" alignSelf="center">
         {dayjs(start).format("DD.MM.YYYY")} - {dayjs(end).format("DD.MM.YYYY")}
       </Typography>
       <Button variant="contained" onClick={onNext} disabled={disableNext}>
