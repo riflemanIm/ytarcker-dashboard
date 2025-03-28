@@ -10,6 +10,7 @@ dayjs.locale("ru");
 
 export const isValidDuration = (duration: string): boolean => {
   // Updated regex to support years (Y), weeks (W), days (D) and time (hours, minutes, seconds)
+  console.log("duration", duration);
   const iso8601DurationRegex =
     /^P(?=\d|T\d)(?:(\d+Y)?(\d+W)?(\d+D)?)(?:T(?=\d+[HMS])(?:(\d+H)?(\d+M)?(\d+S)?))?$/i;
   return iso8601DurationRegex.test(duration);
@@ -18,12 +19,12 @@ export const isValidDuration = (duration: string): boolean => {
 export const normalizeDuration = (input: string): string => {
   if (isValidDuration(input)) return input;
 
-  // Regex to capture years, weeks, days, hours, minutes, and seconds in a flexible input format
+  // Обновлённое регулярное выражение, разрешающее пробелы между компонентами
   const regex =
-    /^(?:(\d+)[yY])?(?:(\d+)[wW])?(?:(\d+)[dD])?(?:(\d+)[hH])?(?:(\d+)[mM])?(?:(\d+)[sS])?$/;
+    /^\s*(?:(\d+)\s*[yY])?\s*(?:(\d+)\s*[wW])?\s*(?:(\d+)\s*[dD])?\s*(?:(\d+)\s*[hH])?\s*(?:(\d+)\s*[mM])?\s*(?:(\d+)\s*[sS])?\s*$/;
   const match = input.trim().match(regex);
 
-  // Ensure at least one valid value is provided
+  // Если нет совпадения или ни один компонент не передан – возвращаем исходное значение
   if (!match || match.slice(1).every((v) => !v)) {
     return input; // невалидный формат, возвращаем исходное значение
   }
@@ -35,7 +36,7 @@ export const normalizeDuration = (input: string): string => {
   if (weeks) result += `${parseInt(weeks, 10)}W`;
   if (days) result += `${parseInt(days, 10)}D`;
 
-  // Append time part if any time component is provided
+  // Добавляем часть времени, если задан хотя бы один компонент
   if (hours || minutes || seconds) {
     result += "T";
     if (hours) result += `${parseInt(hours, 10)}H`;
