@@ -1,5 +1,12 @@
 import RefreshIcon from "@mui/icons-material/Refresh";
-import { Button, Grid2 as Grid, IconButton, Typography } from "@mui/material";
+import {
+  FormControlLabel,
+  Grid2 as Grid,
+  IconButton,
+  Switch,
+  Tooltip,
+  Typography,
+} from "@mui/material";
 import { useEffect, useState } from "react";
 import { deleteData, getData, setData } from "./actions/data";
 import AutocompleteUsers from "./components/AutocompleteUsers";
@@ -141,17 +148,28 @@ export default function YandexTracker() {
               </IconButton>
             </Grid>
             <Grid
-              size={1.6}
+              size={0.5}
               alignSelf="center"
               justifySelf="center"
               textAlign="center"
             >
-              <Button
-                onClick={toggleFetchMode}
-                variant={state.fetchByLogin ? "contained" : "outlined"}
+              <Tooltip
+                title={
+                  !state.fetchByLogin ? "По сотруднику" : "По своему логину"
+                }
+                placement="top"
               >
-                {state.fetchByLogin ? "По сотруднику" : "По своему логину"}
-              </Button>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={!state.fetchByLogin}
+                      onChange={toggleFetchMode}
+                      color="primary"
+                    />
+                  }
+                  label=""
+                />
+              </Tooltip>
             </Grid>
             <Grid
               size="grow"
