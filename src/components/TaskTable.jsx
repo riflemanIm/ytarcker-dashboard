@@ -1,9 +1,8 @@
-import { IconButton } from "@mui/material";
+import { Chip, IconButton } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
 import { useCallback, useMemo, useState } from "react";
 
 import {
-  aggregateDurations,
   dayOfWeekNameByDate,
   daysMap,
   displayDuration,
@@ -117,22 +116,24 @@ const TaskTable = ({ data, userId, setState, token, setData, deleteData }) => {
   console.log("tableRows", tableRows);
   const [menuState, setMenuState] = useState({
     anchorEl: null,
-    rowId: null,
+    issue: null,
     field: null,
     issueId: null,
     durations: null,
   });
 
   const handleMenuOpen = (event, params) => {
-    //console.log("handleMenuOpen params", params);
+    console.log("handleMenuOpen params", params);
 
     setMenuState({
       anchorEl: event.currentTarget,
-      rowId: params.row.id,
+      issue: params.row.issue.display,
       field: params.field,
       issueId: params.row.issueId,
       durations: data.find(
-        (row) => dayOfWeekNameByDate(row.start) === params.field
+        (row) =>
+          dayOfWeekNameByDate(row.start) === params.field &&
+          row.key === params.id
       ).durations,
     });
   };
@@ -140,7 +141,7 @@ const TaskTable = ({ data, userId, setState, token, setData, deleteData }) => {
   const handleMenuClose = () =>
     setMenuState({
       anchorEl: null,
-      rowId: null,
+      issue: null,
       field: null,
       issueId: null,
       durations: null,
@@ -260,12 +261,15 @@ const TaskTable = ({ data, userId, setState, token, setData, deleteData }) => {
         const val = displayDuration(params.value);
         if (params.row.id === "total" || val === "") return val;
         return (
-          <div
+          <Chip
+            label={val}
+            component="a"
+            href="#basic-chip"
+            variant="outlined"
+            clickable
+            color="primary"
             onClick={(e) => handleMenuOpen(e, params)}
-            style={{ cursor: "pointer", width: "100%" }}
-          >
-            {val}
-          </div>
+          />
         );
       },
       renderEditCell: (params) => (

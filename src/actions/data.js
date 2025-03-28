@@ -41,27 +41,38 @@ export const setData = async ({
   issueId,
   duration,
   comment = "",
+  worklogId = null,
 }) => {
   if (token == null) {
     return;
   }
 
   try {
-    //setState((prev) => ({ ...prev, loaded: false }));
-
-    const start = dayjs(dateCell)
-      .add(8, "hours")
-      .format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
-
-    const payload = {
-      token,
-      issueId,
-      start,
-      duration,
-      comment,
-    };
-
-    const res = await axios.post(`${apiUrl}/api/add_time`, payload);
+    let res;
+    if (worklogId) {
+      // Если worklogId передан, редактируем существующую запись
+      const payload = {
+        token,
+        issueId,
+        worklogId,
+        duration,
+        comment,
+      };
+      res = await axios.patch(`${apiUrl}/api/edit_time`, payload);
+    } else {
+      // Добавляем новую запись, формируем время из dateCell
+      const start = dayjs(dateCell)
+        .add(8, "hours")
+        .format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
+      const payload = {
+        token,
+        issueId,
+        start,
+        duration,
+        comment,
+      };
+      res = await axios.post(`${apiUrl}/api/add_time`, payload);
+    }
 
     if (res.status !== 200) {
       throw new Error("Api set data error");
@@ -71,15 +82,21 @@ export const setData = async ({
       setState((prev) => ({
         ...prev,
         loaded: true,
-        data: [...prev.data, { ...res.data }],
+        data: worklogId
+          ? prev.data.map((item) => (item.id === res.data.id ? res.data : item))
+          : [...prev.data, { ...res.data }],
       }));
       setAlert({
         open: true,
         severity: "success",
-        message: "Данные успешно добавлены",
+        message: worklogId
+          ? "Запись успешно изменена"
+          : "Данные успешно добавлены",
       });
     } else {
-      throw new Error("Ошибка добавления данных");
+      throw new Error(
+        worklogId ? "Ошибка изменения данных" : "Ошибка добавления данных"
+      );
     }
   } catch (err) {
     console.error("ERROR", err.message);

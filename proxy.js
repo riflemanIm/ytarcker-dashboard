@@ -1,16 +1,7 @@
 import express from "express";
 import axios from "axios";
 import cors from "cors";
-function isArray(obj) {
-  return obj instanceof Array;
-}
-const isEmpty = (value) => {
-  return (
-    value == null ||
-    (typeof value === "object" && Object.keys(value).length === 0) ||
-    (typeof value === "string" && value.trim().length === 0)
-  );
-};
+
 const headers = (token) => ({
   headers: {
     Authorization: `OAuth ${token}`,
@@ -114,6 +105,31 @@ app.post("/api/add_time", async (req, res) => {
     res.json(data);
   } catch (error) {
     console.error("[Ошибка в методе /api/add_time]:", error);
+    res.status(error.response?.status || 500).json({ error: error.message });
+  }
+});
+
+app.patch("/api/edit_time", async (req, res) => {
+  let { token, issueId, worklogId, duration, comment } = req.body;
+  try {
+    if (!token) {
+      return res.status(400).json({ error: "token not passed" });
+    }
+    if (!issueId || !worklogId || !duration) {
+      return res
+        .status(400)
+        .json({ error: "issueId, worklogId and duration are required" });
+    }
+
+    const url = `https://api.tracker.yandex.net/v2/issues/${issueId}/worklog/${worklogId}`;
+    const payload = {
+      duration,
+      comment,
+    };
+    const response = await axios.patch(url, payload, headers(token));
+    res.json(response.data);
+  } catch (error) {
+    console.error("[Ошибка в методе /api/edit_time]:", error.message);
     res.status(error.response?.status || 500).json({ error: error.message });
   }
 });

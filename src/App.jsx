@@ -103,127 +103,130 @@ export default function YandexTracker() {
 
   console.log("state.data", state.data);
   return (
-    <Grid
-      container
-      size={12}
-      sx={{
-        background: "white",
-        height: "100vh",
-        width: "98vw",
-        justifyContent: "center",
-        alignSelf: "center",
-        justifySelf: "center",
-        textAlign: "center",
-      }}
-      spacing={2}
-    >
-      <>
-        {token && (
-          <Grid
-            size={5}
-            alignSelf="center"
-            justifySelf="center"
-            textAlign="center"
-          >
-            <WeekNavigator
-              start={start}
-              end={end}
-              onPrevious={handlePrevious}
-              onNext={handleNext}
-              disableNext={weekOffset === 0}
-            />
-          </Grid>
-        )}
-        {state.loaded && (
-          <>
+    <>
+      {!state.loaded && <Loading isLinear />}
+      <Grid
+        container
+        size={12}
+        sx={{
+          background: "white",
+          height: "100vh",
+          width: "98vw",
+          justifyContent: "center",
+          justifySelf: "center",
+          textAlign: "center",
+        }}
+        spacing={2}
+      >
+        <>
+          {token && (
             <Grid
-              size={1}
+              size={5}
               alignSelf="center"
               justifySelf="center"
               textAlign="center"
             >
-              {/* IconButton для обновления состояния */}
-              <IconButton onClick={handleRefresh} color="primary">
-                <RefreshIcon />
-              </IconButton>
-            </Grid>
-            <Grid
-              size={0.5}
-              alignSelf="center"
-              justifySelf="center"
-              textAlign="center"
-            >
-              <Tooltip
-                title={
-                  !state.fetchByLogin ? "По сотруднику" : "По своему логину"
-                }
-                placement="top"
-              >
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={!state.fetchByLogin}
-                      onChange={toggleFetchMode}
-                      color="primary"
-                    />
-                  }
-                  label=""
-                />
-              </Tooltip>
-            </Grid>
-            <Grid
-              size="grow"
-              alignSelf="center"
-              justifySelf="center"
-              textAlign="center"
-            >
-              <AutocompleteUsers
-                userId={state.userId}
-                handleSelectedUsersChange={handleSelectedUsersChange}
-                users={state.users}
-                disabled={!state.loaded || state.fetchByLogin}
+              <WeekNavigator
+                start={start}
+                end={end}
+                onPrevious={handlePrevious}
+                onNext={handleNext}
+                disableNext={weekOffset === 0}
               />
             </Grid>
-          </>
-        )}
-        <Grid
-          size={2}
-          sx={{
-            alignSelf: "center",
-            justifySelf: "center",
-            textAlign: "center",
-          }}
-        >
-          <LogInOut token={token} setToken={setToken} />
-        </Grid>
-      </>
-      {token && (
-        <Grid
-          size={12}
-          sx={{ height: "80vh", background: "white", mx: "auto" }}
-        >
-          {!state.loaded && <Loading />}
-          {state.loaded && !isEmpty(state.data) && (
+          )}
+          {state.loaded && (
             <>
-              <Typography variant="h5" mb={2}>
-                Отметки времени по{" "}
-                {!state.fetchByLogin ? "сотруднику" : "своему логину"}
-              </Typography>
-              <TaskTable
-                data={aggregateDurations(state.data)}
-                userId={state.userId}
-                setState={setState}
-                token={token}
-                setData={setData}
-                deleteData={deleteData}
-              />
+              <Grid
+                size={1}
+                alignSelf="center"
+                justifySelf="center"
+                textAlign="center"
+              >
+                {/* IconButton для обновления состояния */}
+                <IconButton onClick={handleRefresh} color="primary">
+                  <RefreshIcon />
+                </IconButton>
+              </Grid>
+              <Grid
+                size={0.5}
+                alignSelf="center"
+                justifySelf="center"
+                textAlign="center"
+              >
+                <Tooltip
+                  title={
+                    state.fetchByLogin
+                      ? "Переключится на выборку по сотруднику"
+                      : "Переключится на выборку по своему логину"
+                  }
+                  placement="top"
+                >
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={!state.fetchByLogin}
+                        onChange={toggleFetchMode}
+                        color="primary"
+                      />
+                    }
+                    label=""
+                  />
+                </Tooltip>
+              </Grid>
+              <Grid
+                size="grow"
+                alignSelf="center"
+                justifySelf="center"
+                textAlign="center"
+              >
+                <AutocompleteUsers
+                  userId={state.userId}
+                  handleSelectedUsersChange={handleSelectedUsersChange}
+                  users={state.users}
+                  disabled={!state.loaded || state.fetchByLogin}
+                />
+              </Grid>
             </>
           )}
-          {state.loaded && isEmpty(state.data) && (
-            <Typography variant="h6">Нет данных</Typography>
-          )}
-        </Grid>
-      )}
-    </Grid>
+          <Grid
+            size={2}
+            sx={{
+              alignSelf: "center",
+              justifySelf: "center",
+              textAlign: "center",
+            }}
+          >
+            <LogInOut token={token} setToken={setToken} />
+          </Grid>
+        </>
+        {token && (
+          <Grid
+            size={12}
+            sx={{ height: "80vh", background: "white", mx: "auto" }}
+          >
+            {state.loaded && !isEmpty(state.data) && (
+              <>
+                <Typography variant="h5" mb={2}>
+                  Отметки времени по{" "}
+                  {!state.fetchByLogin ? "сотруднику" : "своему логину"}
+                </Typography>
+                <TaskTable
+                  data={aggregateDurations(state.data)}
+                  userId={state.userId}
+                  setState={setState}
+                  token={token}
+                  setData={setData}
+                  deleteData={deleteData}
+                />
+              </>
+            )}
+            {state.loaded && isEmpty(state.data) && (
+              <Typography variant="h6">Нет данных</Typography>
+            )}
+          </Grid>
+        )}
+      </Grid>
+    </>
   );
 }
