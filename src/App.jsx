@@ -1,5 +1,5 @@
-import { Grid2 as Grid, Typography, Button, IconButton } from "@mui/material"; // ...existing code...
 import RefreshIcon from "@mui/icons-material/Refresh";
+import { Button, Grid2 as Grid, IconButton, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
 import { deleteData, getData, setData } from "./actions/data";
 import AutocompleteUsers from "./components/AutocompleteUsers";
@@ -11,9 +11,7 @@ import isEmpty, { aggregateDurations, getWeekRange } from "./helpers";
 
 export default function YandexTracker() {
   const [token, setToken] = useState(localStorage.getItem("yandex_token"));
-  // const [token, setToken] = useState(
-  //   "y0__xD48tOlqveAAhjtmjYg4MvKyxK1MAkqmCzdKHCxTza9dSbqrC4bvA"
-  // );
+  // const [token, setToken] = useState("y0__xD48tOlqveAAhjtmjYg4MvKyxK1MAkqmCzdKHCxTza9dSbqrC4bvA");
   let login = localStorage.getItem("yandex_login");
   login = login ? login.split("@")[0] : login;
 
@@ -22,11 +20,16 @@ export default function YandexTracker() {
     userId: null,
     users: null,
     data: null,
+    fetchByLogin: true,
   });
 
-  const [fetchByLogin, setFetchByLogin] = useState(true);
   const toggleFetchMode = () => {
-    setFetchByLogin((prev) => !prev);
+    setState((prev) => ({
+      ...prev,
+      fetchByLogin: !prev.fetchByLogin,
+      userId: null,
+      data: null,
+    }));
   };
 
   const [weekOffset, setWeekOffset] = useState(0);
@@ -42,38 +45,39 @@ export default function YandexTracker() {
   useEffect(() => {
     if (token != null) {
       getData({
-        userId: fetchByLogin ? null : state.userId,
+        userId: state.fetchByLogin ? null : state.userId,
         setState,
         token,
         start,
         end,
-        login: fetchByLogin ? login : undefined,
+        login: state.fetchByLogin ? login : undefined,
       });
     }
   }, []);
 
   useEffect(() => {
     if (token != null) {
+      setState((prev) => ({ ...prev, userId: null, data: null }));
       getData({
-        userId: fetchByLogin ? null : state.userId,
+        userId: state.fetchByLogin ? null : state.userId,
         setState,
         token,
         start,
         end,
-        login: fetchByLogin ? login : undefined,
+        login: state.fetchByLogin ? login : undefined,
       });
     }
-  }, [weekOffset, fetchByLogin]);
+  }, [weekOffset, state.fetchByLogin]);
 
   const handleSelectedUsersChange = (userId) => {
-    setState((prev) => ({ ...prev, userId }));
+    setState((prev) => ({ ...prev, userId, data: null }));
     getData({
-      userId: fetchByLogin ? null : userId,
+      userId: state.fetchByLogin ? null : userId,
       setState,
       token,
       start,
       end,
-      login: fetchByLogin ? login : undefined,
+      login: state.fetchByLogin ? login : undefined,
     });
   };
 
@@ -81,12 +85,12 @@ export default function YandexTracker() {
   const handleRefresh = () => {
     setState((prev) => ({ ...prev, loaded: false }));
     getData({
-      userId: fetchByLogin ? null : state.userId,
+      userId: state.fetchByLogin ? null : state.userId,
       setState,
       token,
       start,
       end,
-      login: fetchByLogin ? login : undefined,
+      login: state.fetchByLogin ? login : undefined,
     });
   };
 
@@ -137,16 +141,16 @@ export default function YandexTracker() {
               </IconButton>
             </Grid>
             <Grid
-              size="1"
+              size={1.6}
               alignSelf="center"
               justifySelf="center"
               textAlign="center"
             >
               <Button
                 onClick={toggleFetchMode}
-                variant={fetchByLogin ? "contained" : "outlined"}
+                variant={state.fetchByLogin ? "contained" : "outlined"}
               >
-                {fetchByLogin ? "По сотруднику" : "По своему логину"}
+                {state.fetchByLogin ? "По сотруднику" : "По своему логину"}
               </Button>
             </Grid>
             <Grid
@@ -159,7 +163,7 @@ export default function YandexTracker() {
                 userId={state.userId}
                 handleSelectedUsersChange={handleSelectedUsersChange}
                 users={state.users}
-                disabled={!state.loaded || fetchByLogin}
+                disabled={!state.loaded || state.fetchByLogin}
               />
             </Grid>
           </>
@@ -183,11 +187,10 @@ export default function YandexTracker() {
           {!state.loaded && <Loading />}
           {state.loaded && !isEmpty(state.data) && (
             <>
-              {state.userId == null && (
-                <Typography variant="h5" mb={2}>
-                  По всем сотрудникам
-                </Typography>
-              )}
+              <Typography variant="h5" mb={2}>
+                Отметки времени по{" "}
+                {!state.fetchByLogin ? "сотруднику" : "своему логину"}
+              </Typography>
               <TaskTable
                 data={aggregateDurations(state.data)}
                 userId={state.userId}

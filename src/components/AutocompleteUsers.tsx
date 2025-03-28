@@ -57,7 +57,7 @@ const AutocompleteUsers: React.FC<AutocompleteUsersProps> = ({
           <TextField
             {...params}
             name="filter-users"
-            margin="normal"
+            margin="dense"
             label={"Выбрать сотрудника"}
             fullWidth
             variant="outlined"
