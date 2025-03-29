@@ -1,4 +1,10 @@
-import { displayDuration, isValidDuration, normalizeDuration } from "@/helpers";
+import {
+  daysMap,
+  displayDuration,
+  getDateOfWeekday,
+  isValidDuration,
+  normalizeDuration,
+} from "@/helpers";
 import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
 import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
@@ -68,6 +74,53 @@ function TableCellMenu({
       return `Значение "${rawValue}" не является корректным форматом времени.`;
     }
     return "";
+  };
+
+  // Добавьте это объявление состояния в начало компонента TableCellMenu (рядом с validationErrors и localState)
+  const [newEntry, setNewEntry] = useState({ duration: "", comment: "" });
+
+  // Функция для обработки изменений поля "Длительность" новой записи
+  const handleAddNewDuration = (e) => {
+    const value = e.target.value;
+    setNewEntry((prev) => ({ ...prev, duration: value }));
+    const error = validateDurationValue(value);
+    if (error) {
+      setValidationErrors((prev) => ({ ...prev, add_new: error }));
+    } else {
+      setValidationErrors((prev) => ({ ...prev, add_new: "" }));
+    }
+  };
+
+  // Функция для обработки изменений поля "Комментарий" новой записи
+  const handleAddNewComment = (e) => {
+    const value = e.target.value;
+    setNewEntry((prev) => ({ ...prev, comment: value }));
+  };
+
+  // Функция сабмита новой записи с валидацией
+  const handleNewSumbmitItem = () => {
+    const error = validateDurationValue(newEntry.duration);
+    if (error) {
+      setValidationErrors((prev) => ({ ...prev, add_new: error }));
+      return;
+    }
+    const duration = normalizeDuration(newEntry.duration);
+
+    const dayOfWeek = daysMap.findIndex((k) => k === menuState.field);
+    const dateCell = getDateOfWeekday(dayOfWeek);
+
+    setData({
+      dateCell,
+      setState,
+      setAlert,
+      token,
+      issueId: menuState.issueId,
+      duration,
+      comment: newEntry.comment,
+    });
+    // Очистка полей новой записи после успешного сабмита
+    setNewEntry({ duration: "", comment: "" });
+    onClose();
   };
 
   const handleConfirmDeleteAll = () => {
@@ -154,6 +207,9 @@ function TableCellMenu({
             <Typography variant="h5">
               {menuState.issue} {menuState.issueId}
             </Typography>
+            <Typography variant="h6" my={1}>
+              Редактировать отметки времени
+            </Typography>
           </Grid>
           {(localState || []).map((item) => (
             <Fragment key={item.id}>
@@ -215,6 +271,58 @@ function TableCellMenu({
             </Fragment>
           ))}
         </Grid>
+        <Divider />
+
+        <Grid container spacing={2} sx={{ padding: 2.5, width: 440 }}>
+          <Grid item size={12}>
+            <Typography variant="h6">Добавить отметку времени</Typography>
+          </Grid>
+          <Grid item size={3}>
+            <TextField
+              required
+              label="Длительность"
+              name="duration"
+              value={newEntry.duration}
+              onChange={handleAddNewDuration}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  handleNewSumbmitItem();
+                }
+              }}
+            />
+          </Grid>
+          <Grid item size={6}>
+            <TextField
+              name="comment"
+              label="Комментарий"
+              value={newEntry.comment}
+              onChange={handleAddNewComment}
+              aria-label="minimum height"
+              minRows={2}
+              placeholder="Комментарий"
+              style={{ width: "100%" }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  handleNewSumbmitItem();
+                }
+              }}
+            />
+          </Grid>
+          <Grid item size={1.5}>
+            <IconButton
+              onClick={handleNewSumbmitItem}
+              disabled={!!validationErrors["add_new"]}
+            >
+              <CheckIcon color="success" />
+            </IconButton>
+          </Grid>
+          <Grid item size={12}>
+            <FormHelperText error>
+              {validationErrors["add_new"] || ""}
+            </FormHelperText>
+          </Grid>
+        </Grid>
+
         <Divider sx={{ mb: 2 }} />
         <MenuItem onClick={() => setOpenConfirm(true)} sx={{ mb: 2 }}>
           <ListItemIcon>
