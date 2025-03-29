@@ -205,8 +205,6 @@ const TaskTable = ({ data, userId, setState, token, setData, deleteData }) => {
       const dayOfWeek = daysMap.findIndex((k) => k === field);
       const dateCell = getDateOfWeekday(dayOfWeek);
 
-      console.log("dayOfWeek", dayOfWeek, "dateCell", dateCell);
-
       setData({
         dateCell,
         setState,

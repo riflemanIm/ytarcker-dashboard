@@ -61,9 +61,11 @@ export const setData = async ({
       res = await axios.patch(`${apiUrl}/api/edit_time`, payload);
     } else {
       // Добавляем новую запись, формируем время из dateCell
+
       const start = dayjs(dateCell)
         .add(8, "hours")
         .format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
+
       const payload = {
         token,
         issueId,

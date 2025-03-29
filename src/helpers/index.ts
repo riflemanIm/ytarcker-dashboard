@@ -9,10 +9,10 @@ dayjs.extend(utc); // ✅ расширяем
 dayjs.locale("ru");
 
 export const isValidDuration = (duration: string): boolean => {
-  // Updated regex to support years (Y), weeks (W), days (D) and time (hours, minutes, seconds)
+  // Обновлённое регулярное выражение для ISO8601 длительности без поддержки лет и секунд
   console.log("duration", duration);
   const iso8601DurationRegex =
-    /^P(?=\d|T\d)(?:(\d+Y)?(\d+W)?(\d+D)?)(?:T(?=\d+[HMS])(?:(\d+H)?(\d+M)?(\d+S)?))?$/i;
+    /^P(?=\d|T\d)(?:(\d+W)?(\d+D)?)(?:T(?=\d+[HM])(?:(\d+H)?(\d+M)?))?$/i;
   return iso8601DurationRegex.test(duration);
 };
 
