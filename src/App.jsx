@@ -53,7 +53,7 @@ export default function YandexTracker() {
   // При первом рендере
 
   useEffect(() => {
-    if (login != null && token != null) {
+    if ((login != null || state.userId) && token != null) {
       setState((prev) => ({ ...prev, userId: null, data: null }));
       getData({
         userId: state.fetchByLogin ? null : state.userId,
@@ -64,7 +64,7 @@ export default function YandexTracker() {
         login: state.fetchByLogin ? login : undefined,
       });
     }
-  }, [login, weekOffset, state.fetchByLogin]);
+  }, [login, weekOffset, state.fetchByLogin, state.userId]);
 
   const handleSelectedUsersChange = (userId) => {
     setState((prev) => ({ ...prev, userId, data: null }));
