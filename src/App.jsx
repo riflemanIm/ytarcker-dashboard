@@ -19,7 +19,7 @@ import isEmpty, { aggregateDurations, getWeekRange } from "./helpers";
 export default function YandexTracker() {
   const [auth, setAuth] = useState({
     token: localStorage.getItem("yandex_token"),
-    login: null,
+    login: localStorage.getItem("yandex_login"),
   });
   const { token, login } = auth;
   // const [token, setAuth] = useState("y0__xD48tOlqveAAhjtmjYg4MvKyxK1MAkqmCzdKHCxTza9dSbqrC4bvA");
