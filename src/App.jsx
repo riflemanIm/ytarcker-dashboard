@@ -65,7 +65,7 @@ export default function YandexTracker() {
         login: state.fetchByLogin ? login : undefined,
       });
     }
-  }, [login, weekOffset, state.fetchByLogin, state.userId]);
+  }, [login, weekOffset, state.fetchByLogin]);
 
   const handleSelectedUsersChange = (userId) => {
     setState((prev) => ({ ...prev, userId, data: null }));
