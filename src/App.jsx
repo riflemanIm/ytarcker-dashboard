@@ -53,6 +53,7 @@ export default function YandexTracker() {
   // При первом рендере
 
   useEffect(() => {
+    console.log("login", login, "state.userId", state.userId, "token", token);
     if ((login != null || state.userId) && token != null) {
       setState((prev) => ({ ...prev, userId: null, data: null }));
       getData({
@@ -139,7 +140,7 @@ export default function YandexTracker() {
                 </IconButton>
               </Grid>
               <Grid
-                size={0.5}
+                size={0.8}
                 alignSelf="center"
                 justifySelf="center"
                 textAlign="center"
@@ -160,7 +161,8 @@ export default function YandexTracker() {
                         color="primary"
                       />
                     }
-                    label=""
+                    labelPlacement="bottom"
+                    label={state.fetchByLogin ? login : ""}
                   />
                 </Tooltip>
               </Grid>
