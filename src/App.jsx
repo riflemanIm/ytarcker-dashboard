@@ -16,6 +16,9 @@ import TaskTable from "./components/TaskTable";
 import WeekNavigator from "./components/WeekNavigator";
 import isEmpty, { aggregateDurations, getWeekRange } from "./helpers";
 
+const ADMIN_LOGINS = ["a.smirnov", "o.lambin"];
+const isSuperLogin = (login) => ADMIN_LOGINS.includes(login);
+
 export default function YandexTracker() {
   const [auth, setAuth] = useState({
     token: localStorage.getItem("yandex_token"),
@@ -60,8 +63,8 @@ export default function YandexTracker() {
         userId: state.fetchByLogin ? null : state.userId,
         setState,
         token,
-        start,
-        end,
+        start: start.format("YYYY-MM-DD"),
+        end: end.format("YYYY-MM-DD"),
         login: state.fetchByLogin ? login : undefined,
       });
     }
@@ -73,8 +76,8 @@ export default function YandexTracker() {
       userId: state.fetchByLogin ? null : userId,
       setState,
       token,
-      start,
-      end,
+      start: start.format("YYYY-MM-DD"),
+      end: end.format("YYYY-MM-DD"),
       login: state.fetchByLogin ? login : undefined,
     });
   };
@@ -86,8 +89,8 @@ export default function YandexTracker() {
       userId: state.fetchByLogin ? null : state.userId,
       setState,
       token,
-      start,
-      end,
+      start: start.format("YYYY-MM-DD"),
+      end: end.format("YYYY-MM-DD"),
       login: state.fetchByLogin ? login : undefined,
     });
   };
@@ -135,50 +138,69 @@ export default function YandexTracker() {
                 textAlign="center"
               >
                 {/* IconButton для обновления состояния */}
-                <IconButton onClick={handleRefresh} color="primary">
+                <IconButton
+                  onClick={handleRefresh}
+                  color="primary"
+                  sx={(theme) => ({
+                    borderRadius: "50%",
+                    p: 3,
+
+                    color: theme.palette.background.default,
+                    background: theme.palette.primary.light,
+
+                    "&:hover": {
+                      color: theme.palette.background.default,
+                      background: theme.palette.primary.main,
+                    },
+                  })}
+                >
                   <RefreshIcon />
                 </IconButton>
               </Grid>
-              <Grid
-                size={0.8}
-                alignSelf="center"
-                justifySelf="center"
-                textAlign="center"
-              >
-                <Tooltip
-                  title={
-                    state.fetchByLogin
-                      ? "Переключится на выборку по сотруднику"
-                      : "Переключится на выборку по своему логину"
-                  }
-                  placement="top"
-                >
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={!state.fetchByLogin}
-                        onChange={toggleFetchMode}
-                        color="primary"
+              {isSuperLogin(login) && (
+                <>
+                  <Grid
+                    size={0.8}
+                    alignSelf="center"
+                    justifySelf="center"
+                    textAlign="center"
+                  >
+                    <Tooltip
+                      title={
+                        state.fetchByLogin
+                          ? "Переключится на выборку по сотруднику"
+                          : "Переключится на выборку по своему логину"
+                      }
+                      placement="top"
+                    >
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            checked={!state.fetchByLogin}
+                            onChange={toggleFetchMode}
+                            color="primary"
+                          />
+                        }
+                        labelPlacement="bottom"
+                        label={state.fetchByLogin ? login : ""}
                       />
-                    }
-                    labelPlacement="bottom"
-                    label={state.fetchByLogin ? login : ""}
-                  />
-                </Tooltip>
-              </Grid>
-              <Grid
-                size="grow"
-                alignSelf="center"
-                justifySelf="center"
-                textAlign="center"
-              >
-                <AutocompleteUsers
-                  userId={state.userId}
-                  handleSelectedUsersChange={handleSelectedUsersChange}
-                  users={state.users}
-                  disabled={!state.loaded || state.fetchByLogin}
-                />
-              </Grid>
+                    </Tooltip>
+                  </Grid>
+                  <Grid
+                    size="grow"
+                    alignSelf="center"
+                    justifySelf="center"
+                    textAlign="center"
+                  >
+                    <AutocompleteUsers
+                      userId={state.userId}
+                      handleSelectedUsersChange={handleSelectedUsersChange}
+                      users={state.users}
+                      disabled={!state.loaded || state.fetchByLogin}
+                    />
+                  </Grid>
+                </>
+              )}
             </>
           )}
           <Grid
@@ -210,6 +232,8 @@ export default function YandexTracker() {
                   token={token}
                   setData={setData}
                   deleteData={deleteData}
+                  start={start}
+                  end={end}
                 />
               </>
             )}

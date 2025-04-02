@@ -62,9 +62,10 @@ export const setData = async ({
     } else {
       // Добавляем новую запись, формируем время из dateCell
 
-      const start = dayjs(dateCell)
-        .add(8, "hours")
-        .format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
+      const start =
+        dateCell != null
+          ? dateCell.add(8, "hours").format("YYYY-MM-DDTHH:mm:ss.SSSZZ")
+          : dayjs().add(8, "hours").format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
 
       const payload = {
         token,

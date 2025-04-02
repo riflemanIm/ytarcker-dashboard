@@ -5,7 +5,9 @@ import { useCallback, useMemo, useState } from "react";
 import {
   dayOfWeekNameByDate,
   daysMap,
+  dayToNumber,
   displayDuration,
+  getDateOfCurrentWeekday,
   getDateOfWeekday,
   isValidDuration,
   normalizeDuration,
@@ -96,7 +98,7 @@ const transformData = (data) => {
   });
 };
 
-const TaskTable = ({ data, userId, setState, token, setData, deleteData }) => {
+const TaskTable = ({ data, start, setState, token, setData, deleteData }) => {
   console.log("data", data);
 
   const [alert, setAlert] = useState({
@@ -120,6 +122,7 @@ const TaskTable = ({ data, userId, setState, token, setData, deleteData }) => {
     field: null,
     issueId: null,
     durations: null,
+    dateField: null,
   });
 
   const handleMenuOpen = (event, params) => {
@@ -135,6 +138,7 @@ const TaskTable = ({ data, userId, setState, token, setData, deleteData }) => {
           dayOfWeekNameByDate(row.start) === params.field &&
           row.key === params.id
       ).durations,
+      dateField: getDateOfWeekday(start, dayToNumber(params.field)),
     });
   };
 
@@ -145,6 +149,7 @@ const TaskTable = ({ data, userId, setState, token, setData, deleteData }) => {
       field: null,
       issueId: null,
       durations: null,
+      dateField: null,
     });
 
   const calculateTotalRow = useCallback((rows) => {
@@ -202,8 +207,7 @@ const TaskTable = ({ data, userId, setState, token, setData, deleteData }) => {
     }
 
     try {
-      const dayOfWeek = daysMap.findIndex((k) => k === field);
-      const dateCell = getDateOfWeekday(dayOfWeek);
+      const dateCell = getDateOfWeekday(start, dayToNumber(field));
 
       setData({
         dateCell,
@@ -241,17 +245,9 @@ const TaskTable = ({ data, userId, setState, token, setData, deleteData }) => {
         ),
     },
     { field: "issueId", headerName: "Issue Id", flex: 1.5 },
-    ...[
-      "monday",
-      "tuesday",
-      "wednesday",
-      "thursday",
-      "friday",
-      "saturday",
-      "sunday",
-    ].map((day) => ({
+    ...daysMap.map((day) => ({
       field: day,
-      headerName: headerWeekName[day],
+      headerName: `${headerWeekName[day]} ${getDateOfWeekday(start, dayToNumber(day)).format("DD.MM")}`,
       flex: 1,
       editable: true,
       sortable: false,

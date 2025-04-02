@@ -74,12 +74,12 @@ export const displayDuration = (duration: string): string => {
 
   return parts.join(" ");
 };
-export const dayOfWeekNameByDate = (data: string): string => {
+export const dayOfWeekNameByDate = (data: dayjs.Dayjs): string => {
   const dayOfWeek = dayjs.utc(data).isoWeekday();
   const dayOfWeekName = daysMap[dayOfWeek - 1];
   return dayOfWeekName;
 };
-interface GetDateOfWeekday {
+interface getDateOfCurrentWeekday {
   (isoDay: number): dayjs.Dayjs;
 }
 
@@ -94,10 +94,19 @@ export const getDateOfDayName = (dayName: string): dayjs.Dayjs => {
     .add(isoDay - 1, "day"); // локально — ОК
 };
 
-export const getDateOfWeekday: GetDateOfWeekday = (
+export const getDateOfCurrentWeekday: getDateOfCurrentWeekday = (
   isoDay: number
 ): dayjs.Dayjs => {
   return dayjs().startOf("isoWeek").add(isoDay, "day"); // локально — ОК
+};
+
+export const getDateOfWeekday: (start: Date, isoDay: number) => dayjs.Dayjs = (
+  start: Date, // monday
+  isoDay: number
+): dayjs.Dayjs => {
+  return dayjs(start)
+    .startOf("isoWeek")
+    .add(isoDay - 1, "day");
 };
 
 /**
@@ -105,8 +114,8 @@ export const getDateOfWeekday: GetDateOfWeekday = (
  * @param historyNumWeek - Количество недель назад (null - текущая неделя)
  */
 export function getWeekRange(historyNumWeek: number | null = null): {
-  start: string;
-  end: string;
+  start: dayjs.Dayjs;
+  end: dayjs.Dayjs;
 } {
   let date = dayjs(); // локально — ОК, для текущей даты пользователя
 
@@ -114,8 +123,8 @@ export function getWeekRange(historyNumWeek: number | null = null): {
     date = date.subtract(historyNumWeek, "week");
   }
 
-  const start = date.startOf("isoWeek").format("YYYY-MM-DD");
-  const end = date.endOf("isoWeek").format("YYYY-MM-DD");
+  const start = date.startOf("isoWeek");
+  const end = date.endOf("isoWeek");
 
   return { start, end };
 }
@@ -160,7 +169,7 @@ export function aggregateDurations<
   const grouped = data.reduce(
     (acc, item) => {
       //const dateKey = dayjs.utc(item.start).format("YYYY-MM-DD"); // <-- заменено
-      const dayOfWeekName = dayOfWeekNameByDate(item.start);
+      const dayOfWeekName = dayOfWeekNameByDate(dayjs(item.start));
       const groupKey = `${item.issue.key}_${item.updatedBy.id}_${dayOfWeekName}`;
       const groupItem = {
         id: item.id,

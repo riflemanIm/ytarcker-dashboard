@@ -1,10 +1,12 @@
 import React from "react";
-import { Button, Stack, Typography } from "@mui/material";
+import { IconButton, Stack, Tooltip, Typography } from "@mui/material";
+import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
+import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
 import dayjs from "dayjs";
 
 interface WeekNavigatorProps {
-  start: string;
-  end: string;
+  start: dayjs.Dayjs;
+  end: dayjs.Dayjs;
   onPrevious: () => void;
   onNext: () => void;
   disableNext: boolean;
@@ -19,15 +21,54 @@ const WeekNavigator: React.FC<WeekNavigatorProps> = ({
 }) => {
   return (
     <Stack direction="row" spacing={2} alignSelf="center">
-      <Button variant="contained" onClick={onPrevious}>
-        Пред. неделя
-      </Button>
+      <Tooltip title="Пред. неделя">
+        <span>
+          <IconButton
+            onClick={onPrevious}
+            sx={(theme) => ({
+              borderRadius: "50%",
+              p: 3,
+
+              color: theme.palette.background.default,
+              background: theme.palette.primary.light,
+
+              "&:hover": {
+                color: theme.palette.background.default,
+                background: theme.palette.primary.main,
+              },
+            })}
+          >
+            <ArrowBackIosNewIcon />
+          </IconButton>
+        </span>
+      </Tooltip>
       <Typography variant="h5" alignSelf="center">
-        {dayjs(start).format("DD.MM.YYYY")} - {dayjs(end).format("DD.MM.YYYY")}
+        {start.format("DD.MM.YYYY")} - {end.format("DD.MM.YYYY")}
       </Typography>
-      <Button variant="contained" onClick={onNext} disabled={disableNext}>
-        След. неделя
-      </Button>
+      {!disableNext && (
+        <Tooltip title="След. неделя">
+          <span>
+            <IconButton
+              onClick={onNext}
+              disabled={disableNext}
+              sx={(theme) => ({
+                borderRadius: "50%",
+                p: 3,
+
+                color: theme.palette.background.default,
+                background: theme.palette.primary.light,
+
+                "&:hover": {
+                  color: theme.palette.background.default,
+                  background: theme.palette.primary.main,
+                },
+              })}
+            >
+              <ArrowForwardIosIcon />
+            </IconButton>
+          </span>
+        </Tooltip>
+      )}
     </Stack>
   );
 };

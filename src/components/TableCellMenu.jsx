@@ -1,10 +1,4 @@
-import {
-  daysMap,
-  displayDuration,
-  getDateOfWeekday,
-  isValidDuration,
-  normalizeDuration,
-} from "@/helpers";
+import { displayDuration, isValidDuration, normalizeDuration } from "@/helpers";
 import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
 import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
@@ -106,11 +100,8 @@ function TableCellMenu({
     }
     const duration = normalizeDuration(newEntry.duration);
 
-    const dayOfWeek = daysMap.findIndex((k) => k === menuState.field);
-    const dateCell = getDateOfWeekday(dayOfWeek);
-
     setData({
-      dateCell,
+      dateCell: menuState.dateField,
       setState,
       setAlert,
       token,
