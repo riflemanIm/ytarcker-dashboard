@@ -231,7 +231,7 @@ function TableCellMenu({
           </Grid>
 
           <Grid item size={12}>
-            <Typography variant="h6" my={1}>
+            <Typography variant="h6" color="info">
               Редактировать отметки времени
             </Typography>
           </Grid>
@@ -300,7 +300,9 @@ function TableCellMenu({
             <Divider />
             <Grid container spacing={2} sx={{ padding: 2.5, width: 440 }}>
               <Grid item size={12}>
-                <Typography variant="h6">Добавить отметку времени</Typography>
+                <Typography variant="h6" color="info">
+                  Добавить отметку времени
+                </Typography>
               </Grid>
               <Grid item size={3}>
                 <TextField
