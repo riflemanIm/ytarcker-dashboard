@@ -1,6 +1,42 @@
 import express from "express";
 import axios from "axios";
 import cors from "cors";
+// Функция для отнимания недель от даты
+function subtractWeeks(dateStr, weeks) {
+  const date = new Date(dateStr);
+  date.setDate(date.getDate() - weeks * 7);
+  const year = date.getFullYear();
+  const month = ("0" + (date.getMonth() + 1)).slice(-2);
+  const day = ("0" + date.getDate()).slice(-2);
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Фильтрует данные по диапазону дат.
+ * @param {string} start - входящая дата
+ * @param {number} startTimestamp - Начало диапазона (timestamp)
+ * @param {number} endTimestamp - Конец диапазона (timestamp)
+ * @returns {boolean} - true если входящая дата попадает в диапазон
+ */
+function filterDataByDateRange(start, startTimestamp, endTimestamp) {
+  const itemTimestamp = new Date(start).getTime();
+  return itemTimestamp >= startTimestamp && itemTimestamp <= endTimestamp;
+}
+/**
+ * Возвращает дату конца текущей недели (воскресенье) в формате YYYY-MM-DD.
+ */
+function getEndOfCurrentWeek() {
+  const now = new Date();
+  let day = now.getDay(); // 0 (воскресенье) - 6 (суббота)
+  // Если сегодня не воскресенье, вычисляем оставшиеся дни до воскресенья.
+  const diffToSunday = day === 0 ? 0 : 7 - day;
+  const sunday = new Date(now);
+  sunday.setDate(now.getDate() + diffToSunday);
+  const year = sunday.getFullYear();
+  const month = ("0" + (sunday.getMonth() + 1)).slice(-2);
+  const date = ("0" + sunday.getDate()).slice(-2);
+  return `${year}-${month}-${date}`;
+}
 
 const headers = (token) => ({
   headers: {
@@ -16,6 +52,12 @@ app.use(express.json());
 app.get("/api/issues", async (req, res) => {
   let { token, startDate, endDate, userId, login } = req.query;
   console.log("token", token);
+  endDate = `${endDate}T23:59`;
+  // Преобразование startDate и endDate из строки в дату
+  const startDateObj = new Date(startDate);
+  const endDateObj = new Date(endDate);
+  const startTimestamp = startDateObj.getTime();
+  const endTimestamp = endDateObj.getTime();
 
   try {
     if (token) {
@@ -29,14 +71,15 @@ app.get("/api/issues", async (req, res) => {
           ? login
           : null;
 
-      // Форматирование даты
-      endDate = `${endDate}T23:59`;
+      // Форматирование диапазона запроса (строки остаются строками)
+      const from = subtractWeeks(startDate, 1);
+      const to = `${getEndOfCurrentWeek()}T23:59`;
 
       // Формируем тело запроса
       let requestBody = {
         createdAt: {
-          from: startDate,
-          to: endDate,
+          from,
+          to,
         },
       };
       // Если логин передан, добавляем его в запрос
@@ -55,27 +98,41 @@ app.get("/api/issues", async (req, res) => {
       }));
       users = [...new Map(users.map((item) => [item.id, item])).values()];
 
-      // Если login не передан, но указан userId, фильтруем данные по userId
+      // Фильтрация данных с использованием уже вычисленных timestamp'ов
       let data = [];
       if (!login && userId) {
         data = response.data.filter(
-          (it) => parseInt(it.updatedBy.id) === Number(userId)
+          (it) =>
+            parseInt(it.updatedBy.id) === Number(userId) &&
+            filterDataByDateRange(it.start, startTimestamp, endTimestamp)
         );
       } else {
-        data = response.data;
+        //     data = response.data;
+        data = response.data.filter((it) => {
+          // console.log(
+          //   "startDate",
+          //   startDate,
+          //   "it.start",
+          //   it.start,
+          //   "endDate",
+          //   endDate
+          // );
+          return filterDataByDateRange(it.start, startTimestamp, endTimestamp);
+        });
       }
 
-      console.log(
-        response.data[0],
-        "startDate",
-        startDate,
-        "endDate",
-        endDate,
-        "userId",
-        userId,
-        "login",
-        login
-      );
+      // console.log(
+      //   "from",
+      //   from,
+      //   "to",
+      //   to,
+
+      //   data,
+      //   "userId",
+      //   userId,
+      //   "login",
+      //   login
+      // );
       res.json({ data, users });
     } else {
       res.status(400).json({ error: "token not pass" });
@@ -85,6 +142,7 @@ app.get("/api/issues", async (req, res) => {
     res.status(error.response?.status || 500).json({ error: error.message });
   }
 });
+
 app.post("/api/add_time", async (req, res) => {
   let { token, issueId, start, duration, comment } = req.body;
 

@@ -55,6 +55,15 @@ export const normalizeDuration = (input: string): string => {
 
   return result;
 };
+export const headerWeekName = {
+  monday: "Пн",
+  tuesday: "Вт",
+  wednesday: "Ср",
+  thursday: "Чт",
+  friday: "Пт",
+  saturday: "Сб",
+  sunday: "Вс",
+};
 export const daysMap = [
   "monday",
   "tuesday",

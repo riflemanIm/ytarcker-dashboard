@@ -7,9 +7,8 @@ import {
   daysMap,
   dayToNumber,
   displayDuration,
-  getDateOfCurrentWeekday,
   getDateOfWeekday,
-  isDateInCurrentWeek,
+  headerWeekName,
   isValidDuration,
   normalizeDuration,
   sumDurations,
@@ -37,16 +36,6 @@ const IssueDisplay = ({ display, href = null, fio = null }) => (
     <Typography variant="subtitle2">{fio}</Typography>
   </>
 );
-
-const headerWeekName = {
-  monday: "Пн",
-  tuesday: "Вт",
-  wednesday: "Ср",
-  thursday: "Чт",
-  friday: "Пт",
-  saturday: "Сб",
-  sunday: "Вс",
-};
 
 const transformData = (data) => {
   const result = {};
@@ -250,7 +239,7 @@ const TaskTable = ({ data, start, setState, token, setData, deleteData }) => {
       field: day,
       headerName: `${headerWeekName[day]} ${getDateOfWeekday(start, dayToNumber(day)).format("DD.MM")}`,
       flex: 1,
-      editable: isDateInCurrentWeek(start),
+      editable: true,
       sortable: false,
       renderCell: (params) => {
         const val = displayDuration(params.value);

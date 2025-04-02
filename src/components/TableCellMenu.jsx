@@ -1,5 +1,6 @@
 import {
   displayDuration,
+  headerWeekName,
   isDateInCurrentWeek,
   isValidDuration,
   normalizeDuration,
@@ -199,10 +200,37 @@ function TableCellMenu({
         transformOrigin={{ vertical: "top", horizontal: "left" }}
       >
         <Grid container spacing={2} sx={{ padding: 2.5, width: 440 }}>
-          <Grid item size={12}>
-            <Typography variant="h5">
+          <Grid item size={8}>
+            <Typography variant="subtitle1">
               {menuState.issue} {menuState.issueId}
             </Typography>
+          </Grid>
+          <Grid item size={4} alignSelf="center">
+            <Typography variant="subtitle2" align="right" color="success">
+              {menuState.field != null && headerWeekName[menuState.field]}{" "}
+              {menuState.dateField != null &&
+                menuState.dateField.format("DD.MM")}
+              <IconButton
+                onClick={onClose}
+                sx={(theme) => ({
+                  borderRadius: "50%",
+                  p: 2,
+                  ml: 2,
+                  color: theme.palette.background.default,
+                  background: theme.palette.primary.light,
+
+                  "&:hover": {
+                    color: theme.palette.background.default,
+                    background: theme.palette.primary.main,
+                  },
+                })}
+              >
+                <CloseIcon />
+              </IconButton>
+            </Typography>
+          </Grid>
+
+          <Grid item size={12}>
             <Typography variant="h6" my={1}>
               Редактировать отметки времени
             </Typography>
@@ -267,73 +295,66 @@ function TableCellMenu({
             </Fragment>
           ))}
         </Grid>
-        {menuState.dateField != null &&
-          isDateInCurrentWeek(menuState.dateField) && (
-            <>
-              <Divider />
-              <Grid container spacing={2} sx={{ padding: 2.5, width: 440 }}>
-                <Grid item size={12}>
-                  <Typography variant="h6">Добавить отметку времени</Typography>
-                </Grid>
-                <Grid item size={3}>
-                  <TextField
-                    required
-                    label="Длительность"
-                    name="duration"
-                    value={newEntry.duration}
-                    onChange={handleAddNewDuration}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        handleNewSumbmitItem();
-                      }
-                    }}
-                  />
-                </Grid>
-                <Grid item size={6}>
-                  <TextField
-                    name="comment"
-                    label="Комментарий"
-                    value={newEntry.comment}
-                    onChange={handleAddNewComment}
-                    aria-label="minimum height"
-                    minRows={2}
-                    placeholder="Комментарий"
-                    style={{ width: "100%" }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        handleNewSumbmitItem();
-                      }
-                    }}
-                  />
-                </Grid>
-                <Grid item size={1.5}>
-                  <IconButton
-                    onClick={handleNewSumbmitItem}
-                    disabled={!!validationErrors["add_new"]}
-                  >
-                    <CheckIcon color="success" />
-                  </IconButton>
-                </Grid>
-                <Grid item size={12}>
-                  <FormHelperText error>
-                    {validationErrors["add_new"] || ""}
-                  </FormHelperText>
-                </Grid>
+        {menuState.dateField != null && (
+          <>
+            <Divider />
+            <Grid container spacing={2} sx={{ padding: 2.5, width: 440 }}>
+              <Grid item size={12}>
+                <Typography variant="h6">Добавить отметку времени</Typography>
               </Grid>
-            </>
-          )}
+              <Grid item size={3}>
+                <TextField
+                  required
+                  label="Длительность"
+                  name="duration"
+                  value={newEntry.duration}
+                  onChange={handleAddNewDuration}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleNewSumbmitItem();
+                    }
+                  }}
+                />
+              </Grid>
+              <Grid item size={6}>
+                <TextField
+                  name="comment"
+                  label="Комментарий"
+                  value={newEntry.comment}
+                  onChange={handleAddNewComment}
+                  aria-label="minimum height"
+                  minRows={2}
+                  placeholder="Комментарий"
+                  style={{ width: "100%" }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleNewSumbmitItem();
+                    }
+                  }}
+                />
+              </Grid>
+              <Grid item size={1.5}>
+                <IconButton
+                  onClick={handleNewSumbmitItem}
+                  disabled={!!validationErrors["add_new"]}
+                >
+                  <CheckIcon color="success" />
+                </IconButton>
+              </Grid>
+              <Grid item size={12}>
+                <FormHelperText error>
+                  {validationErrors["add_new"] || ""}
+                </FormHelperText>
+              </Grid>
+            </Grid>
+          </>
+        )}
         <Divider sx={{ mb: 2 }} />
         <MenuItem onClick={() => setOpenConfirm(true)} sx={{ mb: 2 }}>
           <ListItemIcon>
             <DeleteForeverIcon color="error" />
           </ListItemIcon>
           <ListItemText color="error">Удалить все</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={onClose}>
-          <ListItemIcon>
-            <CloseIcon color="primary" />
-          </ListItemIcon>
-          <ListItemText sx={{ color: "primary" }}>Закрыть</ListItemText>
         </MenuItem>
       </Menu>
       <Dialog open={openConfirm} onClose={handleCancelDeleteAll}>
