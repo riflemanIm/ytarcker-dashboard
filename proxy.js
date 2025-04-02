@@ -91,13 +91,6 @@ app.get("/api/issues", async (req, res) => {
         "https://api.tracker.yandex.net/v2/worklog/_search?perPage=1000";
       const response = await axios.post(url, requestBody, headers(token));
 
-      // Формируем список пользователей без повторов
-      let users = response.data.map((it) => ({
-        id: parseInt(it.updatedBy.id),
-        name: it.updatedBy.display,
-      }));
-      users = [...new Map(users.map((item) => [item.id, item])).values()];
-
       // Фильтрация данных с использованием уже вычисленных timestamp'ов
       let data = [];
       if (!login && userId) {
@@ -120,6 +113,12 @@ app.get("/api/issues", async (req, res) => {
           return filterDataByDateRange(it.start, startTimestamp, endTimestamp);
         });
       }
+      // Формируем список пользователей без повторов
+      let users = data.map((it) => ({
+        id: parseInt(it.updatedBy.id),
+        name: it.updatedBy.display,
+      }));
+      users = [...new Map(users.map((item) => [item.id, item])).values()];
 
       // console.log(
       //   "from",

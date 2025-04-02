@@ -1,7 +1,6 @@
 import {
   displayDuration,
   headerWeekName,
-  isDateInCurrentWeek,
   isValidDuration,
   normalizeDuration,
 } from "@/helpers";
