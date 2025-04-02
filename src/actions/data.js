@@ -64,8 +64,8 @@ export const setData = async ({
 
       const start =
         dateCell != null
-          ? dateCell.add(8, "hours").format("YYYY-MM-DDTHH:mm:ss.SSSZZ")
-          : dayjs().add(8, "hours").format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
+          ? dateCell.add(18, "hours").format("YYYY-MM-DDTHH:mm:ss.SSSZZ")
+          : dayjs().add(18, "hours").format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
 
       const payload = {
         token,
