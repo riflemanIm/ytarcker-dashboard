@@ -72,7 +72,7 @@ app.get("/api/issues", async (req, res) => {
           : null;
 
       // Форматирование диапазона запроса (строки остаются строками)
-      const from = subtractWeeks(startDate, 1);
+      const from = subtractWeeks(startDate, 3);
       const to = `${getEndOfCurrentWeek()}T23:59`;
 
       // Формируем тело запроса
@@ -86,7 +86,7 @@ app.get("/api/issues", async (req, res) => {
       if (login) {
         requestBody.createdBy = login;
       }
-      console.log(requestBody);
+
       const url =
         "https://api.tracker.yandex.net/v2/worklog/_search?perPage=1000";
       const response = await axios.post(url, requestBody, headers(token));
