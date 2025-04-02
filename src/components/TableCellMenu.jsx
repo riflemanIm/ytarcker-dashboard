@@ -1,4 +1,9 @@
-import { displayDuration, isValidDuration, normalizeDuration } from "@/helpers";
+import {
+  displayDuration,
+  isDateInCurrentWeek,
+  isValidDuration,
+  normalizeDuration,
+} from "@/helpers";
 import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
 import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
@@ -262,58 +267,61 @@ function TableCellMenu({
             </Fragment>
           ))}
         </Grid>
-        <Divider />
-
-        <Grid container spacing={2} sx={{ padding: 2.5, width: 440 }}>
-          <Grid item size={12}>
-            <Typography variant="h6">Добавить отметку времени</Typography>
-          </Grid>
-          <Grid item size={3}>
-            <TextField
-              required
-              label="Длительность"
-              name="duration"
-              value={newEntry.duration}
-              onChange={handleAddNewDuration}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  handleNewSumbmitItem();
-                }
-              }}
-            />
-          </Grid>
-          <Grid item size={6}>
-            <TextField
-              name="comment"
-              label="Комментарий"
-              value={newEntry.comment}
-              onChange={handleAddNewComment}
-              aria-label="minimum height"
-              minRows={2}
-              placeholder="Комментарий"
-              style={{ width: "100%" }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  handleNewSumbmitItem();
-                }
-              }}
-            />
-          </Grid>
-          <Grid item size={1.5}>
-            <IconButton
-              onClick={handleNewSumbmitItem}
-              disabled={!!validationErrors["add_new"]}
-            >
-              <CheckIcon color="success" />
-            </IconButton>
-          </Grid>
-          <Grid item size={12}>
-            <FormHelperText error>
-              {validationErrors["add_new"] || ""}
-            </FormHelperText>
-          </Grid>
-        </Grid>
-
+        {menuState.dateField != null &&
+          isDateInCurrentWeek(menuState.dateField) && (
+            <>
+              <Divider />
+              <Grid container spacing={2} sx={{ padding: 2.5, width: 440 }}>
+                <Grid item size={12}>
+                  <Typography variant="h6">Добавить отметку времени</Typography>
+                </Grid>
+                <Grid item size={3}>
+                  <TextField
+                    required
+                    label="Длительность"
+                    name="duration"
+                    value={newEntry.duration}
+                    onChange={handleAddNewDuration}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleNewSumbmitItem();
+                      }
+                    }}
+                  />
+                </Grid>
+                <Grid item size={6}>
+                  <TextField
+                    name="comment"
+                    label="Комментарий"
+                    value={newEntry.comment}
+                    onChange={handleAddNewComment}
+                    aria-label="minimum height"
+                    minRows={2}
+                    placeholder="Комментарий"
+                    style={{ width: "100%" }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleNewSumbmitItem();
+                      }
+                    }}
+                  />
+                </Grid>
+                <Grid item size={1.5}>
+                  <IconButton
+                    onClick={handleNewSumbmitItem}
+                    disabled={!!validationErrors["add_new"]}
+                  >
+                    <CheckIcon color="success" />
+                  </IconButton>
+                </Grid>
+                <Grid item size={12}>
+                  <FormHelperText error>
+                    {validationErrors["add_new"] || ""}
+                  </FormHelperText>
+                </Grid>
+              </Grid>
+            </>
+          )}
         <Divider sx={{ mb: 2 }} />
         <MenuItem onClick={() => setOpenConfirm(true)} sx={{ mb: 2 }}>
           <ListItemIcon>

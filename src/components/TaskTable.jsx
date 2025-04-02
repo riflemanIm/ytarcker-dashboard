@@ -9,6 +9,7 @@ import {
   displayDuration,
   getDateOfCurrentWeekday,
   getDateOfWeekday,
+  isDateInCurrentWeek,
   isValidDuration,
   normalizeDuration,
   sumDurations,
@@ -249,7 +250,7 @@ const TaskTable = ({ data, start, setState, token, setData, deleteData }) => {
       field: day,
       headerName: `${headerWeekName[day]} ${getDateOfWeekday(start, dayToNumber(day)).format("DD.MM")}`,
       flex: 1,
-      editable: true,
+      editable: isDateInCurrentWeek(start),
       sortable: false,
       renderCell: (params) => {
         const val = displayDuration(params.value);

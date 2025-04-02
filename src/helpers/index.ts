@@ -2,12 +2,21 @@ import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
 import isoWeek from "dayjs/plugin/isoWeek";
 import utc from "dayjs/plugin/utc"; // ✅ добавляем utc
+import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
+import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
 
 dayjs.extend(isoWeek);
 dayjs.extend(duration);
 dayjs.extend(utc); // ✅ расширяем
+dayjs.extend(isSameOrAfter);
+dayjs.extend(isSameOrBefore);
 dayjs.locale("ru");
 
+export function isDateInCurrentWeek(date: dayjs.Dayjs): boolean {
+  const weekStart = dayjs().startOf("isoWeek");
+  const weekEnd = dayjs().endOf("isoWeek");
+  return date.isSameOrAfter(weekStart) && date.isSameOrBefore(weekEnd);
+}
 export const isValidDuration = (duration: string): boolean => {
   // Обновлённое регулярное выражение для ISO8601 длительности без поддержки лет и секунд
   console.log("duration", duration);
