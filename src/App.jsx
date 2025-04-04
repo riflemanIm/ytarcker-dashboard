@@ -16,12 +16,7 @@ import TaskTable from "./components/TaskTable";
 import WeekNavigator from "./components/WeekNavigator";
 import isEmpty, { aggregateDurations, getWeekRange } from "./helpers";
 
-const ADMIN_LOGINS = [
-  "l.musaeva@rtk-healthlab.ru",
-  "s.ermakov",
-  "a.smirnov",
-  "o.lambin",
-];
+const ADMIN_LOGINS = ["l.musaeva", "s.ermakov", "a.smirnov", "o.lambin"];
 const isSuperLogin = (login) => ADMIN_LOGINS.includes(login);
 
 export default function YandexTracker() {
