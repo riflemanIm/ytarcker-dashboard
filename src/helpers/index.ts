@@ -192,12 +192,11 @@ export function aggregateDurations<
       const groupItem = {
         id: item.id,
         issue: item.issue.display,
-
         key: `${item.issue.key}_${item.updatedBy.id}`,
         issueId: item.issue.key,
         duration: item.duration,
         start: item.start,
-        href: item.self,
+        href: `https://tracker.yandex.ru/${item.issue.key}`,
         updatedBy: item.updatedBy.display,
       };
 

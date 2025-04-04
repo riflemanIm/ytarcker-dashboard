@@ -13,6 +13,7 @@ import {
   normalizeDuration,
   sumDurations,
 } from "@/helpers";
+import AddIcon from "@mui/icons-material/Add";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import Typography from "@mui/material/Typography";
 import dayjs from "dayjs";
@@ -25,15 +26,43 @@ dayjs.extend(utc); // ✅ расширяем
 
 const IssueDisplay = ({ display, href = null, fio = null }) => (
   <>
-    <Typography variant="subtitle1">
+    <Typography
+      variant="subtitle1"
+      sx={() => ({
+        position: "relative",
+        left: -7,
+      })}
+    >
       {href && (
-        <IconButton component="a" href={href} target="_blank">
+        <IconButton
+          component="a"
+          href={href}
+          target="_blank"
+          sx={(theme) => ({
+            borderRadius: "50%",
+
+            color: theme.palette.primary.light,
+            "&:hover": {
+              color: theme.palette.primary.main,
+            },
+          })}
+        >
           <OpenInNewIcon />
         </IconButton>
       )}
       {display}
     </Typography>
-    <Typography variant="subtitle2">{fio}</Typography>
+    <Typography
+      variant="subtitle2"
+      color="text.secondary"
+      sx={() => ({
+        position: "relative",
+        top: -5,
+        left: 30,
+      })}
+    >
+      {fio}
+    </Typography>
   </>
 );
 
@@ -47,7 +76,7 @@ const transformData = (data) => {
         id: item.key,
         issue: {
           display: item.issue,
-          //href: item.href,
+          href: item.href,
           fio: item.updatedBy,
         },
         issueId: item.issueId,
@@ -234,21 +263,52 @@ const TaskTable = ({ data, start, setState, token, setData, deleteData }) => {
           params.value.display
         ),
     },
-    { field: "issueId", headerName: "Issue Id", flex: 1.5 },
+    { field: "issueId", headerName: "Key", flex: 1.5 },
     ...daysMap.map((day) => ({
       field: day,
       headerName: `${headerWeekName[day]} ${getDateOfWeekday(start, dayToNumber(day)).format("DD.MM")}`,
       flex: 1,
+
       editable: true,
       sortable: false,
       renderCell: (params) => {
         const val = displayDuration(params.value);
-        if (params.row.id === "total" || val === "") return val;
+        if (params.row.id === "total") return val;
+        if (val === "") {
+          return (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: "100%",
+                height: "100%",
+                margin: "0 auto",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.firstChild.style.opacity = 1;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.firstChild.style.opacity = 0;
+              }}
+            >
+              <IconButton
+                sx={(theme) => ({
+                  opacity: 0,
+                  transition: "opacity 0.3s",
+                  color: theme.palette.primary.main,
+                  width: "100%",
+                  height: "100%",
+                })}
+              >
+                <AddIcon />
+              </IconButton>
+            </div>
+          );
+        }
         return (
           <Chip
             label={val}
-            component="a"
-            href="#basic-chip"
             variant="outlined"
             clickable
             color="warning"
