@@ -1,4 +1,4 @@
-import dayjs from "dayjs";
+import dayjs, { Dayjs } from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import axios from "axios";
@@ -6,8 +6,18 @@ import isEmpty from "@/helpers";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
-const apiUrl = import.meta.env.VITE_APP_API_URL;
+
+const apiUrl: string = import.meta.env.VITE_APP_API_URL;
 console.log("apiUrl", apiUrl);
+
+export interface GetDataArgs {
+  userId: string | null;
+  setState: React.Dispatch<React.SetStateAction<any>>;
+  token: string | null;
+  start: string;
+  end: string;
+  login?: string;
+}
 
 export const getData = async ({
   userId,
@@ -16,9 +26,9 @@ export const getData = async ({
   start,
   end,
   login,
-}) => {
+}: GetDataArgs): Promise<void> => {
   try {
-    setState((prev) => ({ ...prev, loaded: false }));
+    setState((prev: any) => ({ ...prev, loaded: false }));
 
     const res = await axios.get(
       `${apiUrl}/api/issues?token=${token}&endDate=${end}&startDate=${start}&userId=${userId}&login=${login}`
@@ -27,12 +37,28 @@ export const getData = async ({
     if (res.status !== 200) {
       throw new Error("Api get data error");
     }
-    setState((prev) => ({ ...prev, loaded: true, ...res.data }));
-  } catch (err) {
+    setState((prev: any) => ({ ...prev, loaded: true, ...res.data }));
+  } catch (err: any) {
     console.log("ERROR ", err.message);
-    setState((prev) => ({ ...prev, loaded: true }));
+    setState((prev: any) => ({ ...prev, loaded: true }));
   }
 };
+
+export interface SetDataArgs {
+  dateCell?: Dayjs;
+  setState: React.Dispatch<React.SetStateAction<any>>;
+  setAlert: (args: {
+    open: boolean;
+    severity: string;
+    message: string;
+  }) => void;
+  token: string | null;
+  issueId: string | null;
+  duration: string;
+  comment?: string;
+  worklogId?: string | null;
+}
+
 export const setData = async ({
   dateCell,
   setState,
@@ -42,7 +68,7 @@ export const setData = async ({
   duration,
   comment = "",
   worklogId = null,
-}) => {
+}: SetDataArgs): Promise<void> => {
   if (token == null) {
     return;
   }
@@ -61,8 +87,7 @@ export const setData = async ({
       res = await axios.patch(`${apiUrl}/api/edit_time`, payload);
     } else {
       // Добавляем новую запись, формируем время из dateCell
-
-      const start =
+      const startDate =
         dateCell != null
           ? dateCell.add(18, "hours").format("YYYY-MM-DDTHH:mm:ss.SSSZZ")
           : dayjs().add(18, "hours").format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
@@ -70,7 +95,7 @@ export const setData = async ({
       const payload = {
         token,
         issueId,
-        start,
+        start: startDate,
         duration,
         comment,
       };
@@ -82,11 +107,13 @@ export const setData = async ({
     }
 
     if (!isEmpty(res.data)) {
-      setState((prev) => ({
+      setState((prev: any) => ({
         ...prev,
         loaded: true,
         data: worklogId
-          ? prev.data.map((item) => (item.id === res.data.id ? res.data : item))
+          ? prev.data.map((item: any) =>
+              item.id === res.data.id ? res.data : item
+            )
           : [...prev.data, { ...res.data }],
       }));
       setAlert({
@@ -101,12 +128,24 @@ export const setData = async ({
         worklogId ? "Ошибка изменения данных" : "Ошибка добавления данных"
       );
     }
-  } catch (err) {
+  } catch (err: any) {
     console.error("ERROR", err.message);
-    setState((prev) => ({ ...prev, loaded: true }));
+    setState((prev: any) => ({ ...prev, loaded: true }));
     setAlert({ open: true, severity: "error", message: err.message });
   }
 };
+
+export interface DeleteDataArgs {
+  token: string | null;
+  setState: React.Dispatch<React.SetStateAction<any>>;
+  setAlert: (args: {
+    open: boolean;
+    severity: string;
+    message: string;
+  }) => void;
+  issueId: string | null;
+  ids: string[];
+}
 
 export const deleteData = async ({
   token,
@@ -114,7 +153,7 @@ export const deleteData = async ({
   setAlert,
   issueId,
   ids,
-}) => {
+}: DeleteDataArgs): Promise<void> => {
   if (token == null) {
     return;
   }
@@ -131,10 +170,10 @@ export const deleteData = async ({
     }
     console.log("===data==", res.data);
     if (res.data === true) {
-      setState((prev) => ({
+      setState((prev: any) => ({
         ...prev,
         loaded: true,
-        data: [...prev.data.filter((item) => !ids.includes(item.id))],
+        data: [...prev.data.filter((item: any) => !ids.includes(item.id))],
       }));
       setAlert({
         open: true,
@@ -144,9 +183,9 @@ export const deleteData = async ({
     } else {
       throw new Error("Ошибка удаления данных");
     }
-  } catch (err) {
+  } catch (err: any) {
     console.error("ERROR", err.message);
-    setState((prev) => ({ ...prev, loaded: true }));
+    setState((prev: any) => ({ ...prev, loaded: true }));
     setAlert({ open: true, severity: "error", message: err.message });
   }
 };

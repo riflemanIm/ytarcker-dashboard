@@ -1,6 +1,15 @@
-import { Snackbar, Alert } from "@mui/material";
+import React, { FC } from "react";
+import { Snackbar, Alert, AlertColor } from "@mui/material";
 
-const DurationAlert = ({
+interface DurationAlertProps {
+  open: boolean;
+  message: string;
+  onClose: () => void;
+  duration?: number;
+  severity?: AlertColor;
+}
+
+const DurationAlert: FC<DurationAlertProps> = ({
   open,
   message,
   onClose,

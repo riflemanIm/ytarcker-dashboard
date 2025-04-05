@@ -97,7 +97,7 @@ function TableCellMenu({
   };
 
   // Функция сабмита новой записи с валидацией
-  const handleNewSumbmitItem = () => {
+  const handleNewSubmitItem = () => {
     const error = validateDurationValue(newEntry.duration);
     if (error) {
       setValidationErrors((prev) => ({ ...prev, add_new: error }));
@@ -170,7 +170,7 @@ function TableCellMenu({
   };
 
   // При сабмите происходит валидация и, если все корректно, вызывается setData с нормализованным duration и текущим comment
-  const handleSumbitItem = (item) => {
+  const handleSubmitItem = (item) => {
     const errorMessage = validateDurationValue(item.duration);
     if (errorMessage) {
       setValidationErrors((prev) => ({ ...prev, [item.id]: errorMessage }));
@@ -246,7 +246,7 @@ function TableCellMenu({
                   error={Boolean(validationErrors[item.id])}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
-                      handleSumbitItem(item);
+                      handleSubmitItem(item);
                     }
                   }}
                 />
@@ -262,7 +262,7 @@ function TableCellMenu({
                   style={{ width: "100%" }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
-                      handleSumbitItem(item);
+                      handleSubmitItem(item);
                     }
                   }}
                 />
@@ -270,7 +270,7 @@ function TableCellMenu({
 
               <Grid item size={1.5}>
                 <IconButton
-                  onClick={() => handleSumbitItem(item)}
+                  onClick={() => handleSubmitItem(item)}
                   disabled={
                     !item.duration ||
                     item.duration === "P" ||
@@ -312,7 +312,7 @@ function TableCellMenu({
                   onChange={handleAddNewDuration}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
-                      handleNewSumbmitItem();
+                      handleNewSubmitItem();
                     }
                   }}
                 />
@@ -329,14 +329,14 @@ function TableCellMenu({
                   style={{ width: "100%" }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
-                      handleNewSumbmitItem();
+                      handleNewSubmitItem();
                     }
                   }}
                 />
               </Grid>
               <Grid item size={1.5}>
                 <IconButton
-                  onClick={handleNewSumbmitItem}
+                  onClick={handleNewSubmitItem}
                   disabled={!!validationErrors["add_new"]}
                 >
                   <CheckIcon color="success" />

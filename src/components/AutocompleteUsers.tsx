@@ -10,8 +10,8 @@ interface Users {
 }
 
 interface AutocompleteUsersProps {
-  userId: number;
-  handleSelectedUsersChange: (id: number | null) => void;
+  userId: string | null;
+  handleSelectedUsersChange: (id: string | null) => void;
   disabled?: boolean;
   disableClearable?: boolean;
   users: Users[];
@@ -25,12 +25,13 @@ const AutocompleteUsers: React.FC<AutocompleteUsersProps> = ({
   users,
 }) => {
   const handleChange = (event: React.SyntheticEvent, value: Users | null) => {
-    handleSelectedUsersChange(value?.id || null);
+    handleSelectedUsersChange(value?.id ? value.id.toString() : null);
   };
 
   const options = (users || []).map((item: Users) => item);
 
-  const value = (users || []).find((item: Users) => item.id === userId) || null;
+  const value =
+    (users || []).find((item: Users) => item.id.toString() === userId) || null;
 
   return (
     !isEmpty(options) && (

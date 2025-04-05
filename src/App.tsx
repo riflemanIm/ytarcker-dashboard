@@ -3,31 +3,43 @@ import {
   FormControlLabel,
   Grid2 as Grid,
   IconButton,
+  LinearProgress,
   Switch,
   Tooltip,
   Typography,
 } from "@mui/material";
-import { useEffect, useState } from "react";
+import { FC, useEffect, useState } from "react";
 import { deleteData, getData, setData } from "./actions/data";
 import AutocompleteUsers from "./components/AutocompleteUsers";
-import Loading from "./components/Loading";
 import LogInOut from "./components/LogInOut";
 import TaskTable from "./components/TaskTable";
 import WeekNavigator from "./components/WeekNavigator";
 import isEmpty, { aggregateDurations, getWeekRange } from "./helpers";
 
 const ADMIN_LOGINS = ["l.musaeva", "s.ermakov", "a.smirnov", "o.lambin"];
-const isSuperLogin = (login) => ADMIN_LOGINS.includes(login);
+const isSuperLogin = (login: string | null): boolean => {
+  if (!login) return false;
+  return ADMIN_LOGINS.includes(login);
+};
 
-export default function YandexTracker() {
-  const [auth, setAuth] = useState({
+import { AuthState } from "./types/AuthState.d";
+
+interface AppState {
+  loaded: boolean;
+  userId: string | null;
+  users: any; // замените any на более конкретный тип, если он известен
+  data: any; // аналогично, заменить на конкретный тип данных
+  fetchByLogin: boolean;
+}
+
+const YandexTracker: FC = () => {
+  const [auth, setAuth] = useState<AuthState>({
     token: localStorage.getItem("yandex_token"),
     login: localStorage.getItem("yandex_login"),
   });
   const { token, login } = auth;
-  // const [token, setAuth] = useState("y0__xD48tOlqveAAhjtmjYg4MvKyxK1MAkqmCzdKHCxTza9dSbqrC4bvA");
 
-  const [state, setState] = useState({
+  const [state, setState] = useState<AppState>({
     loaded: true,
     userId: null,
     users: null,
@@ -44,7 +56,7 @@ export default function YandexTracker() {
     }));
   };
 
-  const [weekOffset, setWeekOffset] = useState(0);
+  const [weekOffset, setWeekOffset] = useState<number>(0);
   const handlePrevious = () => {
     setWeekOffset((prev) => prev + 1);
   };
@@ -53,11 +65,9 @@ export default function YandexTracker() {
   };
   const { start, end } = getWeekRange(weekOffset);
 
-  // При первом рендере
-
   useEffect(() => {
     console.log("login", login, "state.userId", state.userId, "token", token);
-    if ((login != null || state.userId) && token != null) {
+    if ((login !== null || state.userId) && token !== null) {
       setState((prev) => ({ ...prev, userId: null, data: null }));
       getData({
         userId: state.fetchByLogin ? null : state.userId,
@@ -65,12 +75,13 @@ export default function YandexTracker() {
         token,
         start: start.format("YYYY-MM-DD"),
         end: end.format("YYYY-MM-DD"),
-        login: state.fetchByLogin ? login : undefined,
+        login: state.fetchByLogin ? login! : undefined,
       });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [login, weekOffset, state.fetchByLogin]);
 
-  const handleSelectedUsersChange = (userId) => {
+  const handleSelectedUsersChange = (userId: string | null) => {
     setState((prev) => ({ ...prev, userId, data: null }));
     getData({
       userId: state.fetchByLogin ? null : userId,
@@ -78,11 +89,10 @@ export default function YandexTracker() {
       token,
       start: start.format("YYYY-MM-DD"),
       end: end.format("YYYY-MM-DD"),
-      login: state.fetchByLogin ? login : undefined,
+      login: state.fetchByLogin ? login! : undefined,
     });
   };
 
-  // Функция для обновления state
   const handleRefresh = () => {
     setState((prev) => ({ ...prev, loaded: false }));
     getData({
@@ -91,14 +101,14 @@ export default function YandexTracker() {
       token,
       start: start.format("YYYY-MM-DD"),
       end: end.format("YYYY-MM-DD"),
-      login: state.fetchByLogin ? login : undefined,
+      login: state.fetchByLogin ? login! : undefined,
     });
   };
 
   console.log("state.data", state.data);
   return (
     <>
-      {!state.loaded && <Loading isLinear />}
+      {!state.loaded && <LinearProgress />}
       <Grid
         container
         size={12}
@@ -137,17 +147,14 @@ export default function YandexTracker() {
                 justifySelf="center"
                 textAlign="center"
               >
-                {/* IconButton для обновления состояния */}
                 <IconButton
                   onClick={handleRefresh}
                   color="primary"
                   sx={(theme) => ({
                     borderRadius: "50%",
                     p: 3,
-
                     color: theme.palette.background.default,
                     background: theme.palette.primary.light,
-
                     "&:hover": {
                       color: theme.palette.background.default,
                       background: theme.palette.primary.main,
@@ -157,7 +164,7 @@ export default function YandexTracker() {
                   <RefreshIcon />
                 </IconButton>
               </Grid>
-              {isSuperLogin(login) && (
+              {isSuperLogin(login ?? null) && (
                 <>
                   <Grid
                     size={0.8}
@@ -182,7 +189,7 @@ export default function YandexTracker() {
                           />
                         }
                         labelPlacement="bottom"
-                        label={state.fetchByLogin ? login : ""}
+                        label={state.fetchByLogin ? login || "" : ""}
                       />
                     </Tooltip>
                   </Grid>
@@ -219,25 +226,22 @@ export default function YandexTracker() {
             size={12}
             sx={{ height: "80vh", background: "white", mx: "auto" }}
           >
-            {!isEmpty(state.data) && (
+            {!isEmpty(state.data) ? (
               <>
                 <Typography variant="h5" mb={2}>
                   Отметки времени по{" "}
-                  {!state.fetchByLogin ? "сотруднику" : "своему логину"}
+                  {state.fetchByLogin ? "своему логину" : "сотруднику"}
                 </Typography>
                 <TaskTable
                   data={aggregateDurations(state.data)}
-                  userId={state.userId}
+                  start={start}
                   setState={setState}
                   token={token}
                   setData={setData}
                   deleteData={deleteData}
-                  start={start}
-                  end={end}
                 />
               </>
-            )}
-            {isEmpty(state.data) && (
+            ) : (
               <Typography variant="h6">Нет данных</Typography>
             )}
           </Grid>
@@ -245,4 +249,6 @@ export default function YandexTracker() {
       </Grid>
     </>
   );
-}
+};
+
+export default YandexTracker;

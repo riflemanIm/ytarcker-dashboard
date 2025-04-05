@@ -1,32 +1,40 @@
+import React, { useEffect } from "react";
 import { Button, Typography } from "@mui/material";
-import { useEffect } from "react";
 import axios from "axios";
 
+import { AuthState } from "../types/AuthState.d";
+
+interface LogInOutProps {
+  token: string | null;
+  setAuth: React.Dispatch<React.SetStateAction<AuthState>>;
+}
+
 const CLIENT_ID = "bbdf8a5464ba4d7f8a29e947a1a3d913";
-const REDIRECT_URI = import.meta.env.VITE_APP_REDIRECT_URI;
+const REDIRECT_URI = import.meta.env.VITE_APP_REDIRECT_URI as string;
 const AUTH_URL = `https://oauth.yandex.ru/authorize?response_type=token&client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}`;
 
-const handleLogin = () => {
+const handleLogin = (): void => {
   window.location.href = AUTH_URL;
 };
 
-const handleLogout = () => {
+const handleLogout = (
+  setAuth: React.Dispatch<React.SetStateAction<AuthState>>
+): void => {
   localStorage.removeItem("yandex_token");
   localStorage.removeItem("yandex_login");
+  setAuth({ token: null });
   window.location.href = "";
 };
 
-const LogInOut = ({ token, setAuth }) => {
+const LogInOut: React.FC<LogInOutProps> = ({ token, setAuth }) => {
   useEffect(() => {
     const hash = window.location.hash;
-
     if (hash.includes("access_token")) {
       const params = new URLSearchParams(hash.replace("#", "?"));
-      const token = params.get("access_token");
-
-      if (token) {
-        setAuth({ token });
-        localStorage.setItem("yandex_token", token);
+      const tokenFromHash = params.get("access_token");
+      if (tokenFromHash) {
+        setAuth({ token: tokenFromHash });
+        localStorage.setItem("yandex_token", tokenFromHash);
 
         // Получаем логин пользователя
         const fetchLogin = async () => {
@@ -35,18 +43,19 @@ const LogInOut = ({ token, setAuth }) => {
               "https://login.yandex.ru/info?format=json",
               {
                 headers: {
-                  Authorization: `OAuth ${token}`,
+                  Authorization: `OAuth ${tokenFromHash}`,
                 },
               }
             );
 
-            const login = response.data.login
-              ? response.data.login.split("@")[0]
-              : response.data.login;
+            const login: string | null =
+              response.data.login && typeof response.data.login === "string"
+                ? response.data.login.split("@")[0]
+                : null;
+
             if (login) {
               localStorage.setItem("yandex_login", login);
               console.log("Yandex login:", login);
-
               setAuth((prev) => ({ ...prev, login }));
             }
           } catch (error) {
@@ -60,11 +69,11 @@ const LogInOut = ({ token, setAuth }) => {
         fetchLogin();
       }
     }
-  }, []);
+  }, [setAuth]);
 
   return token ? (
     <Typography variant="body1">
-      <Button onClick={handleLogout}>Выйти</Button>
+      <Button onClick={() => handleLogout(setAuth)}>Выйти</Button>
     </Typography>
   ) : (
     <Button onClick={handleLogin}>Войти</Button>

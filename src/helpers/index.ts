@@ -118,8 +118,11 @@ export const getDateOfCurrentWeekday: getDateOfCurrentWeekday = (
   return dayjs().startOf("isoWeek").add(isoDay, "day"); // локально — ОК
 };
 
-export const getDateOfWeekday: (start: Date, isoDay: number) => dayjs.Dayjs = (
-  start: Date, // monday
+export const getDateOfWeekday: (
+  start: dayjs.Dayjs,
+  isoDay: number
+) => dayjs.Dayjs = (
+  start: dayjs.Dayjs, // monday
   isoDay: number
 ): dayjs.Dayjs => {
   return dayjs(start)
@@ -170,7 +173,18 @@ export function sumDurations(durations: string[]): string {
   return result;
 }
 
-export function aggregateDurations<
+export interface TaskItem {
+  start: string;
+  key: string;
+  issue: string;
+  href?: string | null;
+  updatedBy: string;
+  issueId: string;
+  durations: { id: string; duration: string }[];
+  duration: string;
+}
+
+export const aggregateDurations = <
   T extends {
     id: string;
     duration: string;
@@ -182,18 +196,17 @@ export function aggregateDurations<
   },
 >(
   data: T[]
-): (T & { durations: { id: string; duration: string }[]; duration: string })[] {
-  // ✅ используем UTC при парсинге даты
+): TaskItem[] => {
   const grouped = data.reduce(
     (acc, item) => {
-      //const dateKey = dayjs.utc(item.start).format("YYYY-MM-DD"); // <-- заменено
+      // Используем имя дня недели для группировки
       const dayOfWeekName = dayOfWeekNameByDate(dayjs(item.start));
       const groupKey = `${item.issue.key}_${item.updatedBy.id}_${dayOfWeekName}`;
       const groupItem = {
         id: item.id,
         issue: item.issue.display,
-        key: `${item.issue.key}_${item.updatedBy.id}`,
-        issueId: item.issue.key,
+        key: item.issue.key, // добавляем для TaskItem
+        issueId: item.issue.key, // добавляем для TaskItem
         duration: item.duration,
         start: item.start,
         href: `https://tracker.yandex.ru/${item.issue.key}`,
@@ -201,26 +214,43 @@ export function aggregateDurations<
       };
 
       if (!acc[groupKey]) {
-        acc[groupKey] = [groupItem as unknown as T];
+        acc[groupKey] = [groupItem];
       } else {
-        acc[groupKey].push(groupItem as unknown as T);
+        acc[groupKey].push(groupItem);
       }
       return acc;
     },
-    {} as Record<string, typeof data>
+    {} as Record<
+      string,
+      {
+        id: string;
+        issue: string;
+        key: string;
+        issueId: string;
+        duration: string;
+        start: string;
+        href: string;
+        updatedBy: string;
+      }[]
+    >
   );
 
   return Object.values(grouped).map((group) => {
     const durations = group.map((i) => ({ id: i.id, duration: i.duration }));
     const totalDuration = sumDurations(group.map((i) => i.duration));
-
     return {
-      ...group[0],
+      id: group[0].id,
+      key: group[0].key,
+      issue: group[0].issue,
+      issueId: group[0].issueId,
+      start: group[0].start,
+      href: group[0].href,
+      updatedBy: group[0].updatedBy,
       duration: totalDuration,
-      durations,
-    };
+      durations: durations,
+    } as TaskItem;
   });
-}
+};
 
 //  Пример использования:
 // const durations = ["P1D", "PT4H", "PT45M", "PT2H30M"];
