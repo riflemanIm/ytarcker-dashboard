@@ -1,3 +1,4 @@
+import { DurationItem } from "./../types/global.d";
 import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
 import isoWeek from "dayjs/plugin/isoWeek";
@@ -190,38 +191,41 @@ export function aggregateDurations(
       const dayOfWeekName = dayOfWeekNameByDate(dayjs(item.start));
       const groupKey = `${item.issue.key}_${item.updatedBy.id}_${dayOfWeekName}`;
       const groupItem: TaskItem = {
+        id: item.id,
         key: `${item.issue.key}_${item.updatedBy.id}`,
         issueId: item.issue.key,
         issue: item.issue.display,
         start: item.start,
         href: `https://tracker.yandex.ru/${item.issue.key}`,
         updatedBy: item.updatedBy.display,
-        durations: [], // временно оставим пустым, позже обновим
+        duration: item.duration,
       };
 
       if (!acc[groupKey]) {
         acc[groupKey] = [groupItem];
       }
-      // Добавляем длительность как новый элемент в массив
-      (acc[groupKey][0].durations as { id: string; duration: string }[]).push({
-        id: item.id,
-        duration: item.duration,
-      });
-      // Можно аккумулировать общую длительность, если нужно (например, записать в поле duration)
+
+      if (!acc[groupKey]) {
+        acc[groupKey] = [groupItem];
+      } else {
+        acc[groupKey].push(groupItem);
+      }
       return acc;
     },
     {} as Record<string, TaskItem[]>
   );
 
   return Object.values(grouped).map((group) => {
-    const durations = group[0].durations;
-    const totalDuration = sumDurations(durations.map((d) => d.duration));
-    // Если требуется сохранить итоговую длительность в дополнительном поле, можно добавить её:
+    const durations = group.map(
+      (i) => ({ id: i.id, duration: i.duration, comment: "" }) as DurationItem
+    );
+    const totalDuration = sumDurations(group.map((i) => i.duration));
+
     return {
       ...group[0],
-      // например, можно добавить поле total или использовать уже существующее поле duration:
       duration: totalDuration,
-    } as TaskItem;
+      durations,
+    };
   });
 }
 

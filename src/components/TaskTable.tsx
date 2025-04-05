@@ -4,7 +4,14 @@ import { AlertColor, Chip, IconButton, Typography } from "@mui/material";
 import { DataGrid, GridColDef } from "@mui/x-data-grid";
 import dayjs, { Dayjs } from "dayjs";
 import utc from "dayjs/plugin/utc";
-import React, { FC, useCallback, useMemo, useState } from "react";
+import React, {
+  FC,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import DurationAlert from "./DurationAlert";
 import TableCellMenu from "./TableCellMenu";
 import {
@@ -90,7 +97,7 @@ const IssueDisplay: FC<{
 const transformData = (data: TaskItem[]): TransformedTaskRow[] => {
   const result: Record<string, any> = {};
 
-  data.forEach((item) => {
+  data.forEach((item: TaskItem) => {
     const dayName = dayOfWeekNameByDate(dayjs(item.start));
     if (!result[item.key]) {
       result[item.key] = {
@@ -110,9 +117,7 @@ const transformData = (data: TaskItem[]): TransformedTaskRow[] => {
         sunday: [] as string[],
       };
     }
-    result[item.key][dayName].push(
-      item.durations.length > 0 ? item.durations[0].duration : ""
-    );
+    result[item.key][dayName].push(item.duration);
   });
 
   return Object.values(result).map((item: any) => {
@@ -165,7 +170,7 @@ const TaskTable: FC<TaskTableProps> = ({
     });
   }, []);
 
-  const tableRows = useMemo(() => transformData(data), [data]);
+  const tableRows = transformData(data);
 
   const [menuState, setMenuState] = useState<MenuState>({
     anchorEl: null,
@@ -178,17 +183,21 @@ const TaskTable: FC<TaskTableProps> = ({
 
   const handleMenuOpen = useCallback(
     (event: React.MouseEvent, params: any) => {
-      const foundRow = data.find(
-        (row) =>
-          dayOfWeekNameByDate(dayjs(row.start)) === params.field &&
-          row.key === params.id
-      );
+      const foundRow =
+        data != null
+          ? data.find(
+              (row) =>
+                dayOfWeekNameByDate(dayjs(row.start)) === params.field &&
+                row.key === params.id
+            )?.durations
+          : null;
+      console.log("foundRow", foundRow);
       setMenuState({
         anchorEl: event.currentTarget as HTMLElement,
         issue: params.row.issue.display,
         field: params.field,
         issueId: params.row.issueId,
-        durations: foundRow ? [foundRow.durations] : null,
+        durations: foundRow ?? null,
         dateField: getDateOfWeekday(start, dayToNumber(params.field)),
       });
     },
@@ -278,7 +287,7 @@ const TaskTable: FC<TaskTableProps> = ({
         return false;
       }
     },
-    [setData, setState, setAlert, start, token]
+    []
   );
 
   const columns: GridColDef[] = [

@@ -1,18 +1,15 @@
 import { Dayjs } from "dayjs";
 
-export interface DurationItem {
-  id: string;
-  duration: string;
-  comment?: string;
-}
 export interface TaskItem {
+  id: string;
   start: string;
   key: string;
   issue: string;
   href?: string | null;
   updatedBy: string;
   issueId: string;
-  durations: DurationItem[];
+  duration: string;
+  durations?: DurationItem[];
 }
 
 export interface TransformedTaskRow {
@@ -33,12 +30,17 @@ export interface TransformedTaskRow {
   total: string;
 }
 
+export interface DurationItem {
+  id: string;
+  duration: string;
+  comment: string;
+}
 export interface MenuState {
   anchorEl: HTMLElement | null;
   issue: string | null;
   field: string | null;
   issueId: string | null;
-  durations: DurationItem[][] | null;
+  durations: DurationItem[] | null;
   dateField: Dayjs | null;
 }
 
