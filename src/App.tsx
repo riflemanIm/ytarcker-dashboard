@@ -43,7 +43,7 @@ const YandexTracker: FC = () => {
     loaded: true,
     userId: null,
     users: null,
-    data: null,
+    data: [], // Инициализация как пустой массив
     fetchByLogin: true,
   });
 

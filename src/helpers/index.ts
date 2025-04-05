@@ -4,6 +4,7 @@ import isoWeek from "dayjs/plugin/isoWeek";
 import utc from "dayjs/plugin/utc"; // ✅ добавляем utc
 import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
 import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
+import { TaskItem } from "@/types/global";
 
 dayjs.extend(isoWeek);
 dayjs.extend(duration);
@@ -173,19 +174,8 @@ export function sumDurations(durations: string[]): string {
   return result;
 }
 
-export interface TaskItem {
-  start: string;
-  key: string;
-  issue: string;
-  href?: string | null;
-  updatedBy: string;
-  issueId: string;
-  durations: { id: string; duration: string }[];
-  duration: string;
-}
-
-export const aggregateDurations = <
-  T extends {
+export function aggregateDurations(
+  data: Array<{
     id: string;
     duration: string;
     start: string;
@@ -193,64 +183,47 @@ export const aggregateDurations = <
     updatedBy: { id: string; display: string };
     self: string;
     [key: string]: any;
-  },
->(
-  data: T[]
-): TaskItem[] => {
+  }>
+): TaskItem[] {
   const grouped = data.reduce(
     (acc, item) => {
-      // Используем имя дня недели для группировки
       const dayOfWeekName = dayOfWeekNameByDate(dayjs(item.start));
       const groupKey = `${item.issue.key}_${item.updatedBy.id}_${dayOfWeekName}`;
-      const groupItem = {
-        id: item.id,
+      const groupItem: TaskItem = {
+        key: `${item.issue.key}_${item.updatedBy.id}`,
+        issueId: item.issue.key,
         issue: item.issue.display,
-        key: item.issue.key, // добавляем для TaskItem
-        issueId: item.issue.key, // добавляем для TaskItem
-        duration: item.duration,
         start: item.start,
         href: `https://tracker.yandex.ru/${item.issue.key}`,
         updatedBy: item.updatedBy.display,
+        durations: [], // временно оставим пустым, позже обновим
       };
 
       if (!acc[groupKey]) {
         acc[groupKey] = [groupItem];
-      } else {
-        acc[groupKey].push(groupItem);
       }
+      // Добавляем длительность как новый элемент в массив
+      (acc[groupKey][0].durations as { id: string; duration: string }[]).push({
+        id: item.id,
+        duration: item.duration,
+      });
+      // Можно аккумулировать общую длительность, если нужно (например, записать в поле duration)
       return acc;
     },
-    {} as Record<
-      string,
-      {
-        id: string;
-        issue: string;
-        key: string;
-        issueId: string;
-        duration: string;
-        start: string;
-        href: string;
-        updatedBy: string;
-      }[]
-    >
+    {} as Record<string, TaskItem[]>
   );
 
   return Object.values(grouped).map((group) => {
-    const durations = group.map((i) => ({ id: i.id, duration: i.duration }));
-    const totalDuration = sumDurations(group.map((i) => i.duration));
+    const durations = group[0].durations;
+    const totalDuration = sumDurations(durations.map((d) => d.duration));
+    // Если требуется сохранить итоговую длительность в дополнительном поле, можно добавить её:
     return {
-      id: group[0].id,
-      key: group[0].key,
-      issue: group[0].issue,
-      issueId: group[0].issueId,
-      start: group[0].start,
-      href: group[0].href,
-      updatedBy: group[0].updatedBy,
+      ...group[0],
+      // например, можно добавить поле total или использовать уже существующее поле duration:
       duration: totalDuration,
-      durations: durations,
     } as TaskItem;
   });
-};
+}
 
 //  Пример использования:
 // const durations = ["P1D", "PT4H", "PT45M", "PT2H30M"];

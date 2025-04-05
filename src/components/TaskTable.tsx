@@ -7,6 +7,12 @@ import utc from "dayjs/plugin/utc";
 import React, { FC, useCallback, useMemo, useState } from "react";
 import DurationAlert from "./DurationAlert";
 import TableCellMenu from "./TableCellMenu";
+import {
+  TaskItem,
+  TransformedTaskRow,
+  AlertState,
+  MenuState,
+} from "../types/global";
 
 import {
   dayOfWeekNameByDate,
@@ -24,64 +30,6 @@ import { SetDataArgs } from "@/actions/data";
 dayjs.locale("ru");
 dayjs.extend(utc);
 
-//
-// Типизация исходных данных задачи, получаемых через пропс data
-//
-interface TaskItem {
-  start: string; // ISO-строка даты
-  key: string;
-  issue: string;
-  href?: string | null;
-  updatedBy: string;
-  issueId: string;
-  durations: { id: string; duration: string }[]; // если durations – массив объектов
-}
-
-//
-// Тип результата преобразования данных для отображения в таблице
-//
-interface TransformedTaskRow {
-  id: string;
-  issue: {
-    display: string;
-    href?: string | null;
-    fio: string;
-  };
-  issueId: string;
-  monday: string;
-  tuesday: string;
-  wednesday: string;
-  thursday: string;
-  friday: string;
-  saturday: string;
-  sunday: string;
-  total: string;
-}
-
-//
-// Типизация состояния оповещений
-//
-interface AlertState {
-  open: boolean;
-  severity: string;
-  message: string;
-}
-
-//
-// Типизация состояния меню для редактирования ячеек
-//
-export interface MenuState {
-  anchorEl: HTMLElement | null;
-  issue: string | null;
-  field: string | null;
-  issueId: string | null;
-  durations: { id: string; duration: string; comment?: string }[] | null;
-  dateField: Dayjs | null;
-}
-
-//
-// Типизация пропсов TaskTable
-//
 interface TaskTableProps {
   data: TaskItem[];
   start: Dayjs;
@@ -240,7 +188,7 @@ const TaskTable: FC<TaskTableProps> = ({
         issue: params.row.issue.display,
         field: params.field,
         issueId: params.row.issueId,
-        durations: foundRow ? foundRow.durations : null,
+        durations: foundRow ? [foundRow.durations] : null,
         dateField: getDateOfWeekday(start, dayToNumber(params.field)),
       });
     },

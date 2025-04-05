@@ -37,7 +37,7 @@ export const getData = async ({
     if (res.status !== 200) {
       throw new Error("Api get data error");
     }
-    setState((prev: any) => ({ ...prev, loaded: true, ...res.data }));
+    setState((prev: any) => ({ ...prev, loaded: true, data: res.data.data }));
   } catch (err: any) {
     console.log("ERROR ", err.message);
     setState((prev: any) => ({ ...prev, loaded: true }));

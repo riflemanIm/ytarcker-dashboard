@@ -26,24 +26,8 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import dayjs from "dayjs";
 import React, { FC, Fragment, useCallback, useEffect, useState } from "react";
-
-interface DurationItem {
-  id: string;
-  duration: string;
-  comment?: string;
-  [key: string]: any;
-}
-
-interface MenuState {
-  anchorEl: HTMLElement | null;
-  issue: string | null;
-  field: string | null;
-  issueId: string | null;
-  durations: DurationItem[] | null;
-  dateField: dayjs.Dayjs | null;
-}
+import { DurationItem, MenuState } from "../types/global";
 
 interface TableCellMenuProps {
   open: boolean;
@@ -92,7 +76,7 @@ const TableCellMenu: FC<TableCellMenuProps> = ({
 
   // Локальное состояние для хранения данных (duration и comment)
   const [localState, setLocalState] = useState<DurationItem[]>(
-    (menuState.durations || []).map((item) => ({
+    (menuState.durations || []).flat().map((item) => ({
       ...item,
       comment: item.comment || "",
     }))
@@ -104,7 +88,7 @@ const TableCellMenu: FC<TableCellMenuProps> = ({
   // Синхронизируем локальное состояние при обновлении menuState.durations
   useEffect(() => {
     setLocalState(
-      (menuState.durations || []).map((item) => ({
+      (menuState.durations || []).flat().map((item) => ({
         ...item,
         comment: item.comment || "",
       }))
@@ -187,7 +171,7 @@ const TableCellMenu: FC<TableCellMenuProps> = ({
         setState,
         setAlert,
         issueId: menuState.issueId,
-        ids: menuState.durations.map((item) => item.id),
+        ids: menuState.durations.flat().map((item) => item.id),
       });
     }
     setOpenConfirm(false);
