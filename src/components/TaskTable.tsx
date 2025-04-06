@@ -4,23 +4,17 @@ import { AlertColor, Chip, IconButton, Typography } from "@mui/material";
 import { DataGrid, GridColDef } from "@mui/x-data-grid";
 import dayjs, { Dayjs } from "dayjs";
 import utc from "dayjs/plugin/utc";
-import React, {
-  FC,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import DurationAlert from "./DurationAlert";
-import TableCellMenu from "./TableCellMenu";
+import React, { FC, useCallback, useMemo, useState } from "react";
 import {
-  TaskItem,
-  TransformedTaskRow,
   AlertState,
   MenuState,
+  TaskItem,
+  TransformedTaskRow,
 } from "../types/global";
+import DurationAlert from "./DurationAlert";
+import TableCellMenu from "./TableCellMenu";
 
+import { SetDataArgs } from "@/actions/data";
 import {
   dayOfWeekNameByDate,
   daysMap,
@@ -32,7 +26,6 @@ import {
   normalizeDuration,
   sumDurations,
 } from "@/helpers";
-import { SetDataArgs } from "@/actions/data";
 
 dayjs.locale("ru");
 dayjs.extend(utc);
@@ -155,8 +148,6 @@ const TaskTable: FC<TaskTableProps> = ({
   setData,
   deleteData,
 }) => {
-  console.log("data", data);
-
   const [alert, setAlert] = useState<AlertState>({
     open: false,
     severity: "",

@@ -203,10 +203,6 @@ export function aggregateDurations(
 
       if (!acc[groupKey]) {
         acc[groupKey] = [groupItem];
-      }
-
-      if (!acc[groupKey]) {
-        acc[groupKey] = [groupItem];
       } else {
         acc[groupKey].push(groupItem);
       }
