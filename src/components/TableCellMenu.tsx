@@ -55,29 +55,21 @@ const TableCellMenu: FC<TableCellMenuProps> = ({
   const [validationErrors, setValidationErrors] = useState<
     Record<string, string>
   >({});
-
   // Локальное состояние для хранения данных (duration и comment)
   const [localState, setLocalState] = useState<DurationItem[]>(
-    (menuState.durations || []).flat().map((item) => ({
-      ...item,
-      comment: item.comment || "",
-    }))
+    menuState.durations || []
   );
-
   // Состояние для показа диалога подтверждения удаления
   const [openConfirm, setOpenConfirm] = useState<boolean>(false);
 
-  // Синхронизируем локальное состояние при обновлении menuState.durations
+  // Синхронизация локального состояния при изменении menuState.durations
   useEffect(() => {
-    setLocalState(
-      (menuState.durations || []).flat().map((item) => ({
-        ...item,
-        comment: item.comment || "",
-      }))
-    );
+    if (menuState.durations && menuState.durations.length > 0) {
+      setLocalState([...menuState.durations]);
+    }
   }, [menuState.durations]);
 
-  // Функция валидации длительности
+  // Валидация значения длительности
   const validateDurationValue = useCallback((rawValue: string): string => {
     const normalized = normalizeDuration(rawValue);
     if (

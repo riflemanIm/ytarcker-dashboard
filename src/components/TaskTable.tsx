@@ -21,7 +21,6 @@ import {
 } from "../types/global";
 import DurationAlert from "./DurationAlert";
 import TableCellMenu from "./TableCellMenu";
-
 import { DeleteDataArgs, SetDataArgs } from "@/actions/data";
 import {
   dayOfWeekNameByDate,
@@ -47,9 +46,7 @@ interface TaskTableProps {
   deleteData: (args: DeleteDataArgs) => void;
 }
 
-//
-// Отображение задачи с кнопкой перехода (если есть ссылка) и информацией по ФИО
-//
+// Компонент для отображения задачи (с переходом по ссылке, если она есть)
 const IssueDisplay: FC<{
   display: string;
   href?: string | null;
@@ -85,7 +82,7 @@ const IssueDisplay: FC<{
   </>
 );
 
-// Промежуточный тип для группировки: для каждого дня будем хранить массив длительностей (строк)
+// Промежуточный тип для группировки, где для каждого дня хранится массив строк (длительностей)
 interface RawTransformedRow {
   id: string;
   issue: TaskItemIssue;
@@ -125,7 +122,7 @@ const transformData = (data: TaskItem[]): TransformedTaskRow[] => {
         total: "",
       };
     }
-    // Приводим dayName к ключу RawTransformedRow (исключая свойства id, issue, issueId и total)
+    // Добавляем длительность в массив для нужного дня
     (
       grouped[item.key][
         dayName as keyof Omit<
@@ -137,7 +134,6 @@ const transformData = (data: TaskItem[]): TransformedTaskRow[] => {
   });
 
   return Object.values(grouped).map((rawRow) => {
-    // Вычисляем итог для каждого дня
     const monday = sumDurations(rawRow.monday);
     const tuesday = sumDurations(rawRow.tuesday);
     const wednesday = sumDurations(rawRow.wednesday);
@@ -145,7 +141,6 @@ const transformData = (data: TaskItem[]): TransformedTaskRow[] => {
     const friday = sumDurations(rawRow.friday);
     const saturday = sumDurations(rawRow.saturday);
     const sunday = sumDurations(rawRow.sunday);
-    // Вычисляем общий итог по всем дням
     const combined = [
       monday,
       tuesday,
@@ -171,9 +166,6 @@ const transformData = (data: TaskItem[]): TransformedTaskRow[] => {
   });
 };
 
-//
-// Основной компонент TaskTable
-//
 const TaskTable: FC<TaskTableProps> = ({
   data,
   start,
@@ -187,16 +179,13 @@ const TaskTable: FC<TaskTableProps> = ({
     severity: "",
     message: "",
   });
+
   const handleCloseAlert = useCallback(() => {
-    setAlert({
-      open: false,
-      severity: "",
-      message: "",
-    });
+    setAlert({ open: false, severity: "", message: "" });
   }, []);
-  console.log("data", data);
+
   const tableRows = transformData(data);
-  console.log("tableRows", tableRows);
+
   const [menuState, setMenuState] = useState<MenuState>({
     anchorEl: null,
     issue: null,
@@ -206,8 +195,9 @@ const TaskTable: FC<TaskTableProps> = ({
     dateField: null,
   });
 
+  // Используем GridRenderCellParams вместо any для handleMenuOpen
   const handleMenuOpen = useCallback(
-    (event: React.MouseEvent<HTMLElement>, params: any) => {
+    (event: React.MouseEvent<HTMLElement>, params: GridRenderCellParams) => {
       const foundRow =
         data != null
           ? data.find(
@@ -216,14 +206,16 @@ const TaskTable: FC<TaskTableProps> = ({
                 row.key === params.id
             )?.durations
           : null;
-
       setMenuState({
-        anchorEl: event.currentTarget as HTMLElement,
+        anchorEl: event.currentTarget,
         issue: params.row.issue.display,
-        field: params.field,
+        field: params.field as DayOfWeek,
         issueId: params.row.issueId,
         durations: foundRow ?? null,
-        dateField: getDateOfWeekday(start, dayToNumber(params.field)),
+        dateField: getDateOfWeekday(
+          start,
+          dayToNumber(params.field as DayOfWeek)
+        ),
       });
     },
     [data, start]
@@ -257,7 +249,7 @@ const TaskTable: FC<TaskTableProps> = ({
       totals.total = displayDuration(sumDurations(Object.values(totalsVals)));
       return {
         id: "total",
-        issue: { display: "Итого" },
+        issue: { display: "Итого", href: "", fio: "" },
         issueId: "",
         ...totals,
       } as TransformedTaskRow;
@@ -305,7 +297,7 @@ const TaskTable: FC<TaskTableProps> = ({
         return false;
       }
     },
-    []
+    [start, setData, setState, setAlert, token]
   );
 
   const columns: GridColDef[] = [
@@ -328,7 +320,7 @@ const TaskTable: FC<TaskTableProps> = ({
     { field: "issueId", headerName: "Key", flex: 1.5 },
     ...daysMap.map((day) => ({
       field: day,
-      headerName: `${headerWeekName[day as keyof typeof headerWeekName]} ${getDateOfWeekday(start, dayToNumber(day)).format("DD.MM")}`,
+      headerName: `${headerWeekName[day]} ${getDateOfWeekday(start, dayToNumber(day)).format("DD.MM")}`,
       flex: 1,
       editable: true,
       sortable: false,
