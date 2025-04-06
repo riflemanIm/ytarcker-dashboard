@@ -3,21 +3,13 @@ import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import axios from "axios";
 import isEmpty from "@/helpers";
+import { AlertState, AppState, DataItem, GetDataArgs } from "@/types/global";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
 const apiUrl: string = import.meta.env.VITE_APP_API_URL;
 console.log("apiUrl", apiUrl);
-
-export interface GetDataArgs {
-  userId: string | null;
-  setState: React.Dispatch<React.SetStateAction<any>>;
-  token: string | null;
-  start: string;
-  end: string;
-  login?: string;
-}
 
 export const getData = async ({
   userId,
@@ -28,7 +20,7 @@ export const getData = async ({
   login,
 }: GetDataArgs): Promise<void> => {
   try {
-    setState((prev: any) => ({ ...prev, loaded: false }));
+    setState((prev) => ({ ...prev, loaded: false }));
 
     const res = await axios.get(
       `${apiUrl}/api/issues?token=${token}&endDate=${end}&startDate=${start}&userId=${userId}&login=${login}`
@@ -37,21 +29,18 @@ export const getData = async ({
     if (res.status !== 200) {
       throw new Error("Api get data error");
     }
-    setState((prev: any) => ({ ...prev, loaded: true, data: res.data.data }));
-  } catch (err: any) {
-    console.log("ERROR ", err.message);
-    setState((prev: any) => ({ ...prev, loaded: true }));
+    setState((prev) => ({ ...prev, loaded: true, ...res.data }));
+  } catch (err: unknown) {
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    console.log("ERROR ", errorMessage);
+    setState((prev) => ({ ...prev, loaded: true }));
   }
 };
 
 export interface SetDataArgs {
   dateCell?: Dayjs;
-  setState: React.Dispatch<React.SetStateAction<any>>;
-  setAlert: (args: {
-    open: boolean;
-    severity: string;
-    message: string;
-  }) => void;
+  setState: React.Dispatch<React.SetStateAction<AppState>>;
+  setAlert: (args: AlertState) => void;
   token: string | null;
   issueId: string | null;
   duration: string;
@@ -107,14 +96,16 @@ export const setData = async ({
     }
 
     if (!isEmpty(res.data)) {
-      setState((prev: any) => ({
+      setState((prev: AppState) => ({
         ...prev,
         loaded: true,
         data: worklogId
-          ? prev.data.map((item: any) =>
-              item.id === res.data.id ? res.data : item
+          ? prev.data.map((item: DataItem) =>
+              item.id === (res.data as DataItem).id
+                ? (res.data as DataItem)
+                : item
             )
-          : [...prev.data, { ...res.data }],
+          : [...prev.data, { ...(res.data as DataItem) }],
       }));
       setAlert({
         open: true,

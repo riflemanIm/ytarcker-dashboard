@@ -15,22 +15,13 @@ import LogInOut from "./components/LogInOut";
 import TaskTable from "./components/TaskTable";
 import WeekNavigator from "./components/WeekNavigator";
 import isEmpty, { aggregateDurations, getWeekRange } from "./helpers";
+import { AppState, AuthState, DataItem, TaskItem } from "./types/global";
 
 const ADMIN_LOGINS = ["l.musaeva", "s.ermakov", "a.smirnov", "o.lambin"];
-const isSuperLogin = (login: string | null): boolean => {
+const isSuperLogin = (login: string | null | undefined): boolean => {
   if (!login) return false;
   return ADMIN_LOGINS.includes(login);
 };
-
-import { AuthState } from "./types/AuthState.d";
-
-interface AppState {
-  loaded: boolean;
-  userId: string | null;
-  users: any; // замените any на более конкретный тип, если он известен
-  data: any; // аналогично, заменить на конкретный тип данных
-  fetchByLogin: boolean;
-}
 
 const YandexTracker: FC = () => {
   const [auth, setAuth] = useState<AuthState>({
@@ -52,7 +43,7 @@ const YandexTracker: FC = () => {
       ...prev,
       fetchByLogin: !prev.fetchByLogin,
       userId: null,
-      data: null,
+      data: [],
     }));
   };
 
@@ -68,7 +59,7 @@ const YandexTracker: FC = () => {
   useEffect(() => {
     console.log("login", login, "state.userId", state.userId, "token", token);
     if ((login !== null || state.userId) && token !== null) {
-      setState((prev) => ({ ...prev, userId: null, data: null }));
+      setState((prev) => ({ ...prev, userId: null, data: [] }));
       getData({
         userId: state.fetchByLogin ? null : state.userId,
         setState,
@@ -82,7 +73,7 @@ const YandexTracker: FC = () => {
   }, [login, weekOffset, state.fetchByLogin]);
 
   const handleSelectedUsersChange = (userId: string | null) => {
-    setState((prev) => ({ ...prev, userId, data: null }));
+    setState((prev) => ({ ...prev, userId, data: [] }));
     getData({
       userId: state.fetchByLogin ? null : userId,
       setState,
@@ -105,7 +96,7 @@ const YandexTracker: FC = () => {
     });
   };
 
-  console.log("state.data", state.data);
+  console.log("state", state);
   return (
     <>
       {!state.loaded && <LinearProgress />}
@@ -164,7 +155,7 @@ const YandexTracker: FC = () => {
                   <RefreshIcon />
                 </IconButton>
               </Grid>
-              {isSuperLogin(login ?? null) && (
+              {login && isSuperLogin(login) && (
                 <>
                   <Grid
                     size={0.8}
@@ -233,7 +224,7 @@ const YandexTracker: FC = () => {
                   {state.fetchByLogin ? "своему логину" : "сотруднику"}
                 </Typography>
                 <TaskTable
-                  data={aggregateDurations(state.data)}
+                  data={aggregateDurations(state.data as DataItem[])}
                   start={start}
                   setState={setState}
                   token={token}

@@ -1,4 +1,4 @@
-import { DurationItem } from "./../types/global.d";
+import { DayOfWeek, DurationItem } from "./../types/global.d";
 import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
 import isoWeek from "dayjs/plugin/isoWeek";
@@ -66,7 +66,7 @@ export const headerWeekName = {
   saturday: "Сб",
   sunday: "Вс",
 };
-export const daysMap = [
+export const daysMap: DayOfWeek[] = [
   "monday",
   "tuesday",
   "wednesday",
@@ -75,6 +75,7 @@ export const daysMap = [
   "saturday",
   "sunday",
 ];
+
 export const displayDuration = (duration: string): string => {
   if (duration === "P") return "";
   // Регулярное выражение для ISO8601 длительности с учетом лет, недель, дней, часов, минут и секунд
@@ -103,12 +104,12 @@ interface getDateOfCurrentWeekday {
   (isoDay: number): dayjs.Dayjs;
 }
 
-export const dayToNumber = (dayName: string): number => {
-  return daysMap.indexOf(dayName.toLowerCase()) + 1; // ISO-нумерация
+export const dayToNumber = (dayName: DayOfWeek): number => {
+  return daysMap.indexOf(dayName.toLowerCase() as DayOfWeek) + 1; // ISO-нумерация
 };
 
 export const getDateOfDayName = (dayName: string): dayjs.Dayjs => {
-  const isoDay = dayToNumber(dayName);
+  const isoDay = dayToNumber(dayName as DayOfWeek);
   return dayjs()
     .startOf("isoWeek")
     .add(isoDay - 1, "day"); // локально — ОК
@@ -182,8 +183,6 @@ export function aggregateDurations(
     start: string;
     issue: { display: string; key: string };
     updatedBy: { id: string; display: string };
-    self: string;
-    [key: string]: any;
   }>
 ): TaskItem[] {
   const grouped = data.reduce(
@@ -194,10 +193,13 @@ export function aggregateDurations(
         id: item.id,
         key: `${item.issue.key}_${item.updatedBy.id}`,
         issueId: item.issue.key,
-        issue: item.issue.display,
+        issue: {
+          display: item.issue.display,
+          href: `https://tracker.yandex.ru/${item.issue.key}`,
+          fio: item.updatedBy.display,
+        },
         start: item.start,
-        href: `https://tracker.yandex.ru/${item.issue.key}`,
-        updatedBy: item.updatedBy.display,
+
         duration: item.duration,
       };
 

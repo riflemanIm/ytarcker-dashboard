@@ -3,18 +3,14 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import Autocomplete from "@mui/material/Autocomplete";
 import isEmpty from "../helpers";
-
-interface Users {
-  id: number;
-  name: string;
-}
+import { User } from "@/types/global";
 
 interface AutocompleteUsersProps {
   userId: string | null;
   handleSelectedUsersChange: (id: string | null) => void;
   disabled?: boolean;
   disableClearable?: boolean;
-  users: Users[];
+  users: User[] | null;
 }
 
 const AutocompleteUsers: React.FC<AutocompleteUsersProps> = ({
@@ -24,14 +20,18 @@ const AutocompleteUsers: React.FC<AutocompleteUsersProps> = ({
   disableClearable = false,
   users,
 }) => {
-  const handleChange = (event: React.SyntheticEvent, value: Users | null) => {
+  if (!users) {
+    return null;
+  }
+  const handleChange = (event: React.SyntheticEvent, value: User | null) => {
     handleSelectedUsersChange(value?.id ? value.id.toString() : null);
   };
+  console.log("users", users, userId);
 
-  const options = (users || []).map((item: Users) => item);
+  const options = (users || []).map((item: User) => item);
 
   const value =
-    (users || []).find((item: Users) => item.id.toString() === userId) || null;
+    (users || []).find((item: User) => item.id.toString() === userId) || null;
 
   return (
     !isEmpty(options) && (
@@ -44,11 +44,11 @@ const AutocompleteUsers: React.FC<AutocompleteUsersProps> = ({
         value={value}
         options={options}
         onChange={handleChange}
-        getOptionLabel={(option: Users) => option?.name || ""}
-        isOptionEqualToValue={(option: Users, value: Users) =>
+        getOptionLabel={(option: User) => option?.name || ""}
+        isOptionEqualToValue={(option: User, value: User) =>
           option.id === value.id
         }
-        renderOption={(props, option: Users) => (
+        renderOption={(props, option: User) => (
           <Typography variant="body1" {...props}>
             {option.name}
           </Typography>

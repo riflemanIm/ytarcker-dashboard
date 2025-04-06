@@ -7,6 +7,7 @@ import utc from "dayjs/plugin/utc";
 import React, { FC, useCallback, useMemo, useState } from "react";
 import {
   AlertState,
+  DayOfWeek,
   MenuState,
   TaskItem,
   TransformedTaskRow,
@@ -88,29 +89,28 @@ const IssueDisplay: FC<{
 // Преобразование исходных данных в структуру, удобную для отображения в таблице
 //
 const transformData = (data: TaskItem[]): TransformedTaskRow[] => {
-  const result: Record<string, any> = {};
+  const result: Record<string, TransformedTaskRow> = {};
 
   data.forEach((item: TaskItem) => {
     const dayName = dayOfWeekNameByDate(dayjs(item.start));
     if (!result[item.key]) {
       result[item.key] = {
         id: item.key,
-        issue: {
-          display: item.issue,
-          href: item.href,
-          fio: item.updatedBy,
-        },
+        issue: item.issue,
         issueId: item.issueId,
-        monday: [] as string[],
-        tuesday: [] as string[],
-        wednesday: [] as string[],
-        thursday: [] as string[],
-        friday: [] as string[],
-        saturday: [] as string[],
-        sunday: [] as string[],
+        monday: [] as DayOfWeek[],
+        tuesday: [] as DayOfWeek[],
+        wednesday: [] as DayOfWeek[],
+        thursday: [] as DayOfWeek[],
+        friday: [] as DayOfWeek[],
+        saturday: [] as DayOfWeek[],
+        sunday: [] as DayOfWeek[],
+        total: "", // initialize total as empty string
       };
     }
-    result[item.key][dayName].push(item.duration);
+    (result[item.key][dayName as keyof TransformedTaskRow] as string[]).push(
+      item.duration
+    );
   });
 
   return Object.values(result).map((item: any) => {
@@ -160,9 +160,9 @@ const TaskTable: FC<TaskTableProps> = ({
       message: "",
     });
   }, []);
-
+  console.log("data", data);
   const tableRows = transformData(data);
-
+  console.log("tableRows", tableRows);
   const [menuState, setMenuState] = useState<MenuState>({
     anchorEl: null,
     issue: null,
@@ -182,7 +182,7 @@ const TaskTable: FC<TaskTableProps> = ({
                 row.key === params.id
             )?.durations
           : null;
-      console.log("foundRow", foundRow);
+
       setMenuState({
         anchorEl: event.currentTarget as HTMLElement,
         issue: params.row.issue.display,
@@ -208,23 +208,16 @@ const TaskTable: FC<TaskTableProps> = ({
 
   const calculateTotalRow = useCallback(
     (rows: TransformedTaskRow[]): TransformedTaskRow => {
-      const fields: (keyof TransformedTaskRow)[] = [
-        "monday",
-        "tuesday",
-        "wednesday",
-        "thursday",
-        "friday",
-        "saturday",
-        "sunday",
-      ];
       const totals: Record<string, string> = {};
       const totalsVals: Record<string, string> = {};
-      fields.forEach((field) => {
+      daysMap.forEach((field) => {
         totals[field] = displayDuration(
-          sumDurations(rows.map((row) => row[field] as string))
+          sumDurations(
+            rows.map((row) => (row as unknown as Record<string, string>)[field])
+          )
         );
         totalsVals[field] = sumDurations(
-          rows.map((row) => row[field] as string)
+          rows.map((row) => (row as unknown as Record<string, string>)[field])
         );
       });
       totals.total = displayDuration(sumDurations(Object.values(totalsVals)));
@@ -244,7 +237,7 @@ const TaskTable: FC<TaskTableProps> = ({
   );
 
   const handleCellEdit = useCallback(
-    (field: string, newValue: string, issueId: string) => {
+    (field: DayOfWeek, newValue: string, issueId: string) => {
       const normalizedValue = normalizeDuration(newValue);
       if (
         normalizedValue.trim() === "" ||
@@ -416,11 +409,11 @@ const TaskTable: FC<TaskTableProps> = ({
           handleCellEdit(
             Object.keys(updatedRow).find(
               (key) => updatedRow[key] !== originalRow[key]
-            ) as string,
+            ) as DayOfWeek,
             updatedRow[
               Object.keys(updatedRow).find(
                 (key) => updatedRow[key] !== originalRow[key]
-              ) as string
+              ) as DayOfWeek
             ],
             updatedRow.issueId
           )
