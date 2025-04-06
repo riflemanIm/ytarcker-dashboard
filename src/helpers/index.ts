@@ -251,5 +251,12 @@ export function isNumeric(n: string | number) {
 export function isArray(obj: []) {
   return obj instanceof Array;
 }
+export const parseTime = (timeStr: string): number => {
+  if (!timeStr) return 0;
+  return dayjs.duration(timeStr).asMinutes();
+};
 
+export const timeSortComparator = (v1: string, v2: string): number => {
+  return parseTime(v1) - parseTime(v2);
+};
 export default isEmpty;

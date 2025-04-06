@@ -1,3 +1,15 @@
+import { DeleteDataArgs, SetDataArgs } from "@/actions/data";
+import {
+  dayOfWeekNameByDate,
+  daysMap,
+  dayToNumber,
+  displayDuration,
+  getDateOfWeekday,
+  headerWeekName,
+  isValidDuration,
+  normalizeDuration,
+  sumDurations,
+} from "@/helpers";
 import AddIcon from "@mui/icons-material/Add";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import { AlertColor, Chip, IconButton, Typography } from "@mui/material";
@@ -21,18 +33,6 @@ import {
 } from "../types/global";
 import DurationAlert from "./DurationAlert";
 import TableCellMenu from "./TableCellMenu";
-import { DeleteDataArgs, SetDataArgs } from "@/actions/data";
-import {
-  dayOfWeekNameByDate,
-  daysMap,
-  dayToNumber,
-  displayDuration,
-  getDateOfWeekday,
-  headerWeekName,
-  isValidDuration,
-  normalizeDuration,
-  sumDurations,
-} from "@/helpers";
 
 dayjs.locale("ru");
 dayjs.extend(utc);
@@ -321,8 +321,17 @@ const TaskTable: FC<TaskTableProps> = ({
           params.value.display
         ),
     },
-    { field: "issueId", headerName: "Key", flex: 1.5 },
-    { field: "groupIssue", headerName: "Группа", flex: 1.5 },
+    {
+      field: "issueId",
+      headerName: "Key",
+      flex: 1.5,
+    },
+    {
+      field: "groupIssue",
+      headerName: "Группа",
+
+      flex: 1.5,
+    },
 
     ...daysMap.map((day) => ({
       field: day,
@@ -330,6 +339,7 @@ const TaskTable: FC<TaskTableProps> = ({
       flex: 1,
       editable: true,
       sortable: false,
+      //sortComparator: timeSortComparator,
       renderCell: (params: GridRenderCellParams) => {
         const val = displayDuration(params.value);
         if (params.row.id === "total") return val;
@@ -420,7 +430,13 @@ const TaskTable: FC<TaskTableProps> = ({
         />
       ),
     })),
-    { field: "total", headerName: "Итого", flex: 1.5 },
+    {
+      field: "total",
+      headerName: "Итого",
+      sortable: false,
+      //sortComparator: timeSortComparator,
+      flex: 1.5,
+    },
   ];
 
   return (
