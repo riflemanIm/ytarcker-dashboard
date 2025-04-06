@@ -87,6 +87,7 @@ interface RawTransformedRow {
   id: string;
   issue: TaskItemIssue;
   issueId: string;
+  groupIssue: string;
   monday: string[];
   tuesday: string[];
   wednesday: string[];
@@ -112,6 +113,7 @@ const transformData = (data: TaskItem[]): TransformedTaskRow[] => {
         id: item.key,
         issue: item.issue,
         issueId: item.issueId,
+        groupIssue: item.groupIssue,
         monday: [],
         tuesday: [],
         wednesday: [],
@@ -127,7 +129,7 @@ const transformData = (data: TaskItem[]): TransformedTaskRow[] => {
       grouped[item.key][
         dayName as keyof Omit<
           RawTransformedRow,
-          "id" | "issue" | "issueId" | "total"
+          "id" | "issue" | "issueId" | "groupIssue" | "total"
         >
       ] as string[]
     ).push(item.duration);
@@ -154,6 +156,7 @@ const transformData = (data: TaskItem[]): TransformedTaskRow[] => {
       id: rawRow.id,
       issue: rawRow.issue,
       issueId: rawRow.issueId,
+      groupIssue: rawRow.groupIssue,
       monday,
       tuesday,
       wednesday,
@@ -251,6 +254,7 @@ const TaskTable: FC<TaskTableProps> = ({
         id: "total",
         issue: { display: "Итого", href: "", fio: "" },
         issueId: "",
+        groupIssue: "",
         ...totals,
       } as TransformedTaskRow;
     },
@@ -318,6 +322,8 @@ const TaskTable: FC<TaskTableProps> = ({
         ),
     },
     { field: "issueId", headerName: "Key", flex: 1.5 },
+    { field: "groupIssue", headerName: "Группа", flex: 1.5 },
+
     ...daysMap.map((day) => ({
       field: day,
       headerName: `${headerWeekName[day]} ${getDateOfWeekday(start, dayToNumber(day)).format("DD.MM")}`,

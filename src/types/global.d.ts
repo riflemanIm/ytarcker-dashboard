@@ -81,6 +81,7 @@ export interface TransformedTaskRow {
   id: string;
   issue: TaskItemIssue;
   issueId: string;
+  groupIssue: string;
   monday: DayOfWeek[];
   tuesday: DayOfWeek[];
   wednesday: DayOfWeek[];
