@@ -1,21 +1,28 @@
 import AddIcon from "@mui/icons-material/Add";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import { AlertColor, Chip, IconButton, Typography } from "@mui/material";
-import { DataGrid, GridColDef } from "@mui/x-data-grid";
+import {
+  DataGrid,
+  GridColDef,
+  GridRenderCellParams,
+  GridRenderEditCellParams,
+} from "@mui/x-data-grid";
 import dayjs, { Dayjs } from "dayjs";
 import utc from "dayjs/plugin/utc";
 import React, { FC, useCallback, useMemo, useState } from "react";
 import {
   AlertState,
+  AppState,
   DayOfWeek,
   MenuState,
   TaskItem,
+  TaskItemIssue,
   TransformedTaskRow,
 } from "../types/global";
 import DurationAlert from "./DurationAlert";
 import TableCellMenu from "./TableCellMenu";
 
-import { SetDataArgs } from "@/actions/data";
+import { DeleteDataArgs, SetDataArgs } from "@/actions/data";
 import {
   dayOfWeekNameByDate,
   daysMap,
@@ -34,17 +41,10 @@ dayjs.extend(utc);
 interface TaskTableProps {
   data: TaskItem[];
   start: Dayjs;
-  setState: (arg: any) => void;
+  setState: React.Dispatch<React.SetStateAction<AppState>>;
   token: string | null;
   setData: (args: SetDataArgs) => Promise<void>;
-
-  deleteData: (args: {
-    token: string | null;
-    setState: (arg: any) => void;
-    setAlert: (arg: AlertState) => void;
-    issueId: string | null;
-    ids: string[];
-  }) => void;
+  deleteData: (args: DeleteDataArgs) => void;
 }
 
 //
@@ -85,55 +85,89 @@ const IssueDisplay: FC<{
   </>
 );
 
-//
-// Преобразование исходных данных в структуру, удобную для отображения в таблице
-//
+// Промежуточный тип для группировки: для каждого дня будем хранить массив длительностей (строк)
+interface RawTransformedRow {
+  id: string;
+  issue: TaskItemIssue;
+  issueId: string;
+  monday: string[];
+  tuesday: string[];
+  wednesday: string[];
+  thursday: string[];
+  friday: string[];
+  saturday: string[];
+  sunday: string[];
+  total: string;
+}
+
 const transformData = (data: TaskItem[]): TransformedTaskRow[] => {
-  const result: Record<string, TransformedTaskRow> = {};
+  const grouped: Record<string, RawTransformedRow> = {} as Record<
+    string,
+    RawTransformedRow
+  >;
 
   data.forEach((item: TaskItem) => {
-    const dayName = dayOfWeekNameByDate(dayjs(item.start));
-    if (!result[item.key]) {
-      result[item.key] = {
+    const dayName: DayOfWeek = dayOfWeekNameByDate(
+      dayjs(item.start)
+    ) as DayOfWeek;
+    if (!grouped[item.key]) {
+      grouped[item.key] = {
         id: item.key,
         issue: item.issue,
         issueId: item.issueId,
-        monday: [] as DayOfWeek[],
-        tuesday: [] as DayOfWeek[],
-        wednesday: [] as DayOfWeek[],
-        thursday: [] as DayOfWeek[],
-        friday: [] as DayOfWeek[],
-        saturday: [] as DayOfWeek[],
-        sunday: [] as DayOfWeek[],
-        total: "", // initialize total as empty string
+        monday: [],
+        tuesday: [],
+        wednesday: [],
+        thursday: [],
+        friday: [],
+        saturday: [],
+        sunday: [],
+        total: "",
       };
     }
-    (result[item.key][dayName as keyof TransformedTaskRow] as string[]).push(
-      item.duration
-    );
+    // Приводим dayName к ключу RawTransformedRow (исключая свойства id, issue, issueId и total)
+    (
+      grouped[item.key][
+        dayName as keyof Omit<
+          RawTransformedRow,
+          "id" | "issue" | "issueId" | "total"
+        >
+      ] as string[]
+    ).push(item.duration);
   });
 
-  return Object.values(result).map((item: any) => {
-    const totalDurations = [
-      ...item.monday,
-      ...item.tuesday,
-      ...item.wednesday,
-      ...item.thursday,
-      ...item.friday,
-      ...item.saturday,
-      ...item.sunday,
+  return Object.values(grouped).map((rawRow) => {
+    // Вычисляем итог для каждого дня
+    const monday = sumDurations(rawRow.monday);
+    const tuesday = sumDurations(rawRow.tuesday);
+    const wednesday = sumDurations(rawRow.wednesday);
+    const thursday = sumDurations(rawRow.thursday);
+    const friday = sumDurations(rawRow.friday);
+    const saturday = sumDurations(rawRow.saturday);
+    const sunday = sumDurations(rawRow.sunday);
+    // Вычисляем общий итог по всем дням
+    const combined = [
+      monday,
+      tuesday,
+      wednesday,
+      thursday,
+      friday,
+      saturday,
+      sunday,
     ];
     return {
-      ...item,
-      monday: sumDurations(item.monday),
-      tuesday: sumDurations(item.tuesday),
-      wednesday: sumDurations(item.wednesday),
-      thursday: sumDurations(item.thursday),
-      friday: sumDurations(item.friday),
-      saturday: sumDurations(item.saturday),
-      sunday: sumDurations(item.sunday),
-      total: displayDuration(sumDurations(totalDurations)),
-    };
+      id: rawRow.id,
+      issue: rawRow.issue,
+      issueId: rawRow.issueId,
+      monday,
+      tuesday,
+      wednesday,
+      thursday,
+      friday,
+      saturday,
+      sunday,
+      total: displayDuration(sumDurations(combined)),
+    } as unknown as TransformedTaskRow;
   });
 };
 
@@ -173,7 +207,7 @@ const TaskTable: FC<TaskTableProps> = ({
   });
 
   const handleMenuOpen = useCallback(
-    (event: React.MouseEvent, params: any) => {
+    (event: React.MouseEvent<HTMLElement>, params: any) => {
       const foundRow =
         data != null
           ? data.find(
@@ -280,7 +314,7 @@ const TaskTable: FC<TaskTableProps> = ({
       headerName: "Название",
       flex: 4,
       sortable: false,
-      renderCell: (params) =>
+      renderCell: (params: GridRenderCellParams) =>
         params.row.id !== "total" ? (
           <IssueDisplay
             display={params.value.display}
@@ -298,7 +332,7 @@ const TaskTable: FC<TaskTableProps> = ({
       flex: 1,
       editable: true,
       sortable: false,
-      renderCell: (params: any) => {
+      renderCell: (params: GridRenderCellParams) => {
         const val = displayDuration(params.value);
         if (params.row.id === "total") return val;
         if (val === "") {
@@ -343,7 +377,7 @@ const TaskTable: FC<TaskTableProps> = ({
           />
         );
       },
-      renderEditCell: (params: any) => (
+      renderEditCell: (params: GridRenderEditCellParams) => (
         <input
           type="text"
           autoFocus

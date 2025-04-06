@@ -121,14 +121,14 @@ export const setData = async ({
     }
   } catch (err: any) {
     console.error("ERROR", err.message);
-    setState((prev: any) => ({ ...prev, loaded: true }));
+    setState((prev: AppState) => ({ ...prev, loaded: true }));
     setAlert({ open: true, severity: "error", message: err.message });
   }
 };
 
 export interface DeleteDataArgs {
   token: string | null;
-  setState: React.Dispatch<React.SetStateAction<any>>;
+  setState: React.Dispatch<React.SetStateAction<AppState>>;
   setAlert: (args: {
     open: boolean;
     severity: string;
@@ -161,10 +161,10 @@ export const deleteData = async ({
     }
     console.log("===data==", res.data);
     if (res.data === true) {
-      setState((prev: any) => ({
+      setState((prev: AppState) => ({
         ...prev,
         loaded: true,
-        data: [...prev.data.filter((item: any) => !ids.includes(item.id))],
+        data: [...prev.data.filter((item: DataItem) => !ids.includes(item.id))],
       }));
       setAlert({
         open: true,
@@ -176,7 +176,7 @@ export const deleteData = async ({
     }
   } catch (err: any) {
     console.error("ERROR", err.message);
-    setState((prev: any) => ({ ...prev, loaded: true }));
+    setState((prev: AppState) => ({ ...prev, loaded: true }));
     setAlert({ open: true, severity: "error", message: err.message });
   }
 };

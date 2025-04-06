@@ -66,8 +66,9 @@ export interface TaskItem {
   key: string;
   issueId: string;
   issue: TaskItemIssue;
-  start: string;
+  groupIssue: string;
 
+  start: string;
   duration: string;
   durations?: DurationItem[];
 }

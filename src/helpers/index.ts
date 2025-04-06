@@ -1,4 +1,4 @@
-import { DayOfWeek, DurationItem } from "./../types/global.d";
+import { DataItem, DayOfWeek, DurationItem } from "./../types/global.d";
 import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
 import isoWeek from "dayjs/plugin/isoWeek";
@@ -176,15 +176,7 @@ export function sumDurations(durations: string[]): string {
   return result;
 }
 
-export function aggregateDurations(
-  data: Array<{
-    id: string;
-    duration: string;
-    start: string;
-    issue: { display: string; key: string };
-    updatedBy: { id: string; display: string };
-  }>
-): TaskItem[] {
+export function aggregateDurations(data: DataItem[]): TaskItem[] {
   const grouped = data.reduce(
     (acc, item) => {
       const dayOfWeekName = dayOfWeekNameByDate(dayjs(item.start));
@@ -198,8 +190,8 @@ export function aggregateDurations(
           href: `https://tracker.yandex.ru/${item.issue.key}`,
           fio: item.updatedBy.display,
         },
+        groupIssue: item.issue.key.split("-")[0],
         start: item.start,
-
         duration: item.duration,
       };
 

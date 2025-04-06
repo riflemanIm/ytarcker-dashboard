@@ -1,13 +1,4 @@
-import {
-  displayDuration,
-  headerWeekName,
-  isValidDuration,
-  normalizeDuration,
-} from "@/helpers";
-import CheckIcon from "@mui/icons-material/Check";
-import CloseIcon from "@mui/icons-material/Close";
-import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
-import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import React, { FC, Fragment, useCallback, useEffect, useState } from "react";
 import {
   Button,
   Dialog,
@@ -26,37 +17,28 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import React, { FC, Fragment, useCallback, useEffect, useState } from "react";
-import { DurationItem, MenuState } from "../types/global";
+import CheckIcon from "@mui/icons-material/Check";
+import CloseIcon from "@mui/icons-material/Close";
+import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import {
+  displayDuration,
+  headerWeekName,
+  isValidDuration,
+  normalizeDuration,
+} from "@/helpers";
+import { DurationItem, MenuState, AlertState, AppState } from "../types/global";
+import { SetDataArgs, DeleteDataArgs } from "@/actions/data";
 
 interface TableCellMenuProps {
   open: boolean;
   onClose: () => void;
   menuState: MenuState;
-  setState: any;
-  deleteData: (args: {
-    token: string | null;
-    setState: any;
-    setAlert: any;
-    issueId: string | null;
-    ids: string[];
-  }) => void;
+  setState: React.Dispatch<React.SetStateAction<AppState>>;
+  deleteData: (args: DeleteDataArgs) => void;
   token: string | null;
-  setData: (args: {
-    dateCell?: any;
-    setState: any;
-    setAlert: any;
-    token: string | null;
-    issueId: string | null;
-    duration: string;
-    comment?: string;
-    worklogId?: string;
-  }) => void;
-  setAlert: (args: {
-    open: boolean;
-    severity: string;
-    message: string;
-  }) => void;
+  setData: (args: SetDataArgs) => void;
+  setAlert: (args: AlertState) => void;
 }
 
 const TableCellMenu: FC<TableCellMenuProps> = ({
@@ -143,7 +125,7 @@ const TableCellMenu: FC<TableCellMenuProps> = ({
     }
     const duration = normalizeDuration(newEntry.duration);
     setData({
-      dateCell: menuState.dateField,
+      dateCell: menuState.dateField || undefined,
       setState,
       setAlert,
       token,
