@@ -51,7 +51,7 @@ app.use(express.json());
 
 app.get("/api/issues", async (req, res) => {
   let { token, startDate, endDate, userId, login } = req.query;
-  //console.log("token", token);
+  console.log("token", token);
   endDate = `${endDate}T23:59`;
   // Преобразование startDate и endDate из строки в дату
   const startDateObj = new Date(startDate);
@@ -86,7 +86,6 @@ app.get("/api/issues", async (req, res) => {
       if (login) {
         requestBody.createdBy = login;
       }
-      console.log("requestBody", requestBody);
 
       const url =
         "https://api.tracker.yandex.net/v2/worklog/_search?perPage=1000";
@@ -94,7 +93,7 @@ app.get("/api/issues", async (req, res) => {
 
       // Фильтрация данных с использованием уже вычисленных timestamp'ов
       let data = [];
-      if (userId) {
+      if (!login && userId) {
         data = response.data.filter(
           (it) =>
             parseInt(it.updatedBy.id) === Number(userId) &&
@@ -103,6 +102,14 @@ app.get("/api/issues", async (req, res) => {
       } else {
         //     data = response.data;
         data = response.data.filter((it) => {
+          // console.log(
+          //   "startDate",
+          //   startDate,
+          //   "it.start",
+          //   it.start,
+          //   "endDate",
+          //   endDate
+          // );
           return filterDataByDateRange(it.start, startTimestamp, endTimestamp);
         });
       }
@@ -113,18 +120,18 @@ app.get("/api/issues", async (req, res) => {
       }));
       users = [...new Map(users.map((item) => [item.id, item])).values()];
 
-      console.log(
-        "from",
-        from,
-        "to",
-        to,
+      // console.log(
+      //   "from",
+      //   from,
+      //   "to",
+      //   to,
 
-        response.data,
-        "userId",
-        userId,
-        "login",
-        login
-      );
+      //   data,
+      //   "userId",
+      //   userId,
+      //   "login",
+      //   login
+      // );
       res.json({ data, users });
     } else {
       res.status(400).json({ error: "token not pass" });
