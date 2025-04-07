@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import { Button, Typography } from "@mui/material";
 import axios from "axios";
 
-import { AuthState } from "../types/AuthState.d";
+import { AuthState } from "../types/global";
 
 interface LogInOutProps {
   token: string | null;
@@ -22,6 +22,7 @@ const handleLogout = (
 ): void => {
   localStorage.removeItem("yandex_token");
   localStorage.removeItem("yandex_login");
+
   setAuth({ token: null });
   window.location.href = "";
 };
@@ -48,15 +49,17 @@ const LogInOut: React.FC<LogInOutProps> = ({ token, setAuth }) => {
               }
             );
 
-            const login: string | null =
-              response.data.login && typeof response.data.login === "string"
-                ? response.data.login.split("@")[0]
-                : null;
+            const login: string | null = response.data.login;
 
             if (login) {
               localStorage.setItem("yandex_login", login);
+
               console.log("Yandex login:", login);
-              setAuth((prev) => ({ ...prev, login }));
+
+              setAuth((prev) => ({
+                ...prev,
+                login: login.includes("@") ? login.split("@")[0] : login,
+              }));
             }
           } catch (error) {
             console.error(
@@ -72,9 +75,13 @@ const LogInOut: React.FC<LogInOutProps> = ({ token, setAuth }) => {
   }, [setAuth]);
 
   return token ? (
-    <Typography variant="body1">
-      <Button onClick={() => handleLogout(setAuth)}>Выйти</Button>
-    </Typography>
+    <>
+      <Button onClick={() => handleLogout(setAuth)}>Выйти </Button>
+
+      <Typography variant="subtitle1" color="text.secondary">
+        {localStorage.getItem("yandex_login")}
+      </Typography>
+    </>
   ) : (
     <Button onClick={handleLogin}>Войти</Button>
   );

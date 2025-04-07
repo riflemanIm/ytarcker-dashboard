@@ -2,7 +2,7 @@ import dayjs, { Dayjs } from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import axios from "axios";
-import isEmpty from "@/helpers";
+import isEmpty, { isSuperLogin } from "@/helpers";
 import { AlertState, AppState, DataItem, GetDataArgs } from "@/types/global";
 
 dayjs.extend(utc);
@@ -21,10 +21,10 @@ export const getData = async ({
 }: GetDataArgs): Promise<void> => {
   try {
     setState((prev) => ({ ...prev, loaded: false }));
-
-    const res = await axios.get(
-      `${apiUrl}/api/issues?token=${token}&endDate=${end}&startDate=${start}&userId=${userId}&login=${login}`
-    );
+    const url = !isSuperLogin(login)
+      ? `${apiUrl}/api/issues?token=${token}&endDate=${end}&startDate=${start}&login=${login}`
+      : `${apiUrl}/api/issues?token=${token}&endDate=${end}&startDate=${start}&userId=${userId}`;
+    const res = await axios.get(url);
 
     if (res.status !== 200) {
       throw new Error("Api get data error");

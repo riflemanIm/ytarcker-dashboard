@@ -1,5 +1,6 @@
 import RefreshIcon from "@mui/icons-material/Refresh";
 import {
+  Alert,
   FormControlLabel,
   Grid2 as Grid,
   IconButton,
@@ -14,19 +15,20 @@ import AutocompleteUsers from "./components/AutocompleteUsers";
 import LogInOut from "./components/LogInOut";
 import TaskTable from "./components/TaskTable";
 import WeekNavigator from "./components/WeekNavigator";
-import isEmpty, { aggregateDurations, getWeekRange } from "./helpers";
+import isEmpty, {
+  aggregateDurations,
+  getWeekRange,
+  isSuperLogin,
+} from "./helpers";
 import { AppState, AuthState, DataItem, TaskItem } from "./types/global";
 
-const ADMIN_LOGINS = ["l.musaeva", "s.ermakov", "a.smirnov", "o.lambin"];
-const isSuperLogin = (login: string | null | undefined): boolean => {
-  if (!login) return false;
-  return ADMIN_LOGINS.includes(login);
-};
-
 const YandexTracker: FC = () => {
+  const yandex_login =
+    localStorage.getItem("yandex_login") ??
+    localStorage.getItem("yandex_login")?.split("@")[0];
   const [auth, setAuth] = useState<AuthState>({
     token: localStorage.getItem("yandex_token"),
-    login: localStorage.getItem("yandex_login"),
+    login: yandex_login,
   });
   const { token, login } = auth;
 
@@ -190,12 +192,18 @@ const YandexTracker: FC = () => {
                     justifySelf="center"
                     textAlign="center"
                   >
-                    <AutocompleteUsers
-                      userId={state.userId}
-                      handleSelectedUsersChange={handleSelectedUsersChange}
-                      users={state.users}
-                      disabled={!state.loaded || state.fetchByLogin}
-                    />
+                    {isEmpty(state.users) && !state.fetchByLogin ? (
+                      <Alert severity="info">
+                        Нет сотрудников за этот период
+                      </Alert>
+                    ) : (
+                      <AutocompleteUsers
+                        userId={state.userId}
+                        handleSelectedUsersChange={handleSelectedUsersChange}
+                        users={state.users}
+                        disabled={!state.loaded || state.fetchByLogin}
+                      />
+                    )}
                   </Grid>
                 </>
               )}
@@ -233,7 +241,9 @@ const YandexTracker: FC = () => {
                 />
               </>
             ) : (
-              <Typography variant="h6">Нет данных</Typography>
+              <Alert severity="warning">
+                Нет ни одно отметки времени за этот период
+              </Alert>
             )}
           </Grid>
         )}

@@ -14,6 +14,12 @@ dayjs.extend(isSameOrAfter);
 dayjs.extend(isSameOrBefore);
 dayjs.locale("ru");
 
+const ADMIN_LOGINS = ["l.musaeva", "s.ermakov", "a.smirnov", "o.lambin"];
+export const isSuperLogin = (login: string | null | undefined): boolean => {
+  if (!login) return false;
+  return ADMIN_LOGINS.includes(login);
+};
+
 export function isDateInCurrentWeek(date: dayjs.Dayjs): boolean {
   const weekStart = dayjs().startOf("isoWeek");
   const weekEnd = dayjs().endOf("isoWeek");
