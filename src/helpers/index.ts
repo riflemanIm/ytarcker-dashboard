@@ -14,7 +14,13 @@ dayjs.extend(isSameOrAfter);
 dayjs.extend(isSameOrBefore);
 dayjs.locale("ru");
 
-const ADMIN_LOGINS = ["l.musaeva", "s.ermakov", "a.smirnov", "o.lambin"];
+const ADMIN_LOGINS = [
+  "e.nikolaev",
+  "l.musaeva",
+  "s.ermakov",
+  "a.smirnov",
+  "o.lambin",
+];
 export const isSuperLogin = (login: string | null | undefined): boolean => {
   if (!login) return false;
   return ADMIN_LOGINS.includes(login);
