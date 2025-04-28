@@ -72,7 +72,7 @@ app.get("/api/issues", async (req, res) => {
           : null;
 
       // Форматирование диапазона запроса (строки остаются строками)
-      const from = subtractWeeks(startDate, 2);
+      const from = subtractWeeks(startDate, 1);
       const to = `${getEndOfCurrentWeek()}T23:59`;
 
       // Формируем тело запроса
@@ -96,42 +96,35 @@ app.get("/api/issues", async (req, res) => {
       if (!login && userId) {
         data = response.data.filter(
           (it) =>
-            parseInt(it.updatedBy.id) === Number(userId) &&
+            parseInt(it.createdBy.id) === parseInt(userId) &&
             filterDataByDateRange(it.start, startTimestamp, endTimestamp)
         );
       } else {
         //     data = response.data;
-        data = response.data.filter((it) => {
-          // console.log(
-          //   "startDate",
-          //   startDate,
-          //   "it.start",
-          //   it.start,
-          //   "endDate",
-          //   endDate
-          // );
-          return filterDataByDateRange(it.start, startTimestamp, endTimestamp);
-        });
+        data = response.data.filter((it) =>
+          filterDataByDateRange(it.start, startTimestamp, endTimestamp)
+        );
       }
       // Формируем список пользователей без повторов
       let users = data.map((it) => ({
-        id: parseInt(it.updatedBy.id),
-        name: it.updatedBy.display,
+        id: parseInt(it.createdBy.id),
+        name: it.createdBy.display,
       }));
       users = [...new Map(users.map((item) => [item.id, item])).values()];
 
-      // console.log(
-      //   "from",
-      //   from,
-      //   "to",
-      //   to,
+      console.log(
+        "from",
+        from,
+        "to",
+        to,
 
-      //   data,
-      //   "userId",
-      //   userId,
-      //   "login",
-      //   login
-      // );
+        "userId",
+        userId,
+        "login",
+        login,
+        "data.length ",
+        data.length
+      );
       res.json({ data, users });
     } else {
       res.status(400).json({ error: "token not pass" });

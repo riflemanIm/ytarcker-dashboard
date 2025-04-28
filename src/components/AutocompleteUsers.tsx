@@ -31,7 +31,9 @@ const AutocompleteUsers: React.FC<AutocompleteUsersProps> = ({
   const options = (users || []).map((item: User) => item);
 
   const value =
-    (users || []).find((item: User) => item.id.toString() === userId) || null;
+    (users || []).find(
+      (item: User) => userId && parseInt(item.id) === parseInt(userId)
+    ) || null;
 
   return (
     !isEmpty(options) && (
