@@ -20,7 +20,7 @@ import isEmpty, {
   getWeekRange,
   isSuperLogin,
 } from "./helpers";
-import { AppState, AuthState, DataItem, TaskItem } from "./types/global";
+import { AppState, AuthState, DataItem } from "./types/global";
 
 const YandexTracker: FC = () => {
   const yandex_login =
