@@ -60,7 +60,7 @@ const YandexTracker: FC = () => {
 
   useEffect(() => {
     console.log("login", login, "state.userId", state.userId, "token", token);
-    if ((login !== null || state.userId) && token !== null) {
+    if ((!!login || !!state.userId) && token !== null) {
       setState((prev) => ({ ...prev, userId: null, data: [] }));
       getData({
         userId: state.fetchByLogin ? null : state.userId,
@@ -68,7 +68,7 @@ const YandexTracker: FC = () => {
         token,
         start: start.format("YYYY-MM-DD"),
         end: end.format("YYYY-MM-DD"),
-        login: state.fetchByLogin ? login! : undefined,
+        login: state.fetchByLogin && login ? login : undefined,
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -82,7 +82,7 @@ const YandexTracker: FC = () => {
       token,
       start: start.format("YYYY-MM-DD"),
       end: end.format("YYYY-MM-DD"),
-      login: state.fetchByLogin ? login! : undefined,
+      login: state.fetchByLogin && login ? login : undefined,
     });
   };
 
@@ -94,7 +94,7 @@ const YandexTracker: FC = () => {
       token,
       start: start.format("YYYY-MM-DD"),
       end: end.format("YYYY-MM-DD"),
-      login: state.fetchByLogin ? login! : undefined,
+      login: state.fetchByLogin && login ? login : undefined,
     });
   };
 
