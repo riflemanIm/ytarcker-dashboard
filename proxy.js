@@ -72,7 +72,7 @@ app.get("/api/issues", async (req, res) => {
           : null;
 
       // Форматирование диапазона запроса (строки остаются строками)
-      const from = subtractWeeks(startDate, 1);
+      const from = startDate;
       const to = `${getEndOfCurrentWeek()}T23:59`;
 
       // Формируем тело запроса

@@ -19,7 +19,7 @@ const ADMIN_LOGINS = [
   "l.musaeva",
   "s.ermakov",
   "a.smirnov",
-  //"o.lambin",
+  "o.lambin",
   "i.modenov",
   "a.solnyshkin",
   "d.malakhov",
