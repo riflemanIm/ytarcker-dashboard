@@ -1,9 +1,10 @@
 import dayjs, { Dayjs } from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 import isEmpty from "@/helpers";
 import { AlertState, AppState, DataItem, GetDataArgs } from "@/types/global";
+import { handleLogout } from "@/components/LogInOut";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -31,6 +32,10 @@ export const getData = async ({
     }
     setState((prev) => ({ ...prev, loaded: true, ...res.data }));
   } catch (err: unknown) {
+    if (axios.isAxiosError(err) && err.response?.status === 422) {
+      handleLogout();
+    }
+
     const errorMessage = err instanceof Error ? err.message : String(err);
     console.log("ERROR ", errorMessage);
     setState((prev) => ({ ...prev, loaded: true }));

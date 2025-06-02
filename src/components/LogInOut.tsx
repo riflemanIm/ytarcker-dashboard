@@ -17,13 +17,10 @@ const handleLogin = (): void => {
   window.location.href = AUTH_URL;
 };
 
-const handleLogout = (
-  setAuth: React.Dispatch<React.SetStateAction<AuthState>>
-): void => {
+export const handleLogout = (): void => {
   localStorage.removeItem("yandex_token");
   localStorage.removeItem("yandex_login");
 
-  setAuth({ token: null });
   window.location.href = "";
 };
 
@@ -76,7 +73,7 @@ const LogInOut: React.FC<LogInOutProps> = ({ token, setAuth }) => {
 
   return token ? (
     <>
-      <Button onClick={() => handleLogout(setAuth)}>Выйти </Button>
+      <Button onClick={() => handleLogout()}>Выйти </Button>
 
       <Typography variant="subtitle1" color="text.secondary">
         {localStorage.getItem("yandex_login")}
