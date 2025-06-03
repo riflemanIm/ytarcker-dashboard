@@ -25,6 +25,7 @@ const ADMIN_LOGINS = [
   "d.malakhov",
   "s.zykov",
   "d.orlinskiy",
+  "y.zinovev",
 ];
 export const isSuperLogin = (login: string | null | undefined): boolean => {
   if (!login) return false;
