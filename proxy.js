@@ -56,8 +56,8 @@ app.get("/api/issues", async (req, res) => {
   // Преобразование startDate и endDate из строки в дату
   const startDateObj = new Date(startDate);
   const endDateObj = new Date(endDate);
-  const startTimestamp = startDateObj.getTime();
-  const endTimestamp = endDateObj.getTime();
+  // const startTimestamp = startDateObj.getTime();
+  // const endTimestamp = endDateObj.getTime();
 
   try {
     if (token) {
@@ -73,8 +73,19 @@ app.get("/api/issues", async (req, res) => {
 
       // Форматирование диапазона запроса (строки остаются строками)
       const from = startDate;
-      const to = `${getEndOfCurrentWeek()}T23:59`;
+      //const to = `${endDate}T23:59`;
+      const to = endDate;
+      console.log(
+        "from",
+        from,
+        "to",
+        to,
 
+        "userId",
+        userId,
+        "login",
+        login
+      );
       // Формируем тело запроса
       let requestBody = {
         start: {
@@ -90,15 +101,15 @@ app.get("/api/issues", async (req, res) => {
       }
 
       const url =
-        "https://api.tracker.yandex.net/v2/worklog/_search?perPage=1000";
+        "https://api.tracker.yandex.net/v2/worklog/_search?perPage=10000";
       const response = await axios.post(url, requestBody, headers(token));
 
       // Фильтрация данных с использованием уже вычисленных timestamp'ов
 
-      const data = response.data.filter((it) =>
-        filterDataByDateRange(it.start, startTimestamp, endTimestamp)
-      );
-      //const data = response.data;
+      // const data = response.data.filter((it) =>
+      //   filterDataByDateRange(it.start, startTimestamp, endTimestamp)
+      // );
+      const data = response.data;
 
       // Формируем список пользователей без повторов
       let users = data.map((it) => ({
@@ -107,19 +118,7 @@ app.get("/api/issues", async (req, res) => {
       }));
       users = [...new Map(users.map((item) => [item.id, item])).values()];
 
-      console.log(
-        "from",
-        from,
-        "to",
-        to,
-
-        "userId",
-        userId,
-        "login",
-        login,
-        "data.length ",
-        data.length
-      );
+      console.log("data.length ", data.length);
       res.json({ data, users });
     } else {
       res.status(400).json({ error: "token not pass" });
