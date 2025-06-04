@@ -95,10 +95,10 @@ app.get("/api/issues", async (req, res) => {
 
       // Фильтрация данных с использованием уже вычисленных timestamp'ов
 
-      // const data = response.data.filter((it) =>
-      //   filterDataByDateRange(it.start, startTimestamp, endTimestamp)
-      // );
-      const data = response.data;
+      const data = response.data.filter((it) =>
+        filterDataByDateRange(it.start, startTimestamp, endTimestamp)
+      );
+      //const data = response.data;
 
       // Формируем список пользователей без повторов
       let users = data.map((it) => ({
