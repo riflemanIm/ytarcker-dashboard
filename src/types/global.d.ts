@@ -5,6 +5,7 @@ export interface DataItem {
   start: string;
   issue: { display: string; key: string };
   updatedBy: { id: string; display: string };
+  comment: string;
 }
 
 export interface AuthState {
@@ -70,6 +71,7 @@ export interface TaskItem {
 
   start: string;
   duration: string;
+  comment: string;
   durations?: DurationItem[];
 }
 

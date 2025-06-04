@@ -51,6 +51,7 @@ const TableCellMenu: FC<TableCellMenuProps> = ({
   setData,
   setAlert,
 }) => {
+  console.log("menuState", menuState);
   // Состояние для ошибок валидации
   const [validationErrors, setValidationErrors] = useState<
     Record<string, string>

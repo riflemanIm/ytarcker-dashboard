@@ -212,6 +212,7 @@ export function aggregateDurations(data: DataItem[]): TaskItem[] {
         groupIssue: item.issue.key.split("-")[0],
         start: item.start,
         duration: item.duration,
+        comment: item.comment,
       };
 
       if (!acc[groupKey]) {
@@ -226,7 +227,8 @@ export function aggregateDurations(data: DataItem[]): TaskItem[] {
 
   return Object.values(grouped).map((group) => {
     const durations = group.map(
-      (i) => ({ id: i.id, duration: i.duration, comment: "" }) as DurationItem
+      (i) =>
+        ({ id: i.id, duration: i.duration, comment: i.comment }) as DurationItem
     );
     const totalDuration = sumDurations(group.map((i) => i.duration));
 

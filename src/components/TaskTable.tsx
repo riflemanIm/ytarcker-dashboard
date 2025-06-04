@@ -209,6 +209,7 @@ const TaskTable: FC<TaskTableProps> = ({
                 row.key === params.id
             )?.durations
           : null;
+
       setMenuState({
         anchorEl: event.currentTarget,
         issue: params.row.issue.display,
