@@ -77,7 +77,7 @@ app.get("/api/issues", async (req, res) => {
 
       // Формируем тело запроса
       let requestBody = {
-        createdAt: {
+        start: {
           from,
           to,
         },
@@ -85,6 +85,8 @@ app.get("/api/issues", async (req, res) => {
       // Если логин передан, добавляем его в запрос
       if (login) {
         requestBody.createdBy = login;
+      } else if (userId) {
+        requestBody.createdBy = userId;
       }
 
       const url =
@@ -92,23 +94,16 @@ app.get("/api/issues", async (req, res) => {
       const response = await axios.post(url, requestBody, headers(token));
 
       // Фильтрация данных с использованием уже вычисленных timestamp'ов
-      let data = [];
-      if (!login && userId) {
-        data = response.data.filter(
-          (it) =>
-            parseInt(it.createdBy.id) === parseInt(userId) &&
-            filterDataByDateRange(it.start, startTimestamp, endTimestamp)
-        );
-      } else {
-        //     data = response.data;
-        data = response.data.filter((it) =>
-          filterDataByDateRange(it.start, startTimestamp, endTimestamp)
-        );
-      }
+
+      // const data = response.data.filter((it) =>
+      //   filterDataByDateRange(it.start, startTimestamp, endTimestamp)
+      // );
+      const data = response.data;
+
       // Формируем список пользователей без повторов
       let users = data.map((it) => ({
-        id: parseInt(it.createdBy.id),
-        name: it.createdBy.display,
+        id: `${it.updatedBy.id}`,
+        name: it.updatedBy.display,
       }));
       users = [...new Map(users.map((item) => [item.id, item])).values()];
 

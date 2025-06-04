@@ -61,7 +61,7 @@ const YandexTracker: FC = () => {
   useEffect(() => {
     console.log("login", login, "state.userId", state.userId, "token", token);
     if ((!!login || !!state.userId) && token !== null) {
-      setState((prev) => ({ ...prev, userId: null, data: [] }));
+      setState((prev) => ({ ...prev, data: [] }));
       getData({
         userId: state.fetchByLogin ? null : state.userId,
         setState,

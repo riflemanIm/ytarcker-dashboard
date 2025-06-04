@@ -26,14 +26,11 @@ const AutocompleteUsers: React.FC<AutocompleteUsersProps> = ({
   const handleChange = (event: React.SyntheticEvent, value: User | null) => {
     handleSelectedUsersChange(value?.id ? value.id.toString() : null);
   };
-  console.log("users", users, userId);
 
   const options = (users || []).map((item: User) => item);
 
   const value =
-    (users || []).find(
-      (item: User) => userId && parseInt(item.id) === parseInt(userId)
-    ) || null;
+    (users || []).find((item: User) => userId && item.id === userId) || null;
 
   return (
     !isEmpty(options) && (

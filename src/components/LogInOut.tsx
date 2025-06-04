@@ -57,6 +57,11 @@ const LogInOut: React.FC<LogInOutProps> = ({ token, setAuth }) => {
                 ...prev,
                 login: login.includes("@") ? login.split("@")[0] : login,
               }));
+
+              // setAuth((prev) => ({
+              //   ...prev,
+              //   login: "a.minyaev",
+              // }));
             }
           } catch (error) {
             console.error(
