@@ -96,24 +96,65 @@ export const daysMap: DayOfWeek[] = [
 ];
 
 export const displayDuration = (duration: string): string => {
+  // Если “P” (плейсхолдер пустого значения) — возвращаем пустую строку
   if (duration === "P") return "";
-  // Регулярное выражение для ISO8601 длительности с учетом лет, недель, дней, часов, минут и секунд
+
+  // Регулярка для ISO-8601 Duration (учитываются годы, недели, дни, часы, минуты, секунды)
   const regex =
     /^P(?:([0-9]+)Y)?(?:([0-9]+)W)?(?:([0-9]+)D)?(?:T(?:([0-9]+)H)?(?:([0-9]+)M)?(?:([0-9]+)S)?)?$/;
   const matches = duration.match(regex);
-  if (!matches) return duration;
+  if (!matches) return duration; // если не подошло под формат, возвращаем оригинал
 
   const [, years, weeks, days, hours, minutes, seconds] = matches;
-  const parts = [];
-  if (years) parts.push(`${years}y`);
-  if (weeks) parts.push(`${weeks}w`);
-  if (days) parts.push(`${days}d`);
-  if (hours) parts.push(`${hours}h`);
-  if (minutes) parts.push(`${minutes}m`);
-  if (seconds) parts.push(`${seconds}s`);
+
+  // 1) Считаем общее число “дней” из недель и дней:
+  //    - каждая неделя = 7 дней
+  //    - каждый день = 1 день (далее переведём в часы)
+  let totalDays = 0;
+  if (weeks) totalDays += parseInt(weeks, 10) * 7;
+  if (days) totalDays += parseInt(days, 10);
+
+  // 2) Считаем общее число “часов” (без учёта дней, их перенесём позже):
+  let totalHours = 0;
+  if (hours) totalHours += parseInt(hours, 10);
+
+  // 3) Считаем общее число “минут” и “секунд”:
+  let totalMinutes = 0;
+  if (minutes) totalMinutes += parseInt(minutes, 10);
+
+  let totalSeconds = 0;
+  if (seconds) totalSeconds += parseInt(seconds, 10);
+
+  // 4) Переводим секунды в минуты (отбрасываем остаток секунд, т.к. выводим только до минут)
+  if (totalSeconds) {
+    totalMinutes += Math.floor(totalSeconds / 60);
+  }
+
+  // 5) Переводим минуты в часы
+  if (totalMinutes) {
+    totalHours += Math.floor(totalMinutes / 60);
+  }
+  const displayMinutes = totalMinutes % 60;
+
+  // 6) Переносим “дни” в “часы” с коэффициентом 8 часов на 1 день
+  totalHours += totalDays * 8;
+
+  // 7) Теперь разбиваем общее число часов на “дни” (по 8 часов) и “остаточные” часы
+  const displayDays = Math.floor(totalHours / 8);
+  const displayHours = totalHours % 8;
+
+  // 8) Собираем итоговую строку: d/h/m, но пропускаем нулевые значения
+  const parts: string[] = [];
+  if (displayDays) parts.push(`${displayDays}d`);
+  if (displayHours) parts.push(`${displayHours}h`);
+  if (displayMinutes) parts.push(`${displayMinutes}m`);
+
+  // Если в итоге не набралось ни дней, ни часов, ни минут — возвращаем пустую строку
+  if (parts.length === 0) return "";
 
   return parts.join(" ");
 };
+
 export const dayOfWeekNameByDate = (data: dayjs.Dayjs): string => {
   const dayOfWeek = dayjs.utc(data).isoWeekday();
   const dayOfWeekName = daysMap[dayOfWeek - 1];

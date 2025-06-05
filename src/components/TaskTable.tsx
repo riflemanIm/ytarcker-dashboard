@@ -39,7 +39,7 @@ dayjs.extend(utc);
 
 interface TaskTableProps {
   data: TaskItem[];
-  start: Dayjs;
+  start: Dayjs; // первый день недели (понедельник)
   setState: React.Dispatch<React.SetStateAction<AppState>>;
   token: string | null;
   setData: (args: SetDataArgs) => Promise<void>;
@@ -177,18 +177,37 @@ const TaskTable: FC<TaskTableProps> = ({
   setData,
   deleteData,
 }) => {
+  // Состояние для показа ошибок при вводе времени
   const [alert, setAlert] = useState<AlertState>({
     open: false,
     severity: "",
     message: "",
   });
-
   const handleCloseAlert = useCallback(() => {
     setAlert({ open: false, severity: "", message: "" });
   }, []);
 
+  // Трансформируем «сырые» задачи в строки для DataGrid
   const tableRows = transformData(data);
 
+  // --- Шаг 1: Вычисляем, какой ключ (monday/tuesday/…) соответствует сегодняшней дате ---
+  // todayKey будет, например, "tuesday" если сегодня вторник в пределах недели start..start+6дн
+  const todayKey: DayOfWeek | "" = useMemo(() => {
+    const today = dayjs().startOf("day");
+    // Перебираем весь daysMap (массив: ["monday","tuesday",…])
+    for (const day of daysMap) {
+      // получаем дату этого «day» (DAY_OF_WEEK) в рамках недели start..start+6
+      const dateOfThisDay = getDateOfWeekday(start, dayToNumber(day)).startOf(
+        "day"
+      );
+      if (dateOfThisDay.isSame(today)) {
+        return day;
+      }
+    }
+    return "";
+  }, [start]);
+
+  // Менеджер контекстного меню ячеек (при клике на Chip с длительностью)
   const [menuState, setMenuState] = useState<MenuState>({
     anchorEl: null,
     issue: null,
@@ -224,7 +243,6 @@ const TaskTable: FC<TaskTableProps> = ({
     },
     [data, start]
   );
-
   const handleMenuClose = useCallback(() => {
     setMenuState({
       anchorEl: null,
@@ -236,37 +254,7 @@ const TaskTable: FC<TaskTableProps> = ({
     });
   }, []);
 
-  const calculateTotalRow = useCallback(
-    (rows: TransformedTaskRow[]): TransformedTaskRow => {
-      const totals: Record<string, string> = {};
-      const totalsVals: Record<string, string> = {};
-      daysMap.forEach((field) => {
-        totals[field] = displayDuration(
-          sumDurations(
-            rows.map((row) => (row as unknown as Record<string, string>)[field])
-          )
-        );
-        totalsVals[field] = sumDurations(
-          rows.map((row) => (row as unknown as Record<string, string>)[field])
-        );
-      });
-      totals.total = displayDuration(sumDurations(Object.values(totalsVals)));
-      return {
-        id: "total",
-        issue: { display: "Итого", href: "", fio: "" },
-        issueId: "",
-        groupIssue: "",
-        ...totals,
-      } as TransformedTaskRow;
-    },
-    []
-  );
-
-  const totalRow = useMemo(
-    () => calculateTotalRow(tableRows),
-    [tableRows, calculateTotalRow]
-  );
-
+  // Обработка редактирования «сырых» значений времени: нормализация, валидация, вызов setData
   const handleCellEdit = useCallback(
     (field: DayOfWeek, newValue: string, issueId: string) => {
       const normalizedValue = normalizeDuration(newValue);
@@ -305,6 +293,7 @@ const TaskTable: FC<TaskTableProps> = ({
     [start, setData, setState, setAlert, token]
   );
 
+  // --- Шаг 2: формируем колонки, подключая классы для «текущего» столбца ---
   const columns: GridColDef[] = [
     {
       field: "issue",
@@ -330,87 +319,90 @@ const TaskTable: FC<TaskTableProps> = ({
     {
       field: "groupIssue",
       headerName: "Группа",
-
       flex: 1.5,
     },
+    // Динамически создаём по одному столбцу на каждый день недели
+    ...daysMap.map((day) => {
+      // Вычисляем форматированный заголовок (например, "Вт 03.06")
+      const header = `${headerWeekName[day]} ${getDateOfWeekday(
+        start,
+        dayToNumber(day)
+      ).format("DD.MM")}`;
 
-    ...daysMap.map((day) => ({
-      field: day,
-      headerName: `${headerWeekName[day]} ${getDateOfWeekday(start, dayToNumber(day)).format("DD.MM")}`,
-      flex: 1,
-      editable: true,
-      sortable: false,
-      //sortComparator: timeSortComparator,
-      renderCell: (params: GridRenderCellParams) => {
-        const val = displayDuration(params.value);
-        if (params.row.id === "total") return val;
-        if (val === "") {
-          return (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: "100%",
-                height: "100%",
-                margin: "0 auto",
-              }}
-              onMouseEnter={(e) => {
-                (e.currentTarget.firstChild as HTMLElement).style.opacity = "1";
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget.firstChild as HTMLElement).style.opacity = "0";
-              }}
-            >
-              <IconButton
-                sx={(theme) => ({
-                  opacity: 0,
-                  transition: "opacity 0.3s",
-                  color: theme.palette.primary.main,
+      return {
+        field: day,
+        headerName: header,
+        flex: 1,
+        editable: true,
+        sortable: false,
+        // Здесь добавляем классы, если day === todayKey
+        headerClassName: day === todayKey ? "current-column-header" : "",
+        cellClassName: (params: GridRenderCellParams) =>
+          params.field === todayKey ? "current-column-cell" : "",
+        renderCell: (params: GridRenderCellParams) => {
+          const val = displayDuration(params.value);
+          if (params.row.id === "total") return val;
+          if (val === "") {
+            // Если ячейка пустая, показываем иконку добавления
+            return (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                   width: "100%",
                   height: "100%",
-                })}
+                  margin: "0 auto",
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget.firstChild as HTMLElement).style.opacity =
+                    "1";
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget.firstChild as HTMLElement).style.opacity =
+                    "0";
+                }}
               >
-                <AddIcon />
-              </IconButton>
-            </div>
+                <IconButton
+                  sx={(theme) => ({
+                    opacity: 0,
+                    transition: "opacity 0.3s",
+                    color: theme.palette.primary.main,
+                    width: "100%",
+                    height: "100%",
+                  })}
+                >
+                  <AddIcon />
+                </IconButton>
+              </div>
+            );
+          }
+          return (
+            <Chip
+              label={val}
+              variant="outlined"
+              clickable
+              color="warning"
+              onClick={(e) => handleMenuOpen(e, params)}
+            />
           );
-        }
-        return (
-          <Chip
-            label={val}
-            variant="outlined"
-            clickable
-            color="warning"
-            onClick={(e) => handleMenuOpen(e, params)}
-          />
-        );
-      },
-      renderEditCell: (params: GridRenderEditCellParams) => (
-        <input
-          type="text"
-          autoFocus
-          style={{
-            border: "none",
-            outline: "none",
-            width: "100%",
-            height: "100%",
-            fontSize: "inherit",
-            fontFamily: "inherit",
-            padding: "0 8px",
-            boxSizing: "border-box",
-          }}
-          defaultValue=""
-          onBlur={(e: React.FocusEvent<HTMLInputElement, Element>) => {
-            params.api.setEditCellValue({
-              id: params.id,
-              field: params.field,
-              value: (e.target as HTMLInputElement).value,
-            });
-            params.api.stopCellEditMode({ id: params.id, field: params.field });
-          }}
-          onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
-            if (e.key === "Enter") {
+        },
+        renderEditCell: (params: GridRenderEditCellParams) => (
+          <input
+            type="text"
+            autoFocus
+            style={{
+              border: "none",
+              outline: "none",
+              width: "100%",
+              height: "100%",
+              fontSize: "inherit",
+              fontFamily: "inherit",
+              padding: "0 8px",
+              boxSizing: "border-box",
+            }}
+            defaultValue=""
+            onBlur={(e: React.FocusEvent<HTMLInputElement, Element>) => {
               params.api.setEditCellValue({
                 id: params.id,
                 field: params.field,
@@ -420,25 +412,68 @@ const TaskTable: FC<TaskTableProps> = ({
                 id: params.id,
                 field: params.field,
               });
-            } else if (e.key === "Escape") {
-              params.api.stopCellEditMode({
-                id: params.id,
-                field: params.field,
-                ignoreModifications: true,
-              });
-            }
-          }}
-        />
-      ),
-    })),
+            }}
+            onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+              if (e.key === "Enter") {
+                params.api.setEditCellValue({
+                  id: params.id,
+                  field: params.field,
+                  value: (e.target as HTMLInputElement).value,
+                });
+                params.api.stopCellEditMode({
+                  id: params.id,
+                  field: params.field,
+                });
+              } else if (e.key === "Escape") {
+                params.api.stopCellEditMode({
+                  id: params.id,
+                  field: params.field,
+                  ignoreModifications: true,
+                });
+              }
+            }}
+          />
+        ),
+      } as GridColDef;
+    }),
     {
       field: "total",
       headerName: "Итого",
       sortable: false,
-      //sortComparator: timeSortComparator,
       flex: 1.5,
     },
   ];
+
+  // --- Шаг 3: вычисляем строку «Итого» по всем задачам ---
+  const calculateTotalRow = useCallback(
+    (rows: TransformedTaskRow[]): TransformedTaskRow => {
+      const totals: Record<string, string> = {};
+      const totalsVals: Record<string, string> = {};
+      daysMap.forEach((field) => {
+        totals[field] = displayDuration(
+          sumDurations(
+            rows.map((row) => (row as unknown as Record<string, string>)[field])
+          )
+        );
+        totalsVals[field] = sumDurations(
+          rows.map((row) => (row as unknown as Record<string, string>)[field])
+        );
+      });
+      totals.total = displayDuration(sumDurations(Object.values(totalsVals)));
+      return {
+        id: "total",
+        issue: { display: "Итого", href: "", fio: "" },
+        issueId: "",
+        groupIssue: "",
+        ...totals,
+      } as TransformedTaskRow;
+    },
+    []
+  );
+  const totalRow = useMemo(
+    () => calculateTotalRow(tableRows),
+    [tableRows, calculateTotalRow]
+  );
 
   return (
     <>
@@ -453,15 +488,16 @@ const TaskTable: FC<TaskTableProps> = ({
         columns={columns}
         disableColumnMenu
         pageSizeOptions={[15]}
+        // Разрешаем редактировать ячейку, только если там «P» (плейсхолдер пустого значения)
         isCellEditable={(params) => params.value === "P"}
         processRowUpdate={(updatedRow, originalRow) =>
           handleCellEdit(
             Object.keys(updatedRow).find(
-              (key) => updatedRow[key] !== originalRow[key]
+              (key) => (updatedRow as any)[key] !== (originalRow as any)[key]
             ) as DayOfWeek,
             updatedRow[
               Object.keys(updatedRow).find(
-                (key) => updatedRow[key] !== originalRow[key]
+                (key) => (updatedRow as any)[key] !== (originalRow as any)[key]
               ) as DayOfWeek
             ],
             updatedRow.issueId
@@ -471,7 +507,16 @@ const TaskTable: FC<TaskTableProps> = ({
         }
         getRowClassName={(params) => (params.id === "total" ? "no-hover" : "")}
         sx={{
+          // Обычные стили для «no-hover»-строки
           "& .no-hover:hover": { backgroundColor: "transparent !important" },
+
+          // --- Стили для подсветки «текущего» столбца ---
+          "& .current-column-header": {
+            backgroundColor: "rgba(200, 220, 255, 0.5)",
+          },
+          "& .current-column-cell": {
+            backgroundColor: "rgba(200, 230, 255, 0.2)",
+          },
         }}
       />
       <TableCellMenu
