@@ -216,32 +216,42 @@ export function getWeekRange(historyNumWeek: number | null = null): {
 export function sumDurations(durations: string[]): string {
   const minutesInWorkDay = 8 * 60; // 8 часов = 1 «рабочий» день
 
-  // Нормализуем чистые "P" → "PT0M"
-  const normalized = durations.map((dur) => (dur === "P" ? "PT0M" : dur));
+  // Пустые "P" → "PT0M"
+  const normalized = durations.map((d) => (d === "P" ? "PT0M" : d));
 
-  let standardDays = 0; // счетчик чистых PnD
+  let standardDays = 0; // сумма чистых 24-часовых дней
   let extraMinutes = 0; // минуты из всего остального
 
   normalized.forEach((dur) => {
-    if (/^P\d+D$/.test(dur)) {
-      // pure day: берем число между P…D
-      standardDays += parseInt(dur.slice(1, -1), 10);
-    } else {
-      // любая другая длительность → минуты
-      extraMinutes += Math.round(dayjs.duration(dur).asMinutes());
+    // 1) Вытаскиваем дни из форм вида PnD или PnDT...
+    const dayMatch = dur.match(/P(\d+)D/);
+    if (dayMatch) {
+      standardDays += parseInt(dayMatch[1], 10);
+    }
+
+    // 2) Вытаскиваем часы/минуты из части после "T"
+    const timeMatch = dur.match(/T(?:(\d+)H)?(?:(\d+)M)?/);
+    if (timeMatch) {
+      const hours = timeMatch[1] ? parseInt(timeMatch[1], 10) : 0;
+      const mins = timeMatch[2] ? parseInt(timeMatch[2], 10) : 0;
+      extraMinutes += hours * 60 + mins;
+    } else if (!dayMatch) {
+      // Сюда попадут строки без D и без T —
+      // но мы заранее заменили "P" на "PT0M",
+      // так что здесь не случится сюрпризов.
     }
   });
 
-  // Каждые 480 минут = 1 «рабочий» день
+  // Конвертируем каждые 480 мин в «рабочий» день
   const extraWorkDays = Math.floor(extraMinutes / minutesInWorkDay);
-  let remainingMinutes = extraMinutes % minutesInWorkDay;
+  let remaining = extraMinutes % minutesInWorkDay;
 
-  const hours = Math.floor(remainingMinutes / 60);
-  const minutes = remainingMinutes % 60;
+  const hours = Math.floor(remaining / 60);
+  const minutes = remaining % 60;
 
   const totalDays = standardDays + extraWorkDays;
 
-  // Формируем итоговую ISO-строку
+  // Собираем итоговую ISO-строку
   let result = "P";
   if (totalDays > 0) result += `${totalDays}D`;
   if (hours > 0 || minutes > 0) {
@@ -249,7 +259,6 @@ export function sumDurations(durations: string[]): string {
     if (hours > 0) result += `${hours}H`;
     if (minutes > 0) result += `${minutes}M`;
   }
-
   return result;
 }
 
