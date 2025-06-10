@@ -57,6 +57,7 @@ const LogInOut: React.FC<LogInOutProps> = ({ token, setAuth }) => {
                 ...prev,
                 login: login.includes("@") ? login.split("@")[0] : login,
               }));
+              window.location.href = "/";
 
               // setAuth((prev) => ({
               //   ...prev,
@@ -74,7 +75,7 @@ const LogInOut: React.FC<LogInOutProps> = ({ token, setAuth }) => {
         fetchLogin();
       }
     }
-  }, [setAuth]);
+  }, []);
 
   return token ? (
     <>

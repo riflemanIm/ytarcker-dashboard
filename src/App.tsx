@@ -23,13 +23,14 @@ import isEmpty, {
 import { AppState, AuthState, DataItem } from "./types/global";
 
 const YandexTracker: FC = () => {
-  const yandex_login =
-    localStorage.getItem("yandex_login") ??
-    localStorage.getItem("yandex_login")?.split("@")[0];
+  const yandex_login = localStorage.getItem("yandex_login") ?? "";
+
   const [auth, setAuth] = useState<AuthState>({
     token: localStorage.getItem("yandex_token"),
-    login: yandex_login,
+    login: yandex_login.includes("@") ? yandex_login.split("@")[0] : null,
   });
+
+  console.log("auth", auth);
   const { token, login } = auth;
 
   const [state, setState] = useState<AppState>({

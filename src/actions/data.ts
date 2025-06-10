@@ -33,7 +33,7 @@ export const getData = async ({
     setState((prev) => ({ ...prev, loaded: true, ...res.data }));
   } catch (err: unknown) {
     if (axios.isAxiosError(err) && err.response?.status === 422) {
-      handleLogout();
+      //handleLogout();
     }
 
     const errorMessage = err instanceof Error ? err.message : String(err);

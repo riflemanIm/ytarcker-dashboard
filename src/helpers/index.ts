@@ -214,19 +214,36 @@ export function getWeekRange(historyNumWeek: number | null = null): {
 }
 
 export function sumDurations(durations: string[]): string {
-  let totalMinutes = durations.reduce(
-    (total, dur) => total + dayjs.duration(dur).asMinutes(),
-    0
-  );
+  const minutesInWorkDay = 8 * 60; // 8 часов = 1 «рабочий» день
 
-  const days = Math.floor(totalMinutes / 1440);
-  totalMinutes %= 1440;
+  // Нормализуем чистые "P" → "PT0M"
+  const normalized = durations.map((dur) => (dur === "P" ? "PT0M" : dur));
 
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
+  let standardDays = 0; // счетчик чистых PnD
+  let extraMinutes = 0; // минуты из всего остального
 
+  normalized.forEach((dur) => {
+    if (/^P\d+D$/.test(dur)) {
+      // pure day: берем число между P…D
+      standardDays += parseInt(dur.slice(1, -1), 10);
+    } else {
+      // любая другая длительность → минуты
+      extraMinutes += Math.round(dayjs.duration(dur).asMinutes());
+    }
+  });
+
+  // Каждые 480 минут = 1 «рабочий» день
+  const extraWorkDays = Math.floor(extraMinutes / minutesInWorkDay);
+  let remainingMinutes = extraMinutes % minutesInWorkDay;
+
+  const hours = Math.floor(remainingMinutes / 60);
+  const minutes = remainingMinutes % 60;
+
+  const totalDays = standardDays + extraWorkDays;
+
+  // Формируем итоговую ISO-строку
   let result = "P";
-  if (days > 0) result += `${days}D`;
+  if (totalDays > 0) result += `${totalDays}D`;
   if (hours > 0 || minutes > 0) {
     result += "T";
     if (hours > 0) result += `${hours}H`;

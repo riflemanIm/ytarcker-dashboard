@@ -459,6 +459,7 @@ const TaskTable: FC<TaskTableProps> = ({
           rows.map((row) => (row as unknown as Record<string, string>)[field])
         );
       });
+
       totals.total = displayDuration(sumDurations(Object.values(totalsVals)));
       return {
         id: "total",
