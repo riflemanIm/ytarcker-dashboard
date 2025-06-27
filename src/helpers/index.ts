@@ -206,7 +206,7 @@ export function getWeekRange(historyNumWeek: number | null = null): {
 } {
   let date = dayjs(); // локально — ОК, для текущей даты пользователя
 
-  if (typeof historyNumWeek === "number" && historyNumWeek > 0) {
+  if (typeof historyNumWeek === "number") {
     date = date.subtract(historyNumWeek, "week");
   }
 

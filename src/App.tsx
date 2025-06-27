@@ -55,7 +55,7 @@ const YandexTracker: FC = () => {
     setWeekOffset((prev) => prev + 1);
   };
   const handleNext = () => {
-    setWeekOffset((prev) => (prev > 0 ? prev - 1 : 0));
+    setWeekOffset((prev) => prev - 1);
   };
   const { start, end } = getWeekRange(weekOffset);
 
@@ -129,7 +129,7 @@ const YandexTracker: FC = () => {
                 end={end}
                 onPrevious={handlePrevious}
                 onNext={handleNext}
-                disableNext={weekOffset === 0}
+                disableNext={weekOffset === -6}
               />
             </Grid>
           )}
