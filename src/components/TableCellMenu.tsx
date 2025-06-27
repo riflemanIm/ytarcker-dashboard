@@ -21,7 +21,7 @@ import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
 import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
-import {
+import isEmpty, {
   displayDuration,
   headerWeekName,
   isValidDuration,
@@ -276,67 +276,73 @@ const TableCellMenu: FC<TableCellMenuProps> = ({
               <CloseIcon />
             </IconButton>
           </Grid>
-
-          <Grid size={12}>
-            <Typography variant="h6" color="info">
-              Редактировать отметки времени
-            </Typography>
-          </Grid>
-          {localState.map((item) => (
-            <Fragment key={item.id}>
-              <Grid size={3}>
-                <TextField
-                  required
-                  label="Длительность"
-                  name="duration"
-                  value={displayDuration(item.duration)}
-                  onChange={(e) => handleDurationChange(item, e)}
-                  error={Boolean(validationErrors[item.id])}
-                  onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
-                    if (e.key === "Enter") handleSubmitItem(item);
-                  }}
-                />
-              </Grid>
-              <Grid size={6}>
-                <TextField
-                  name="comment"
-                  value={item.comment}
-                  onChange={(e) => handleCommentChange(item, e)}
-                  aria-label="minimum height"
-                  minRows={2}
-                  placeholder="Комментарий"
-                  fullWidth
-                  onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
-                    if (e.key === "Enter") handleSubmitItem(item);
-                  }}
-                />
-              </Grid>
-              <Grid size={1.5}>
-                <IconButton
-                  onClick={() => handleSubmitItem(item)}
-                  disabled={
-                    !item.duration ||
-                    item.duration === "P" ||
-                    item.duration === "PT0S" ||
-                    Boolean(validationErrors[item.id])
-                  }
-                >
-                  <CheckIcon color="success" />
-                </IconButton>
-              </Grid>
-              <Grid size={1.5}>
-                <IconButton onClick={() => handleDeleteItem(item)}>
-                  <DeleteOutlineIcon color="error" />
-                </IconButton>
-              </Grid>
+          {!isEmpty(localState) && (
+            <>
               <Grid size={12}>
-                <FormHelperText error>
-                  {validationErrors[item.id] || ""}
-                </FormHelperText>
+                <Typography variant="h6" color="info">
+                  Редактировать отметки времени
+                </Typography>
               </Grid>
-            </Fragment>
-          ))}
+              {localState.map((item) => (
+                <Fragment key={item.id}>
+                  <Grid size={3}>
+                    <TextField
+                      required
+                      label="Длительность"
+                      name="duration"
+                      value={displayDuration(item.duration)}
+                      onChange={(e) => handleDurationChange(item, e)}
+                      error={Boolean(validationErrors[item.id])}
+                      onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                        if (e.key === "Enter") handleSubmitItem(item);
+                      }}
+                    />
+                  </Grid>
+                  <Grid size={6}>
+                    <TextField
+                      name="comment"
+                      value={item.comment}
+                      onChange={(e) => handleCommentChange(item, e)}
+                      aria-label="minimum height"
+                      minRows={2}
+                      placeholder="Комментарий"
+                      fullWidth
+                      onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                        if (e.key === "Enter") handleSubmitItem(item);
+                      }}
+                      multiline
+                      rows={1}
+                    />
+                  </Grid>
+                  <Grid size={1.5}>
+                    <IconButton
+                      onClick={() => handleSubmitItem(item)}
+                      disabled={
+                        !item.duration ||
+                        item.duration === "P" ||
+                        item.duration === "PT0S" ||
+                        Boolean(validationErrors[item.id])
+                      }
+                    >
+                      <CheckIcon color="success" />
+                    </IconButton>
+                  </Grid>
+                  <Grid size={1.5}>
+                    <IconButton onClick={() => handleDeleteItem(item)}>
+                      <DeleteOutlineIcon color="error" />
+                    </IconButton>
+                  </Grid>
+                  <Grid size={12}>
+                    <FormHelperText error>
+                      {validationErrors[item.id] || ""}
+                    </FormHelperText>
+                  </Grid>
+                </Fragment>
+              ))}
+            </>
+          )}
         </Grid>
+
         {menuState.dateField && (
           <>
             <Divider />
@@ -371,6 +377,8 @@ const TableCellMenu: FC<TableCellMenuProps> = ({
                   onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
                     if (e.key === "Enter") handleNewSubmitItem();
                   }}
+                  multiline
+                  rows={3}
                 />
               </Grid>
               <Grid size={1.5}>
