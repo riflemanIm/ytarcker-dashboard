@@ -17,11 +17,12 @@ import {
   DataGrid,
   GridColDef,
   GridRenderCellParams,
-  GridRenderEditCellParams,
+  GridSortModel,
+  gridStringOrNumberComparator,
 } from "@mui/x-data-grid";
 import dayjs, { Dayjs } from "dayjs";
 import utc from "dayjs/plugin/utc";
-import React, { FC, useCallback, useMemo, useState } from "react";
+import React, { FC, useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertState,
   AppState,
@@ -299,7 +300,8 @@ const TaskTable: FC<TaskTableProps> = ({
       field: "issue",
       headerName: "Название",
       flex: 4,
-      sortable: false,
+      sortable: true,
+
       renderCell: (params: GridRenderCellParams) =>
         params.row.id !== "total" ? (
           <IssueDisplay
@@ -315,11 +317,13 @@ const TaskTable: FC<TaskTableProps> = ({
       field: "issueId",
       headerName: "Key",
       flex: 1.5,
+      sortable: true,
     },
     {
       field: "groupIssue",
       headerName: "Группа",
       flex: 1.5,
+      sortable: true,
     },
     // Динамически создаём по одному столбцу на каждый день недели
     ...daysMap.map((day) => {
@@ -333,8 +337,16 @@ const TaskTable: FC<TaskTableProps> = ({
         field: day,
         headerName: header,
         flex: 1,
-        editable: true,
-        sortable: false,
+        editable: false,
+        sortable: true,
+        // кастомный компаратор — проталкивает row.id="total" вниз
+        sortComparator: (v1: string, v2: string, params1, params2) => {
+          if (params1.id === "total") return 1; // total всегда «больше»
+          if (params2.id === "total") return -1; // total всегда «больше»
+          // иначе — стандартное сравнение строк/чисел
+          return gridStringOrNumberComparator(v1, v2, params1, params2);
+        },
+
         // Здесь добавляем классы, если day === todayKey
         headerClassName: day === todayKey ? "current-column-header" : "",
         cellClassName: (params: GridRenderCellParams) =>
@@ -387,59 +399,59 @@ const TaskTable: FC<TaskTableProps> = ({
             />
           );
         },
-        renderEditCell: (params: GridRenderEditCellParams) => (
-          <input
-            type="text"
-            autoFocus
-            style={{
-              border: "none",
-              outline: "none",
-              width: "100%",
-              height: "100%",
-              fontSize: "inherit",
-              fontFamily: "inherit",
-              padding: "0 8px",
-              boxSizing: "border-box",
-            }}
-            defaultValue=""
-            onBlur={(e: React.FocusEvent<HTMLInputElement, Element>) => {
-              params.api.setEditCellValue({
-                id: params.id,
-                field: params.field,
-                value: (e.target as HTMLInputElement).value,
-              });
-              params.api.stopCellEditMode({
-                id: params.id,
-                field: params.field,
-              });
-            }}
-            onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
-              if (e.key === "Enter") {
-                params.api.setEditCellValue({
-                  id: params.id,
-                  field: params.field,
-                  value: (e.target as HTMLInputElement).value,
-                });
-                params.api.stopCellEditMode({
-                  id: params.id,
-                  field: params.field,
-                });
-              } else if (e.key === "Escape") {
-                params.api.stopCellEditMode({
-                  id: params.id,
-                  field: params.field,
-                  ignoreModifications: true,
-                });
-              }
-            }}
-          />
-        ),
+        // renderEditCell: (params: GridRenderEditCellParams) => (
+        //   <input
+        //     type="text"
+        //     autoFocus
+        //     style={{
+        //       border: "none",
+        //       outline: "none",
+        //       width: "100%",
+        //       height: "100%",
+        //       fontSize: "inherit",
+        //       fontFamily: "inherit",
+        //       padding: "0 8px",
+        //       boxSizing: "border-box",
+        //     }}
+        //     defaultValue=""
+        //     onBlur={(e: React.FocusEvent<HTMLInputElement, Element>) => {
+        //       params.api.setEditCellValue({
+        //         id: params.id,
+        //         field: params.field,
+        //         value: (e.target as HTMLInputElement).value,
+        //       });
+        //       params.api.stopCellEditMode({
+        //         id: params.id,
+        //         field: params.field,
+        //       });
+        //     }}
+        //     onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+        //       if (e.key === "Enter") {
+        //         params.api.setEditCellValue({
+        //           id: params.id,
+        //           field: params.field,
+        //           value: (e.target as HTMLInputElement).value,
+        //         });
+        //         params.api.stopCellEditMode({
+        //           id: params.id,
+        //           field: params.field,
+        //         });
+        //       } else if (e.key === "Escape") {
+        //         params.api.stopCellEditMode({
+        //           id: params.id,
+        //           field: params.field,
+        //           ignoreModifications: true,
+        //         });
+        //       }
+        //     }}
+        //   />
+        // ),
       } as GridColDef;
     }),
     {
       field: "total",
       headerName: "Итого",
-      sortable: false,
+      sortable: true,
       flex: 1.5,
     },
   ];
@@ -476,6 +488,32 @@ const TaskTable: FC<TaskTableProps> = ({
     [tableRows, calculateTotalRow]
   );
 
+  const [sortModel, setSortModel] = useState<GridSortModel>([]);
+  const [displayRows, setDisplayRows] = useState<TransformedTaskRow[]>([]);
+
+  // Вычисляем totalRow и tableRows как раньше…
+
+  useEffect(() => {
+    const dataRows = [...tableRows];
+    if (sortModel.length > 0) {
+      const { field, sort } = sortModel[0];
+      dataRows.sort((a, b) => {
+        if (a.id === "total") return 1;
+        if (b.id === "total") return -1;
+        const vA = (a as any)[field];
+        const vB = (b as any)[field];
+        const cmp = gridStringOrNumberComparator(
+          vA,
+          vB,
+          { id: a.id, field, row: a } as any,
+          { id: b.id, field, row: b } as any
+        );
+        return sort === "asc" ? cmp : -cmp;
+      });
+    }
+    setDisplayRows([...dataRows, totalRow]);
+  }, [tableRows, totalRow, sortModel]);
+
   return (
     <>
       <DurationAlert
@@ -485,12 +523,34 @@ const TaskTable: FC<TaskTableProps> = ({
         onClose={handleCloseAlert}
       />
       <DataGrid
-        rows={[...tableRows, totalRow]}
+        rows={displayRows}
         columns={columns}
         disableColumnMenu
         pageSizeOptions={[15]}
+        sortingMode="server"
+        sortModel={sortModel}
+        onSortModelChange={(newModel) => setSortModel(newModel)}
+        // Перехват single-click по пустой ячейке-«дню»
+        onCellClick={(
+          params,
+          event // MuiEvent<React.MouseEvent>
+        ) => {
+          // проверяем, что это одинарный клик по одному из столбцов дней
+          if (
+            daysMap.includes(params.field as DayOfWeek) &&
+            params.value === "P" &&
+            (event as React.MouseEvent).detail === 1
+          ) {
+            // открываем ваше меню точно так же, как по кнопке AddIcon
+            handleMenuOpen(
+              event as React.MouseEvent<HTMLElement>,
+              params as GridRenderCellParams
+            );
+          }
+        }}
         // Разрешаем редактировать ячейку, только если там «P» (плейсхолдер пустого значения)
-        isCellEditable={(params) => params.value === "P"}
+
+        //isCellEditable={(params) => params.value === "P"}
         processRowUpdate={(updatedRow, originalRow) =>
           handleCellEdit(
             Object.keys(updatedRow).find(
