@@ -35,6 +35,16 @@ export const isSuperLogin = (login: string | null | undefined): boolean => {
   if (!login) return false;
   return ADMIN_LOGINS.includes(login);
 };
+/**
+ * Парсит ISO-8601 duration, например "PT2H30M", в общее число секунд.
+ */
+export function parseISODurationToSeconds(dur: string): number {
+  // Ожидаем формат "PT#H#M#S"
+  const match = dur.match(/^P(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)$/);
+  if (!match) return 0;
+  const [, h = "0", m = "0", s = "0"] = match;
+  return +h * 3600 + +m * 60 + +s;
+}
 
 export function isDateInCurrentWeek(date: dayjs.Dayjs): boolean {
   const weekStart = dayjs().startOf("isoWeek");

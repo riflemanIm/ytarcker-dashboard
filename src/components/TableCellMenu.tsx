@@ -298,6 +298,7 @@ const TableCellMenu: FC<TableCellMenuProps> = ({
                       onChange={(e) => handleDurationChange(item, e)}
                       error={Boolean(validationErrors[item.id])}
                       onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                        e.stopPropagation();
                         if (e.key === "Enter") handleSubmitItem(item);
                       }}
                     />
@@ -312,6 +313,7 @@ const TableCellMenu: FC<TableCellMenuProps> = ({
                       placeholder="Комментарий"
                       fullWidth
                       onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                        e.stopPropagation();
                         if (e.key === "Enter") handleSubmitItem(item);
                       }}
                       multiline
@@ -368,6 +370,7 @@ const TableCellMenu: FC<TableCellMenuProps> = ({
                   value={newEntry.duration}
                   onChange={handleAddNewDuration}
                   onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                    e.stopPropagation();
                     if (e.key === "Enter") handleNewSubmitItem();
                   }}
                 />
@@ -383,6 +386,7 @@ const TableCellMenu: FC<TableCellMenuProps> = ({
                   placeholder="Комментарий"
                   fullWidth
                   onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                    e.stopPropagation();
                     if (e.key === "Enter") handleNewSubmitItem();
                   }}
                   multiline
