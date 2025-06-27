@@ -240,7 +240,11 @@ const TableCellMenu: FC<TableCellMenuProps> = ({
         anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
         transformOrigin={{ vertical: "top", horizontal: "left" }}
       >
-        <Grid container spacing={2} sx={{ p: 2.5, width: 440 }}>
+        <Grid
+          container
+          spacing={2}
+          sx={{ p: 2.5, minWidth: 240, maxWidth: 600 }}
+        >
           <Grid size={8}>
             <Typography variant="subtitle1">
               {menuState.issue} {menuState.issueId}
@@ -285,7 +289,7 @@ const TableCellMenu: FC<TableCellMenuProps> = ({
               </Grid>
               {localState.map((item) => (
                 <Fragment key={item.id}>
-                  <Grid size={3}>
+                  <Grid size={2}>
                     <TextField
                       required
                       label="Длительность"
@@ -298,7 +302,7 @@ const TableCellMenu: FC<TableCellMenuProps> = ({
                       }}
                     />
                   </Grid>
-                  <Grid size={6}>
+                  <Grid size={8}>
                     <TextField
                       name="comment"
                       value={item.comment}
@@ -311,10 +315,10 @@ const TableCellMenu: FC<TableCellMenuProps> = ({
                         if (e.key === "Enter") handleSubmitItem(item);
                       }}
                       multiline
-                      rows={1}
+                      rows={2}
                     />
                   </Grid>
-                  <Grid size={1.5}>
+                  <Grid size={1}>
                     <IconButton
                       onClick={() => handleSubmitItem(item)}
                       disabled={
@@ -327,7 +331,7 @@ const TableCellMenu: FC<TableCellMenuProps> = ({
                       <CheckIcon color="success" />
                     </IconButton>
                   </Grid>
-                  <Grid size={1.5}>
+                  <Grid size={1}>
                     <IconButton onClick={() => handleDeleteItem(item)}>
                       <DeleteOutlineIcon color="error" />
                     </IconButton>
@@ -346,13 +350,17 @@ const TableCellMenu: FC<TableCellMenuProps> = ({
         {menuState.dateField && (
           <>
             <Divider />
-            <Grid container spacing={2} sx={{ p: 2.5, width: 440 }}>
+            <Grid
+              container
+              spacing={2}
+              sx={{ p: 2.5, minWidth: 240, maxWidth: 600 }}
+            >
               <Grid size={12}>
                 <Typography variant="h6" color="info">
                   Добавить отметку времени
                 </Typography>
               </Grid>
-              <Grid size={3}>
+              <Grid size={2}>
                 <TextField
                   required
                   label="Длительность"
@@ -364,7 +372,7 @@ const TableCellMenu: FC<TableCellMenuProps> = ({
                   }}
                 />
               </Grid>
-              <Grid size={6}>
+              <Grid size={8}>
                 <TextField
                   name="comment"
                   label="Комментарий"
@@ -381,7 +389,7 @@ const TableCellMenu: FC<TableCellMenuProps> = ({
                   rows={3}
                 />
               </Grid>
-              <Grid size={1.5}>
+              <Grid size={2}>
                 <IconButton
                   onClick={handleNewSubmitItem}
                   disabled={Boolean(validationErrors["add_new"])}

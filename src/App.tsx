@@ -99,7 +99,6 @@ const YandexTracker: FC = () => {
     });
   };
 
-  console.log("state", state);
   return (
     <>
       {!state.loaded && <LinearProgress />}

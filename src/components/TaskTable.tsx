@@ -512,7 +512,7 @@ const TaskTable: FC<TaskTableProps> = ({
       });
     }
     setDisplayRows([...dataRows, totalRow]);
-  }, [tableRows, totalRow, sortModel]);
+  }, [data.length, sortModel]);
 
   return (
     <>
@@ -581,6 +581,7 @@ const TaskTable: FC<TaskTableProps> = ({
         }}
       />
       <TableCellMenu
+        key={`${menuState.issueId}-${menuState.field}-${menuState.dateField?.toISOString()}`}
         open={Boolean(menuState.anchorEl)}
         onClose={handleMenuClose}
         menuState={menuState}
