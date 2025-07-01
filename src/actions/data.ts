@@ -1,3 +1,4 @@
+import { Button } from "@mui/material";
 import dayjs, { Dayjs } from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
@@ -57,6 +58,7 @@ export interface SetDataArgs {
   duration: string;
   comment?: string;
   worklogId?: string | null;
+  addEndWorkDayTime?: boolean;
 }
 
 export const setData = async ({
@@ -68,6 +70,7 @@ export const setData = async ({
   duration,
   comment = "",
   worklogId = null,
+  addEndWorkDayTime = true,
 }: SetDataArgs): Promise<void> => {
   if (token == null) {
     return;
@@ -87,15 +90,25 @@ export const setData = async ({
       res = await axios.patch(`${apiUrl}/api/edit_time`, payload);
     } else {
       // Добавляем новую запись, формируем время из dateCell
-      const startDate =
-        dateCell != null
-          ? dateCell.add(18, "hours").format("YYYY-MM-DDTHH:mm:ss.SSSZZ")
-          : dayjs().add(18, "hours").format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
+
+      const startDate = () => {
+        if (addEndWorkDayTime && dateCell) {
+          return dateCell.add(18, "hours").format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
+        }
+        if (addEndWorkDayTime) {
+          dayjs().add(18, "hours").format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
+        }
+        if (dateCell) {
+          return dateCell.format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
+        }
+
+        return dayjs().format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
+      };
 
       const payload = {
         token,
         issueId,
-        start: startDate,
+        start: startDate(),
         duration,
         comment,
       };

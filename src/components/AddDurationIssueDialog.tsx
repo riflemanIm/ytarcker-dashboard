@@ -84,6 +84,7 @@ export default function AddDurationIssueDialog({
       issueId: values.issue!.key,
       duration: normalizeDuration(values.duration),
       comment: values.comment,
+      addEndWorkDayTime: false,
     } as SetDataArgs);
     setAlert({
       open: true,
@@ -177,7 +178,9 @@ export default function AddDurationIssueDialog({
             <Grid size={6}>
               <MuiUIPicker
                 value={values.dateTime ?? null}
-                handleDateChange={(date) => handleDateChange(date, "dateTime")}
+                handleDateChange={(date) => {
+                  handleDateChange(dayjs(date), "dateTime");
+                }}
                 disablePast
                 label="Дата"
                 errorText={errors.dateTime}
