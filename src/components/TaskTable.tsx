@@ -42,6 +42,7 @@ interface TaskTableProps {
   setData: (args: SetDataArgs) => Promise<void>;
   deleteData: (args: DeleteDataArgs) => void;
   setAlert: React.Dispatch<React.SetStateAction<AlertState>>;
+  idEditable: boolean;
 }
 
 // Компонент для отображения задачи (с переходом по ссылке, если она есть)
@@ -175,6 +176,7 @@ const TaskTable: FC<TaskTableProps> = ({
   setData,
   deleteData,
   setAlert,
+  idEditable = false,
 }) => {
   // Трансформируем «сырые» задачи в строки для DataGrid
   const tableRows = transformData(data);
@@ -343,7 +345,7 @@ const TaskTable: FC<TaskTableProps> = ({
         renderCell: (params: GridRenderCellParams) => {
           const val = displayDuration(params.value);
           if (params.row.id === "total") return val;
-          if (val === "") {
+          if (val === "" && idEditable) {
             // Если ячейка пустая, показываем иконку добавления
             return (
               <div
@@ -378,15 +380,18 @@ const TaskTable: FC<TaskTableProps> = ({
               </div>
             );
           }
-          return (
-            <Chip
-              label={val}
-              variant="outlined"
-              clickable
-              color="warning"
-              onClick={(e) => handleMenuOpen(e, params)}
-            />
-          );
+          if (idEditable) {
+            return (
+              <Chip
+                label={val}
+                variant="outlined"
+                clickable
+                color="warning"
+                onClick={(e) => handleMenuOpen(e, params)}
+              />
+            );
+          }
+          return val;
         },
         // renderEditCell: (params: GridRenderEditCellParams) => (
         //   <input
@@ -493,6 +498,7 @@ const TaskTable: FC<TaskTableProps> = ({
         ) => {
           // проверяем, что это одинарный клик по одному из столбцов дней
           if (
+            idEditable &&
             daysMap.includes(params.field as DayOfWeek) &&
             params.value === "P" &&
             (event as React.MouseEvent).detail === 1

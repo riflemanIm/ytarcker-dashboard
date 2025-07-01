@@ -261,16 +261,18 @@ const YandexTracker: FC = () => {
                   my={2}
                 >
                   <Typography variant="h5">
-                    Отметки времени по{" "}
-                    {state.fetchByLogin ? "своему логину" : "сотруднику"}
+                    Затраченное время{" "}
+                    {state.fetchByLogin ? "по задачам" : "по сотрудникам"}
                   </Typography>
-                  <AddDurationIssueDialog
-                    issues={state.issues}
-                    setData={setData}
-                    setAlert={setAlert}
-                    setState={setState}
-                    token={token}
-                  />
+                  {state.fetchByLogin && (
+                    <AddDurationIssueDialog
+                      issues={state.issues}
+                      setData={setData}
+                      setAlert={setAlert}
+                      setState={setState}
+                      token={token}
+                    />
+                  )}
                 </Stack>
                 <TaskTable
                   data={aggregateDurations(state.data as DataItem[])}
@@ -280,6 +282,7 @@ const YandexTracker: FC = () => {
                   setData={setData}
                   deleteData={deleteData}
                   setAlert={setAlert}
+                  idEditable={state.fetchByLogin}
                 />
                 <DurationAlert
                   open={alert.open}
