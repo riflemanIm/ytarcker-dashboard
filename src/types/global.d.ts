@@ -1,4 +1,11 @@
 import { Dayjs } from "dayjs";
+
+export interface Issue {
+  key: string;
+  summary: string;
+  [key: string]: any;
+}
+
 export interface DataItem {
   id: string;
   duration: string;
@@ -31,6 +38,7 @@ export interface AppState {
   users: User[] | null;
   data: DataItem[];
   fetchByLogin: boolean;
+  issues: Issue[];
 }
 
 export interface GetDataArgs {

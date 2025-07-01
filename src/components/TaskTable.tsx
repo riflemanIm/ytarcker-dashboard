@@ -13,17 +13,11 @@ import {
 } from "@/helpers";
 import AddIcon from "@mui/icons-material/Add";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
-import { AlertColor, Chip, IconButton, Typography } from "@mui/material";
-import {
-  DataGrid,
-  GridColDef,
-  GridRenderCellParams,
-  GridSortModel,
-  gridStringOrNumberComparator,
-} from "@mui/x-data-grid";
+import { Chip, IconButton, Typography } from "@mui/material";
+import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import dayjs, { Dayjs } from "dayjs";
 import utc from "dayjs/plugin/utc";
-import React, { FC, useCallback, useEffect, useMemo, useState } from "react";
+import React, { FC, useCallback, useMemo, useState } from "react";
 import {
   AlertState,
   AppState,
@@ -33,7 +27,6 @@ import {
   TaskItemIssue,
   TransformedTaskRow,
 } from "../types/global";
-import DurationAlert from "./DurationAlert";
 import TableCellMenu from "./TableCellMenu";
 
 dayjs.locale("ru");
@@ -48,6 +41,7 @@ interface TaskTableProps {
   token: string | null;
   setData: (args: SetDataArgs) => Promise<void>;
   deleteData: (args: DeleteDataArgs) => void;
+  setAlert: React.Dispatch<React.SetStateAction<AlertState>>;
 }
 
 // Компонент для отображения задачи (с переходом по ссылке, если она есть)
@@ -180,17 +174,8 @@ const TaskTable: FC<TaskTableProps> = ({
   token,
   setData,
   deleteData,
+  setAlert,
 }) => {
-  // Состояние для показа ошибок при вводе времени
-  const [alert, setAlert] = useState<AlertState>({
-    open: false,
-    severity: "",
-    message: "",
-  });
-  const handleCloseAlert = useCallback(() => {
-    setAlert({ open: false, severity: "", message: "" });
-  }, []);
-
   // Трансформируем «сырые» задачи в строки для DataGrid
   const tableRows = transformData(data);
 
@@ -496,12 +481,6 @@ const TaskTable: FC<TaskTableProps> = ({
 
   return (
     <>
-      <DurationAlert
-        open={alert.open}
-        message={alert.message}
-        severity={alert.severity as AlertColor | undefined}
-        onClose={handleCloseAlert}
-      />
       <DataGrid
         rows={[...tableRows, totalRow]}
         columns={columns}

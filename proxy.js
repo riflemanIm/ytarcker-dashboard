@@ -211,19 +211,19 @@ app.post("/api/delete_all", async (req, res) => {
 });
 // Получить все задачи пользователя, отсортированные по последнему обновлению
 app.get("/api/user_issues", async (req, res) => {
-  let { token, userId, login } = req.query;
+  const { token, userId, login } = req.query;
 
   // Проверяем токен
   if (!token) {
     return res.status(400).json({ error: "token not passed" });
   }
 
-  // Определяем, по какому полю фильтруем: createdBy (можно заменить на assignee, если нужно)
+  // Определяем фильтр: assignee
   const filter = {};
   if (login && login !== "undefined" && login !== "null") {
-    filter.createdBy = login;
+    filter.assignee = login;
   } else if (userId && userId !== "undefined" && userId !== "null") {
-    filter.createdBy = userId;
+    filter.assignee = userId;
   } else {
     return res
       .status(400)
@@ -231,16 +231,18 @@ app.get("/api/user_issues", async (req, res) => {
   }
 
   try {
-    // Запрос к Yandex Tracker: ищем задачи по фильтру, сортируем по updatedAt (desc), возвращаем до 10000 штук
     const url =
-      "https://api.tracker.yandex.net/v3/issues/_search?expand=transitions&perPage=10000";
+      "https://api.tracker.yandex.net/v3/issues/_search?perPage=10000";
     const requestBody = {
       filter,
       order: "-updatedAt",
     };
 
     const response = await axios.post(url, requestBody, headers(token));
-    const issues = response.data;
+    const issues = response.data.map((it) => ({
+      key: it.key,
+      summary: it.summary,
+    }));
 
     res.json({ issues });
   } catch (error) {

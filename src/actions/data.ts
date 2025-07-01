@@ -3,7 +3,13 @@ import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import axios, { AxiosError } from "axios";
 import isEmpty from "@/helpers";
-import { AlertState, AppState, DataItem, GetDataArgs } from "@/types/global";
+import {
+  AlertState,
+  AppState,
+  DataItem,
+  GetDataArgs,
+  Issue,
+} from "@/types/global";
 import { handleLogout } from "@/components/LogInOut";
 
 dayjs.extend(utc);
@@ -183,5 +189,54 @@ export const deleteData = async ({
     console.error("ERROR", err.message);
     setState((prev: AppState) => ({ ...prev, loaded: true }));
     setAlert({ open: true, severity: "error", message: err.message });
+  }
+};
+
+export const getUserIssues = async ({
+  setState,
+
+  token,
+  userId,
+  login,
+}: {
+  setState: React.Dispatch<React.SetStateAction<AppState>>;
+  token: string | null;
+  userId?: string | null;
+  login?: string | null;
+}): Promise<void> => {
+  // Проверяем обязательный токен
+  if (!token) {
+    throw new Error("token not passed");
+  }
+  // Проверяем, что передан хотя бы userId или login
+  if (
+    (!login || login === "undefined" || login === "null") &&
+    (!userId || userId === "undefined" || userId === "null")
+  ) {
+    throw new Error("Either userId or login must be provided");
+  }
+  console.log("getUserIssues]:");
+  try {
+    // GET /api/user_issues?token=…&userId=…&login=…
+    const res = await axios.get<{ issues: Issue[] }>(
+      `${apiUrl}/api/user_issues`,
+      {
+        params: { token, userId, login },
+      }
+    );
+    setState((prev: AppState) => ({
+      ...prev,
+      loaded: true,
+      issues: res.data.issues,
+    }));
+
+    console.log("issues:", res.data.issues);
+  } catch (err: any) {
+    console.error("[Ошибка в getUserIssues]:", err.message);
+    // Если токен протух — разлогиниваем
+    if (axios.isAxiosError(err) && err.response?.status === 401) {
+      handleLogout();
+    }
+    throw err;
   }
 };

@@ -1,16 +1,18 @@
 import RefreshIcon from "@mui/icons-material/Refresh";
 import {
   Alert,
+  AlertColor,
   FormControlLabel,
   Grid2 as Grid,
   IconButton,
   LinearProgress,
+  Stack,
   Switch,
   Tooltip,
   Typography,
 } from "@mui/material";
-import { FC, useEffect, useState } from "react";
-import { deleteData, getData, setData } from "./actions/data";
+import { FC, useCallback, useEffect, useState } from "react";
+import { deleteData, getData, getUserIssues, setData } from "./actions/data";
 import AutocompleteUsers from "./components/AutocompleteUsers";
 import LogInOut from "./components/LogInOut";
 import TaskTable from "./components/TaskTable";
@@ -20,7 +22,15 @@ import isEmpty, {
   getWeekRange,
   isSuperLogin,
 } from "./helpers";
-import { AppState, AuthState, DataItem } from "./types/global";
+import {
+  AlertState,
+  AppState,
+  AuthState,
+  DataItem,
+  Issue,
+} from "./types/global";
+import DurationAlert from "./components/DurationAlert";
+import AddDurationIssueDialog from "./components/AddDurationIssueDialog";
 
 const YandexTracker: FC = () => {
   const yandex_login = localStorage.getItem("yandex_login") ?? "";
@@ -39,7 +49,18 @@ const YandexTracker: FC = () => {
     users: null,
     data: [], // Инициализация как пустой массив
     fetchByLogin: true,
+    issues: [],
   });
+
+  // Состояние для показа ошибок при вводе времени
+  const [alert, setAlert] = useState<AlertState>({
+    open: false,
+    severity: "",
+    message: "",
+  });
+  const handleCloseAlert = useCallback(() => {
+    setAlert({ open: false, severity: "", message: "" });
+  }, []);
 
   const toggleFetchMode = () => {
     setState((prev) => ({
@@ -61,7 +82,7 @@ const YandexTracker: FC = () => {
 
   useEffect(() => {
     console.log("login", login, "state.userId", state.userId, "token", token);
-    if ((!!login || !!state.userId) && token !== null) {
+    if ((login || state.userId) && token) {
       setState((prev) => ({ ...prev, data: [] }));
       getData({
         userId: state.fetchByLogin ? null : state.userId,
@@ -71,6 +92,7 @@ const YandexTracker: FC = () => {
         end: end.format("YYYY-MM-DD"),
         login: state.fetchByLogin && login ? login : undefined,
       });
+      getUserIssues({ setState, token, userId: state.userId, login });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [login, weekOffset, state.fetchByLogin]);
@@ -97,7 +119,10 @@ const YandexTracker: FC = () => {
       end: end.format("YYYY-MM-DD"),
       login: state.fetchByLogin && login ? login : undefined,
     });
+    getUserIssues({ setState, token, userId: state.userId, login });
   };
+
+  console.log("state", state);
 
   return (
     <>
@@ -227,10 +252,26 @@ const YandexTracker: FC = () => {
           >
             {!isEmpty(state.data) ? (
               <>
-                <Typography variant="h5" mb={2}>
-                  Отметки времени по{" "}
-                  {state.fetchByLogin ? "своему логину" : "сотруднику"}
-                </Typography>
+                <Stack
+                  spacing={2}
+                  direction="row"
+                  alignItems="center"
+                  justifyItems="center"
+                  justifyContent="center"
+                  my={2}
+                >
+                  <Typography variant="h5">
+                    Отметки времени по{" "}
+                    {state.fetchByLogin ? "своему логину" : "сотруднику"}
+                  </Typography>
+                  <AddDurationIssueDialog
+                    issues={state.issues}
+                    setData={setData}
+                    setAlert={setAlert}
+                    setState={setState}
+                    token={token}
+                  />
+                </Stack>
                 <TaskTable
                   data={aggregateDurations(state.data as DataItem[])}
                   start={start}
@@ -238,6 +279,13 @@ const YandexTracker: FC = () => {
                   token={token}
                   setData={setData}
                   deleteData={deleteData}
+                  setAlert={setAlert}
+                />
+                <DurationAlert
+                  open={alert.open}
+                  message={alert.message}
+                  severity={alert.severity as AlertColor | undefined}
+                  onClose={handleCloseAlert}
                 />
               </>
             ) : (
