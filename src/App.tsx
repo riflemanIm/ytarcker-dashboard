@@ -299,9 +299,6 @@ const YandexTracker: FC = () => {
           </Grid>
         )}
       </Grid>
-      <Alert severity="warning">
-        Чтобы добавить время в незаполненную ячейку, дважды щёлкните по ней.
-      </Alert>
     </>
   );
 };
