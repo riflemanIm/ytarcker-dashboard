@@ -181,7 +181,6 @@ export default function AddDurationIssueDialog({
                 handleDateChange={(date) => {
                   handleDateChange(dayjs(date), "dateTime");
                 }}
-                disablePast
                 label="Дата"
                 errorText={errors.dateTime}
                 name="dateTime"
