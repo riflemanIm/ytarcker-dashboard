@@ -250,30 +250,30 @@ const YandexTracker: FC = () => {
             size={12}
             sx={{ height: "80vh", background: "white", mx: "auto" }}
           >
+            <Stack
+              spacing={2}
+              direction="row"
+              alignItems="center"
+              justifyItems="center"
+              justifyContent="center"
+              my={2}
+            >
+              <Typography variant="h5">
+                Затраченное время{" "}
+                {state.fetchByLogin ? "по задачам" : "по сотрудникам"}
+              </Typography>
+              {state.fetchByLogin && (
+                <AddDurationIssueDialog
+                  issues={state.issues}
+                  setData={setData}
+                  setAlert={setAlert}
+                  setState={setState}
+                  token={token}
+                />
+              )}
+            </Stack>
             {!isEmpty(state.data) ? (
               <>
-                <Stack
-                  spacing={2}
-                  direction="row"
-                  alignItems="center"
-                  justifyItems="center"
-                  justifyContent="center"
-                  my={2}
-                >
-                  <Typography variant="h5">
-                    Затраченное время{" "}
-                    {state.fetchByLogin ? "по задачам" : "по сотрудникам"}
-                  </Typography>
-                  {state.fetchByLogin && (
-                    <AddDurationIssueDialog
-                      issues={state.issues}
-                      setData={setData}
-                      setAlert={setAlert}
-                      setState={setState}
-                      token={token}
-                    />
-                  )}
-                </Stack>
                 <TaskTable
                   data={aggregateDurations(state.data as DataItem[])}
                   start={start}
