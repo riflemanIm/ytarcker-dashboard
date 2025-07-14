@@ -1,5 +1,6 @@
 <!-- русский -->
 
+Этот документ на русском.
 See the English version in [README.md](README.md).
 
 # YTracker-Dashboard
@@ -70,4 +71,24 @@ See the English version in [README.md](README.md).
 
 ---
 
-*Не стесняйтесь дополнить раздел инструкциями по установке, переменным окружения (`VITE_APP_API_URL`, `VITE_APP_REDIRECT_URI` и т.д.) и примерами конфигурации.*
+## Настройка окружения
+
+Создайте файл `.env` в корне проекта и задайте следующие переменные:
+
+```dotenv
+VITE_APP_CLIENT_ID=xxxxxxxxxxx
+VITE_APP_REDIRECT_URI=https://ytracker.mobimed.ru
+VITE_APP_API_URL=https://ytracker.mobimed.ru
+```
+
+Где:
+
+* `VITE_APP_CLIENT_ID` — идентификатор OAuth-приложения Яндекса.
+* `VITE_APP_REDIRECT_URI` — URL для перенаправления после авторизации.
+* `VITE_APP_API_URL` — базовый URL вашего API-доступа.
+
+---
+
+*Не стесняйтесь дополнить раздел инструкциями по установке или другими примерами конфигурации.*
+
+Не стесняйтесь дорабатывать проект, пулреквесты приветствуются.
