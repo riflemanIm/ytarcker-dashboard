@@ -210,6 +210,16 @@ app.post("/api/delete_all", async (req, res) => {
   }
 });
 // Получить все задачи пользователя, отсортированные по последнему обновлению
+const searchTracker = async (token, filter) => {
+  const url = "https://api.tracker.yandex.net/v3/issues/_search?perPage=10000";
+  const response = await axios.post(
+    url,
+    { filter, order: "-updated" },
+    headers(token)
+  );
+  console.log("response", response);
+  return response.data;
+};
 app.get("/api/user_issues", async (req, res) => {
   const { token, userId, login } = req.query;
 
@@ -218,12 +228,11 @@ app.get("/api/user_issues", async (req, res) => {
     return res.status(400).json({ error: "token not passed" });
   }
 
-  // Определяем фильтр: assignee
-  const filter = {};
+  let user;
   if (login && login !== "undefined" && login !== "null") {
-    filter.assignee = login;
+    user = login;
   } else if (userId && userId !== "undefined" && userId !== "null") {
-    filter.assignee = userId;
+    user = userId;
   } else {
     return res
       .status(400)
@@ -231,20 +240,19 @@ app.get("/api/user_issues", async (req, res) => {
   }
 
   try {
-    const url =
-      "https://api.tracker.yandex.net/v3/issues/_search?perPage=10000";
-    const requestBody = {
-      filter,
-      order: "-updatedAt",
-    };
+    const [assignedNow, createdByMe] = await Promise.all([
+      searchTracker(token, { assignee: user }), // назначены на меня
+      searchTracker(token, { createdBy: user }), // созданы мной
+    ]);
+    const uniqueMap = new Map();
+    [...assignedNow, ...createdByMe].forEach((issue) => {
+      uniqueMap.set(issue.key, {
+        key: issue.key,
+        summary: issue.summary,
+      });
+    });
 
-    const response = await axios.post(url, requestBody, headers(token));
-    const issues = response.data.map((it) => ({
-      key: it.key,
-      summary: it.summary,
-    }));
-
-    res.json({ issues });
+    res.json({ issues: Array.from(uniqueMap.values()) });
   } catch (error) {
     console.error("[Ошибка в методе /api/user_issues]:", error.message);
     res.status(error.response?.status || 500).json({ error: error.message });
