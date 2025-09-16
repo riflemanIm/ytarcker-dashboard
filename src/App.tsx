@@ -2,16 +2,15 @@ import RefreshIcon from "@mui/icons-material/Refresh";
 import {
   Alert,
   AlertColor,
-  FormControlLabel,
   Grid2 as Grid,
   IconButton,
   LinearProgress,
   Stack,
-  Switch,
   Tooltip,
   Typography,
 } from "@mui/material";
 import { FC, useCallback, useEffect, useState } from "react";
+import dayjs from "dayjs";
 import { deleteData, getData, getUserIssues, setData } from "./actions/data";
 import AutocompleteUsers from "./components/AutocompleteUsers";
 import LogInOut from "./components/LogInOut";
@@ -22,15 +21,13 @@ import isEmpty, {
   getWeekRange,
   isSuperLogin,
 } from "./helpers";
-import {
-  AlertState,
-  AppState,
-  AuthState,
-  DataItem,
-  Issue,
-} from "./types/global";
+import { AlertState, AppState, AuthState, DataItem } from "./types/global";
 import DurationAlert from "./components/DurationAlert";
 import AddDurationIssueDialog from "./components/AddDurationIssueDialog";
+import WorklogWeeklyReport from "./components/WorklogWeeklyReport";
+import ReportDateRange from "./components/ReportDateRange";
+import ToggleViewButton from "./components/ToggleViewButton";
+import FetchModeSwitch from "./components/FetchModeSwitch";
 
 const YandexTracker: FC = () => {
   const yandex_login = localStorage.getItem("yandex_login") ?? "";
@@ -40,27 +37,26 @@ const YandexTracker: FC = () => {
     login: yandex_login.includes("@") ? yandex_login.split("@")[0] : null,
   });
 
-  console.log("auth", auth);
   const { token, login } = auth;
 
   const [state, setState] = useState<AppState>({
     loaded: true,
     userId: null,
     users: null,
-    data: [], // Инициализация как пустой массив
+    data: [],
     fetchByLogin: true,
     issues: [],
   });
 
-  // Состояние для показа ошибок при вводе времени
   const [alert, setAlert] = useState<AlertState>({
     open: false,
     severity: "",
     message: "",
   });
-  const handleCloseAlert = useCallback(() => {
-    setAlert({ open: false, severity: "", message: "" });
-  }, []);
+  const handleCloseAlert = useCallback(
+    () => setAlert({ open: false, severity: "", message: "" }),
+    []
+  );
 
   const toggleFetchMode = () => {
     setState((prev) => ({
@@ -71,58 +67,64 @@ const YandexTracker: FC = () => {
     }));
   };
 
+  // Переключатель представлений
+  const [viewMode, setViewMode] = useState<"table" | "report">("table");
+  const toggleView = () =>
+    setViewMode((v) => (v === "table" ? "report" : "table"));
+
+  // НЕДЕЛЬНЫЙ РЕЖИМ (TaskTable)
   const [weekOffset, setWeekOffset] = useState<number>(0);
-  const handlePrevious = () => {
-    setWeekOffset((prev) => prev + 1);
-  };
-  const handleNext = () => {
-    setWeekOffset((prev) => prev - 1);
-  };
+  const handlePrevious = () => setWeekOffset((prev) => prev + 1);
+  const handleNext = () => setWeekOffset((prev) => prev - 1);
   const { start, end } = getWeekRange(weekOffset);
 
-  useEffect(() => {
-    console.log("login", login, "state.userId", state.userId, "token", token);
-    if ((login || state.userId) && token) {
-      setState((prev) => ({ ...prev, data: [] }));
-      getData({
-        userId: state.fetchByLogin ? null : state.userId,
-        setState,
-        token,
-        start: start.format("YYYY-MM-DD"),
-        end: end.format("YYYY-MM-DD"),
-        login: state.fetchByLogin && login ? login : undefined,
-      });
-      getUserIssues({ setState, token, userId: state.userId, login });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [login, weekOffset, state.fetchByLogin]);
+  // РЕЖИМ ОТЧЁТА: произвольный диапазон дат (по умолчанию текущий месяц)
+  const [reportFrom, setReportFrom] = useState<any>(() =>
+    dayjs().startOf("month")
+  );
+  const [reportTo, setReportTo] = useState<any>(() => dayjs().endOf("month"));
 
-  const handleSelectedUsersChange = (userId: string | null) => {
-    setState((prev) => ({ ...prev, userId, data: [] }));
-    getData({
-      userId: state.fetchByLogin ? null : userId,
-      setState,
-      token,
-      start: start.format("YYYY-MM-DD"),
-      end: end.format("YYYY-MM-DD"),
-      login: state.fetchByLogin && login ? login : undefined,
-    });
-  };
+  const fetchForActiveRange = useCallback(() => {
+    if (!(login || state.userId) || !token) return;
 
-  const handleRefresh = () => {
-    setState((prev) => ({ ...prev, loaded: false }));
+    const rangeStart = viewMode === "report" ? reportFrom : start;
+    const rangeEnd = viewMode === "report" ? reportTo : end;
+
+    setState((prev) => ({ ...prev, data: [] }));
     getData({
       userId: state.fetchByLogin ? null : state.userId,
       setState,
       token,
-      start: start.format("YYYY-MM-DD"),
-      end: end.format("YYYY-MM-DD"),
+      start: rangeStart.format("YYYY-MM-DD"),
+      end: rangeEnd.format("YYYY-MM-DD"),
       login: state.fetchByLogin && login ? login : undefined,
     });
     getUserIssues({ setState, token, userId: state.userId, login });
+  }, [
+    login,
+    state.userId,
+    token,
+    state.fetchByLogin,
+    reportFrom,
+    reportTo,
+    start,
+    end,
+    viewMode,
+  ]);
+
+  useEffect(() => {
+    fetchForActiveRange();
+  }, [login, state.fetchByLogin, weekOffset, viewMode, reportFrom, reportTo]);
+
+  const handleSelectedUsersChange = (userId: string | null) => {
+    setState((prev) => ({ ...prev, userId, data: [] }));
+    fetchForActiveRange();
   };
 
-  console.log("state", state);
+  const handleRefresh = () => {
+    setState((prev) => ({ ...prev, loaded: false }));
+    fetchForActiveRange();
+  };
 
   return (
     <>
@@ -135,116 +137,116 @@ const YandexTracker: FC = () => {
           height: "100vh",
           width: "98vw",
           justifyContent: "center",
-          justifySelf: "center",
           textAlign: "center",
         }}
         spacing={2}
       >
-        <>
-          {token && state.loaded && (
+        {login && isSuperLogin(login) && (
+          <>
             <Grid
-              size={5}
+              size={0.8}
               alignSelf="center"
               justifySelf="center"
               textAlign="center"
             >
-              <WeekNavigator
-                start={start}
-                end={end}
-                onPrevious={handlePrevious}
-                onNext={handleNext}
-                disableNext={weekOffset === -6}
+              <FetchModeSwitch
+                fetchByLogin={state.fetchByLogin}
+                login={login}
+                onToggle={toggleFetchMode}
+                disabled={!state.loaded}
               />
             </Grid>
-          )}
-          {token && state.loaded && (
-            <>
-              <Grid
-                size={1}
-                alignSelf="center"
-                justifySelf="center"
-                textAlign="center"
-              >
-                <IconButton
-                  onClick={handleRefresh}
-                  color="primary"
-                  sx={(theme) => ({
-                    borderRadius: "50%",
-                    p: 3,
-                    color: theme.palette.background.default,
-                    background: theme.palette.primary.light,
-                    "&:hover": {
-                      color: theme.palette.background.default,
-                      background: theme.palette.primary.main,
-                    },
-                  })}
-                >
-                  <RefreshIcon />
-                </IconButton>
-              </Grid>
-              {login && isSuperLogin(login) && (
-                <>
-                  <Grid
-                    size={0.8}
-                    alignSelf="center"
-                    justifySelf="center"
-                    textAlign="center"
-                  >
-                    <Tooltip
-                      title={
-                        state.fetchByLogin
-                          ? "Переключится на выборку по сотруднику"
-                          : "Переключится на выборку по своему логину"
-                      }
-                      placement="top"
-                    >
-                      <FormControlLabel
-                        control={
-                          <Switch
-                            checked={!state.fetchByLogin}
-                            onChange={toggleFetchMode}
-                            color="primary"
-                          />
-                        }
-                        labelPlacement="bottom"
-                        label={state.fetchByLogin ? login || "" : ""}
-                      />
-                    </Tooltip>
-                  </Grid>
-                  <Grid
-                    size="grow"
-                    alignSelf="center"
-                    justifySelf="center"
-                    textAlign="center"
-                  >
-                    {isEmpty(state.users) && !state.fetchByLogin ? (
-                      <Alert severity="info">
-                        Нет сотрудников за этот период
-                      </Alert>
-                    ) : (
-                      <AutocompleteUsers
-                        userId={state.userId}
-                        handleSelectedUsersChange={handleSelectedUsersChange}
-                        users={state.users}
-                        disabled={!state.loaded || state.fetchByLogin}
-                      />
-                    )}
-                  </Grid>
-                </>
+            <Grid
+              size="grow"
+              alignSelf="center"
+              justifySelf="center"
+              textAlign="center"
+            >
+              {isEmpty(state.users) && !state.fetchByLogin ? (
+                <Alert severity="info">Нет сотрудников за этот период</Alert>
+              ) : (
+                <AutocompleteUsers
+                  userId={state.userId}
+                  handleSelectedUsersChange={handleSelectedUsersChange}
+                  users={state.users}
+                  disabled={!state.loaded || state.fetchByLogin}
+                />
               )}
-            </>
-          )}
+            </Grid>
+          </>
+        )}
+        {token && state.loaded && (
           <Grid
-            size={2}
-            sx={{
-              alignSelf: "center",
-              justifySelf: "center",
-              textAlign: "center",
-            }}
+            size={5}
+            alignSelf="center"
+            justifySelf="center"
+            textAlign="center"
           >
-            <LogInOut token={token} setAuth={setAuth} />
+            {/* Левая панель: кнопка-переключатель и навигатор/диапазон */}
+            <Stack
+              direction="row"
+              gap={1}
+              alignItems="center"
+              justifyContent="center"
+            >
+              {isSuperLogin(login) && (
+                <ToggleViewButton viewMode={viewMode} onToggle={toggleView} />
+              )}
+              {viewMode === "table" ? (
+                <WeekNavigator
+                  start={start}
+                  end={end}
+                  onPrevious={handlePrevious}
+                  onNext={handleNext}
+                  disableNext={weekOffset === -6}
+                />
+              ) : (
+                <ReportDateRange
+                  from={reportFrom}
+                  to={reportTo}
+                  onPrevMonth={() => {
+                    setReportFrom((prev) =>
+                      prev.add(-1, "month").startOf("month")
+                    );
+                    setReportTo((prev) => prev.add(-1, "month").endOf("month"));
+                  }}
+                  onThisMonth={() => {
+                    setReportFrom(dayjs().startOf("month"));
+                    setReportTo(dayjs().endOf("month"));
+                  }}
+                  onNextMonth={() => {
+                    setReportFrom((prev) =>
+                      prev.add(1, "month").startOf("month")
+                    );
+                    setReportTo((prev) => prev.add(1, "month").endOf("month"));
+                  }}
+                />
+              )}
+            </Stack>
           </Grid>
-        </>
+        )}
+
+        {token && state.loaded && (
+          <Grid
+            size={1}
+            alignSelf="center"
+            justifySelf="center"
+            textAlign="center"
+          >
+            <IconButton onClick={handleRefresh} color="primary">
+              <RefreshIcon />
+            </IconButton>
+          </Grid>
+        )}
+        <Grid
+          size={2}
+          alignSelf="center"
+          justifySelf="center"
+          textAlign="center"
+        >
+          <LogInOut token={token} setAuth={setAuth} />
+        </Grid>
+
         {token && state.loaded && (
           <Grid
             size={12}
@@ -254,15 +256,18 @@ const YandexTracker: FC = () => {
               spacing={2}
               direction="row"
               alignItems="center"
-              justifyItems="center"
               justifyContent="center"
               my={2}
             >
               <Typography variant="h5">
-                Затраченное время{" "}
-                {state.fetchByLogin ? "по задачам" : "по сотрудникам"}
+                {viewMode === "table" && (
+                  <>
+                    Затраченное время{" "}
+                    {state.fetchByLogin ? "по задачам" : "по сотрудникам"}
+                  </>
+                )}
               </Typography>
-              {state.fetchByLogin && (
+              {state.fetchByLogin && viewMode === "table" && (
                 <AddDurationIssueDialog
                   issues={state.issues}
                   setData={setData}
@@ -272,18 +277,29 @@ const YandexTracker: FC = () => {
                 />
               )}
             </Stack>
+
             {!isEmpty(state.data) ? (
               <>
-                <TaskTable
-                  data={aggregateDurations(state.data as DataItem[])}
-                  start={start}
-                  setState={setState}
-                  token={token}
-                  setData={setData}
-                  deleteData={deleteData}
-                  setAlert={setAlert}
-                  idEditable={state.fetchByLogin}
-                />
+                {viewMode === "table" ? (
+                  <TaskTable
+                    data={aggregateDurations(state.data as DataItem[])}
+                    start={start}
+                    setState={setState}
+                    token={token}
+                    setData={setData}
+                    deleteData={deleteData}
+                    setAlert={setAlert}
+                    idEditable={state.fetchByLogin}
+                  />
+                ) : (
+                  <WorklogWeeklyReport
+                    from={reportFrom.toDate()}
+                    to={reportTo.toDate()}
+                    data={state.data as any}
+                    height={780}
+                  />
+                )}
+
                 <DurationAlert
                   open={alert.open}
                   message={alert.message}
@@ -293,7 +309,7 @@ const YandexTracker: FC = () => {
               </>
             ) : (
               <Alert severity="warning">
-                Нет ни одной отметки времени за этот период
+                Нет ни одной отметки времени за выбранный период
               </Alert>
             )}
           </Grid>

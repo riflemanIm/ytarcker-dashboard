@@ -38,6 +38,229 @@ const ADMIN_LOGINS = [
   "n.kovalevskaya",
   "e.pavlova",
 ];
+/** ===== Общие хелперы для дат/форматов/агрегаций ===== */
+
+// "+0000" → "+00:00" (нужен для корректного парсинга Date)
+export function normalizeTZ(s: string): string {
+  if (typeof s !== "string") return s as any;
+  if (/[+-]\d{2}:\d{2}$/.test(s)) return s;
+  return s.replace(/([+-]\d{2})(\d{2})$/, "$1:$2");
+}
+
+// Безопасно получить Date из строки/Date
+export function toDate(value: string | Date): Date {
+  if (value instanceof Date) return value;
+  const s = normalizeTZ(value);
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? new Date(value) : d;
+}
+
+// Полночь локального дня
+export function startOfDay(d: Date): Date {
+  const dt = new Date(d);
+  dt.setHours(0, 0, 0, 0);
+  return dt;
+}
+
+// ISO-неделя: начало (понедельник)
+export function startOfISOWeek(d: Date): Date {
+  const dt = startOfDay(d);
+  const day = dt.getDay(); // 0..6 (вс..сб)
+  const iso = day === 0 ? 7 : day; // 1..7 (пн..вс)
+  const monday = new Date(dt);
+  monday.setDate(dt.getDate() - (iso - 1));
+  return monday;
+}
+
+// ISO-неделя: конец (вс 23:59:59.999)
+export function endOfISOWeek(d: Date): Date {
+  const monday = startOfISOWeek(d);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  sunday.setHours(23, 59, 59, 999);
+  return sunday;
+}
+
+// Все понедельники недель в диапазоне [from..to]
+export function enumerateISOWeeks(from: Date, to: Date): Date[] {
+  const res: Date[] = [];
+  let cur = startOfISOWeek(from);
+  const last = endOfISOWeek(to);
+  while (cur <= last) {
+    res.push(new Date(cur));
+    cur.setDate(cur.getDate() + 7);
+  }
+  return res;
+}
+
+// Номер ISO-недели (1..53)
+export function getISOWeekNumber(d: Date): number {
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dayNum = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  return Math.ceil(((date.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+}
+
+// Заголовок колонки недели: W38 (15–21 Sep)
+export function formatWeekLabel(monday: Date): string {
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  const wn = getISOWeekNumber(monday);
+  const dd = (n: number) => String(n).padStart(2, "0");
+  const monthShort = (d: Date) =>
+    d.toLocaleString(undefined, { month: "short" });
+  return `W${wn} (${dd(monday.getDate())}–${dd(sunday.getDate())} ${monthShort(monday)})`;
+}
+
+// Ключ недели (понедельник) yyyy-MM-dd (UTC)
+export function weekKey(monday: Date): string {
+  return monday.toISOString().slice(0, 10);
+}
+
+// Приведение разных форматов длительности → ISO8601 (PT…)
+export function toIsoDuration(v: any): string {
+  if (typeof v === "string" && /^P/.test(v)) return v; // уже ISO
+
+  if (typeof v === "number") {
+    const sec = Math.max(0, v | 0);
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const s = sec % 60;
+    const parts: string[] = [];
+    if (h) parts.push(`${h}H`);
+    if (m) parts.push(`${m}M`);
+    if (s) parts.push(`${s}S`);
+    return `PT${parts.join("") || "0S"}`;
+  }
+
+  if (typeof v === "string" && /^\d{1,2}:\d{2}$/.test(v)) {
+    const [hh, mm] = v.split(":").map(Number);
+    const h = hh || 0;
+    const m = mm || 0;
+    return `PT${h ? `${h}H` : ""}${m ? `${m}M` : ""}` || "PT0S";
+  }
+
+  if (typeof v === "object" && v && ("minutes" in v || "hours" in v)) {
+    const h = Number((v as any).hours || 0);
+    const m = Number((v as any).minutes || 0);
+    return `PT${h ? `${h}H` : ""}${m ? `${m}M` : ""}` || "PT0S";
+  }
+
+  return "PT0S";
+}
+
+// ISO8601 duration → часы (поддерживает P1D, PT5H30M и т.п.)
+export function isoDurationToHours(iso: string): number {
+  if (!iso) return 0;
+  const norm = iso.startsWith("PT") ? iso.replace(/^PT/, "P0DT") : iso;
+  const re = /^P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?$/i;
+  const m = re.exec(norm);
+  if (!m) return 0;
+  const days = Number(m[1] || 0);
+  const h = Number(m[2] || 0);
+  const min = Number(m[3] || 0);
+  const s = Number(m[4] || 0);
+  const total = days * 24 + h + min / 60 + s / 3600;
+  return Math.round(total * 100) / 100;
+}
+
+// В диапазоне [from..to]?
+export function clampDateToRange(d: Date, from: Date, to: Date): Date | null {
+  if (d < from || d > to) return null;
+  return d;
+}
+
+/** ===== Нормализация worklog-элемента (под ЯТ) ===== */
+
+export interface WorklogItem {
+  id?: number | string;
+  issue: { key: string; display?: string };
+  start: string; // ISO datetime
+  duration: string; // ISO-8601
+  fio?: string; // ← добавили
+}
+
+// Универсальная нормализация одной записи worklog → WorklogItem
+export function normalizeWorklogItem(
+  x: Record<string, any>
+): WorklogItem | null {
+  if (!x) return null;
+
+  const issue = x.issue || {};
+  const key: string | undefined = issue.key || x.issueKey || x.key;
+  if (!key) return null;
+
+  const display: string | undefined =
+    issue.display || x.issueTitle || x.summary || x.display;
+
+  const startRaw: string | undefined =
+    x.start || x.started || x.startAt || x.createdAt || x.updatedAt;
+  if (!startRaw) return null;
+
+  const durationAny: any = x.duration ?? x.timeSpent ?? x.time;
+  const durationISO = toIsoDuration(durationAny);
+
+  // ← добавили: берем ФИО из updatedBy/createdBy
+  const fio: string | undefined =
+    x.updatedBy?.display ??
+    x.createdBy?.display ??
+    x.user?.display ??
+    x.author?.display ??
+    undefined;
+
+  return {
+    id: x.id ?? `${key}-${startRaw}`,
+    issue: { key, display },
+    start: startRaw,
+    duration: durationISO,
+    fio, // ← добавили
+  };
+}
+
+type AnyItem = Record<string, any>;
+
+const normalizeToWorklog = (x: AnyItem) => {
+  // 1) Сырые логи ЯТ — уже подходят
+  if (x?.issue?.key && x?.start && x?.duration) {
+    return {
+      issue: { key: x.issue.key, display: x.issue.display ?? "" },
+      start: x.start,
+      duration: toIsoDuration(x.duration),
+    };
+  }
+
+  // 2) Частые альтернативные названия полей
+  const key =
+    x.issueKey ?? x.key ?? x.issue_id ?? x.issueId ?? x.id ?? "UNKNOWN";
+  const display =
+    x.issueTitle ?? x.title ?? x.summary ?? x.issue?.display ?? "";
+
+  // время начала
+  const start =
+    x.start ??
+    x.started ??
+    x.startedAt ??
+    x.date ??
+    x.createdAt ??
+    x.updatedAt ?? // на крайний случай
+    null;
+
+  // длительность
+  const durationRaw =
+    (x.duration ?? x.spent ?? x.spentSeconds ?? x.seconds ?? x.minutes)
+      ? Number(x.minutes) * 60
+      : null;
+
+  return start
+    ? {
+        issue: { key: String(key), display: String(display ?? "") },
+        start: String(start),
+        duration: toIsoDuration(durationRaw),
+      }
+    : null; // если нет ни одного поля начала — пропустим
+};
+
 export const isSuperLogin = (login: string | null | undefined): boolean => {
   if (!login) return false;
   return ADMIN_LOGINS.includes(login);
