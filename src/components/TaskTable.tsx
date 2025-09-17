@@ -307,14 +307,14 @@ const TaskTable: FC<TaskTableProps> = ({
       field: "issueId",
       headerName: "Key",
       flex: 1.5,
-      sortable: false,
+      sortable: true,
     },
-    {
-      field: "groupIssue",
-      headerName: "Группа",
-      flex: 1.5,
-      sortable: false,
-    },
+    // {
+    //   field: "groupIssue",
+    //   headerName: "Группа",
+    //   flex: 1.5,
+    //   sortable: false,
+    // },
     // Динамически создаём по одному столбцу на каждый день недели
     ...daysMap.map((day) => {
       // Вычисляем форматированный заголовок (например, "Вт 03.06")

@@ -27,8 +27,13 @@ export const getData = async ({
   end,
   login,
 }: GetDataArgs): Promise<void> => {
+  setState((prev) => ({ ...prev, loaded: false }));
+
   try {
-    setState((prev) => ({ ...prev, loaded: false }));
+    // Проверяем обязательный токен
+    if (!token) {
+      throw new Error("token not passed");
+    }
 
     const res = await axios.get(
       `${apiUrl}/api/issues?token=${token}&endDate=${end}&startDate=${start}&userId=${userId}&login=${login}`
@@ -172,7 +177,7 @@ export const deleteData = async ({
   if (token == null) {
     return;
   }
-  console.error("deleteData");
+
   try {
     const payload = {
       issueId,
@@ -207,7 +212,6 @@ export const deleteData = async ({
 
 export const getUserIssues = async ({
   setState,
-
   token,
   userId,
   login,
@@ -217,19 +221,20 @@ export const getUserIssues = async ({
   userId?: string | null;
   login?: string | null;
 }): Promise<void> => {
-  // Проверяем обязательный токен
-  if (!token) {
-    throw new Error("token not passed");
-  }
-  // Проверяем, что передан хотя бы userId или login
-  if (
-    (!login || login === "undefined" || login === "null") &&
-    (!userId || userId === "undefined" || userId === "null")
-  ) {
-    throw new Error("Either userId or login must be provided");
-  }
-  console.log("getUserIssues]:");
+  setState((prev) => ({ ...prev, loaded: false }));
   try {
+    // Проверяем обязательный токен
+    if (!token) {
+      throw new Error("token not passed");
+    }
+    // Проверяем, что передан хотя бы userId или login
+    if (
+      (!login || login === "undefined" || login === "null") &&
+      (!userId || userId === "undefined" || userId === "null")
+    ) {
+      throw new Error("Either userId or login must be provided");
+    }
+
     // GET /api/user_issues?token=…&userId=…&login=…
     const res = await axios.get<{ issues: Issue[] }>(
       `${apiUrl}/api/user_issues`,
@@ -242,14 +247,12 @@ export const getUserIssues = async ({
       loaded: true,
       issues: res.data.issues,
     }));
-
-    console.log("issues:", res.data.issues);
   } catch (err: any) {
     console.error("[Ошибка в getUserIssues]:", err.message);
     // Если токен протух — разлогиниваем
+    setState((prev) => ({ ...prev, loaded: true }));
     if (axios.isAxiosError(err) && err.response?.status === 401) {
       handleLogout();
     }
-    throw err;
   }
 };

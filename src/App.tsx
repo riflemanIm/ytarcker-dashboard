@@ -6,28 +6,27 @@ import {
   IconButton,
   LinearProgress,
   Stack,
-  Tooltip,
   Typography,
 } from "@mui/material";
-import { FC, useCallback, useEffect, useState } from "react";
 import dayjs from "dayjs";
+import { FC, useCallback, useEffect, useState } from "react";
 import { deleteData, getData, getUserIssues, setData } from "./actions/data";
+import AddDurationIssueDialog from "./components/AddDurationIssueDialog";
 import AutocompleteUsers from "./components/AutocompleteUsers";
+import DurationAlert from "./components/DurationAlert";
+import FetchModeSwitch from "./components/FetchModeSwitch";
 import LogInOut from "./components/LogInOut";
+import ReportDateRange from "./components/ReportDateRange";
 import TaskTable from "./components/TaskTable";
+import ToggleViewButton from "./components/ToggleViewButton";
 import WeekNavigator from "./components/WeekNavigator";
+import WorklogWeeklyReport from "./components/WorklogWeeklyReport";
 import isEmpty, {
   aggregateDurations,
   getWeekRange,
   isSuperLogin,
 } from "./helpers";
 import { AlertState, AppState, AuthState, DataItem } from "./types/global";
-import DurationAlert from "./components/DurationAlert";
-import AddDurationIssueDialog from "./components/AddDurationIssueDialog";
-import WorklogWeeklyReport from "./components/WorklogWeeklyReport";
-import ReportDateRange from "./components/ReportDateRange";
-import ToggleViewButton from "./components/ToggleViewButton";
-import FetchModeSwitch from "./components/FetchModeSwitch";
 
 const YandexTracker: FC = () => {
   const yandex_login = localStorage.getItem("yandex_login") ?? "";
@@ -79,10 +78,12 @@ const YandexTracker: FC = () => {
   const { start, end } = getWeekRange(weekOffset);
 
   // РЕЖИМ ОТЧЁТА: произвольный диапазон дат (по умолчанию текущий месяц)
-  const [reportFrom, setReportFrom] = useState<any>(() =>
+  const [reportFrom, setReportFrom] = useState<dayjs.Dayjs>(() =>
     dayjs().startOf("month")
   );
-  const [reportTo, setReportTo] = useState<any>(() => dayjs().endOf("month"));
+  const [reportTo, setReportTo] = useState<dayjs.Dayjs>(() =>
+    dayjs().endOf("month")
+  );
 
   const fetchForActiveRange = useCallback(() => {
     if (!(login || state.userId) || !token) return;
@@ -99,7 +100,7 @@ const YandexTracker: FC = () => {
       end: rangeEnd.format("YYYY-MM-DD"),
       login: state.fetchByLogin && login ? login : undefined,
     });
-    getUserIssues({ setState, token, userId: state.userId, login });
+    console.log("viewMode", viewMode);
   }, [
     login,
     state.userId,
@@ -111,27 +112,37 @@ const YandexTracker: FC = () => {
     end,
     viewMode,
   ]);
+  useEffect(() => {
+    if (viewMode === "table") {
+      getUserIssues({ setState, token, userId: state.userId, login });
+    }
+  }, [viewMode]);
 
   useEffect(() => {
     fetchForActiveRange();
-  }, [login, state.fetchByLogin, weekOffset, viewMode, reportFrom, reportTo]);
+  }, [
+    login,
+    state.userId,
+    state.fetchByLogin,
+    weekOffset,
+    viewMode,
+    reportFrom,
+    reportTo,
+  ]);
 
   const handleSelectedUsersChange = (userId: string | null) => {
-    setState((prev) => ({ ...prev, userId, data: [] }));
-    fetchForActiveRange();
+    setState((prev) => ({ ...prev, userId }));
   };
 
   const handleRefresh = () => {
-    setState((prev) => ({ ...prev, loaded: false }));
     fetchForActiveRange();
   };
-
+  console.log("state.loaded", state.loaded);
   return (
     <>
       {!state.loaded && <LinearProgress />}
       <Grid
         container
-        size={12}
         sx={{
           background: "white",
           height: "100vh",
@@ -139,12 +150,12 @@ const YandexTracker: FC = () => {
           justifyContent: "center",
           textAlign: "center",
         }}
-        spacing={2}
+        spacing={3}
       >
-        {login && isSuperLogin(login) && (
+        {login && isSuperLogin(login) && state.loaded && (
           <>
             <Grid
-              size={0.8}
+              size="auto"
               alignSelf="center"
               justifySelf="center"
               textAlign="center"
@@ -177,7 +188,7 @@ const YandexTracker: FC = () => {
         )}
         {token && state.loaded && (
           <Grid
-            size={5}
+            size="auto"
             alignSelf="center"
             justifySelf="center"
             textAlign="center"
@@ -239,10 +250,10 @@ const YandexTracker: FC = () => {
           </Grid>
         )}
         <Grid
-          size={2}
+          size="grow"
           alignSelf="center"
           justifySelf="center"
-          textAlign="center"
+          textAlign={state.loaded ? "right" : "center"}
         >
           <LogInOut token={token} setAuth={setAuth} />
         </Grid>
