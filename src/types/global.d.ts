@@ -5,6 +5,10 @@ export interface Issue {
   summary: string;
   [key: string]: any;
 }
+export interface IssueType {
+  label: string;
+  hint: string;
+}
 
 export interface DataItem {
   id: string;
@@ -81,6 +85,12 @@ export interface TaskItem {
   duration: string;
   comment: string;
   durations?: DurationItem[];
+}
+
+export interface TaskItemMenu {
+  issue_type_list?: IssueType[];
+  durations?: DurationItem[];
+  loaded: boolean;
 }
 
 /**

@@ -281,7 +281,7 @@ app.get("/api/issue_type_list", async (req, res) => {
       { entityKey, email }
     );
     console.log("resp_types", resp_types.data);
-    res.json({ issues_types: resp_types.data });
+    res.json({ issue_type_list: resp_types.data });
   } catch (error) {
     console.error("[Ошибка в методе api/issue_type_list]:", error.message);
     res.status(error.response?.status || 500).json({ error: error.message });

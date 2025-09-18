@@ -10,6 +10,8 @@ import {
   DataItem,
   GetDataArgs,
   Issue,
+  IssueType,
+  TaskItemMenu,
 } from "@/types/global";
 import { handleLogout } from "@/components/LogInOut";
 
@@ -251,6 +253,60 @@ export const getUserIssues = async ({
     console.error("[Ошибка в getUserIssues]:", err.message);
     // Если токен протух — разлогиниваем
     setState((prev) => ({ ...prev, loaded: true }));
+    if (axios.isAxiosError(err) && err.response?.status === 401) {
+      handleLogout();
+    }
+  }
+};
+
+export const getIssueTypeList = async ({
+  setLocalState,
+  token,
+  entityKey,
+}: {
+  setLocalState: React.Dispatch<React.SetStateAction<TaskItemMenu>>;
+  token: string | null;
+  entityKey?: string | null;
+}): Promise<void> => {
+  const yandex_login = localStorage.getItem("yandex_login") ?? "";
+  if (!yandex_login) {
+    return;
+  }
+  setLocalState((prev) => ({ ...prev, loaded: false }));
+  try {
+    // Проверяем обязательный токен
+    if (!token) {
+      throw new Error("token not passed");
+    }
+    // Проверяем,  yandex_login и entityKey
+    if (
+      !yandex_login ||
+      yandex_login === "undefined" ||
+      yandex_login === "null"
+    ) {
+      throw new Error("Either yandex_login must be provided");
+    }
+    if (!entityKey || entityKey === "undefined" || entityKey === "null") {
+      throw new Error("Either  entityKey must be provided");
+    }
+
+    // GET /api/user_issues?token=…&userId=…&login=…
+    const res = await axios.get<{ issue_type_list: IssueType[] }>(
+      `${apiUrl}/api/issue_type_list`,
+      {
+        params: { token, entityKey, email: yandex_login },
+      }
+    );
+    console.log(" res.data.issue_type_list", res.data.issue_type_list);
+    setLocalState((prev) => ({
+      ...prev,
+      loaded: true,
+      issue_type_list: res.data.issue_type_list,
+    }));
+  } catch (err: any) {
+    console.error("[Ошибка в getIssueTypeList]:", err.message);
+    // Если токен протух — разлогиниваем
+    setLocalState((prev) => ({ ...prev, loaded: true }));
     if (axios.isAxiosError(err) && err.response?.status === 401) {
       handleLogout();
     }

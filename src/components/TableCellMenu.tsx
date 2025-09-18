@@ -1,6 +1,7 @@
 import React, { FC, Fragment, useCallback, useEffect, useState } from "react";
 import {
   Button,
+  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
@@ -27,8 +28,15 @@ import isEmpty, {
   isValidDuration,
   normalizeDuration,
 } from "@/helpers";
-import { DurationItem, MenuState, AlertState, AppState } from "../types/global";
-import { SetDataArgs, DeleteDataArgs } from "@/actions/data";
+import {
+  DurationItem,
+  MenuState,
+  AlertState,
+  AppState,
+  TaskItemMenu,
+} from "../types/global";
+import { SetDataArgs, DeleteDataArgs, getIssueTypeList } from "@/actions/data";
+import SelectIssueTypeList from "./SelectIssueTypeList";
 
 interface TableCellMenuProps {
   open: boolean;
@@ -52,25 +60,41 @@ const TableCellMenu: FC<TableCellMenuProps> = ({
   setAlert,
 }) => {
   console.log("menuState", menuState);
-  // Состояние для ошибок валидации
+
+  // NEW: выбранный тип для конкатенации
+  const [selectedIssueTypeLabel, setSelectedIssueTypeLabel] = useState<
+    string | null
+  >(null);
+
+  // Валидация
   const [validationErrors, setValidationErrors] = useState<
     Record<string, string>
   >({});
-  // Локальное состояние для хранения данных (duration и comment)
-  const [localState, setLocalState] = useState<DurationItem[]>(
-    menuState.durations || []
-  );
-  // Состояние для показа диалога подтверждения удаления
+
+  // Лок. состояние
+  const [localState, setLocalState] = useState<TaskItemMenu>({
+    issue_type_list: [],
+    durations: menuState.durations || [],
+    loaded: true,
+  });
+
   const [openConfirm, setOpenConfirm] = useState<boolean>(false);
 
-  // Синхронизация локального состояния при изменении menuState.durations
+  useEffect(() => {
+    if (menuState.issueId) {
+      getIssueTypeList({ setLocalState, token, entityKey: menuState.issueId });
+    }
+  }, [menuState.issueId, token]);
+
   useEffect(() => {
     if (menuState.durations && menuState.durations.length > 0) {
-      setLocalState([...menuState.durations]);
+      setLocalState((prev) => ({
+        ...prev,
+        durations: menuState.durations ? [...menuState.durations] : [],
+      }));
     }
   }, [menuState.durations]);
 
-  // Валидация значения длительности
   const validateDurationValue = useCallback((rawValue: string): string => {
     const normalized = normalizeDuration(rawValue);
     if (
@@ -83,7 +107,29 @@ const TableCellMenu: FC<TableCellMenuProps> = ({
     return "";
   }, []);
 
-  // Состояние для новой записи
+  // NEW: helper — склейка комментария с типом без дублей
+  const mergeCommentWithIssueType = useCallback(
+    (comment: string, label: string | null | undefined) => {
+      const base = (comment ?? "").trim();
+      const tag = (label ?? "").trim();
+      if (!tag) return base;
+      if (!base) return tag;
+
+      // Не добавляем дубликат, если такой тег уже есть (в конце или где-то ещё)
+      const alreadyHas =
+        base === tag ||
+        base.endsWith(` • ${tag}`) ||
+        base
+          .split("•")
+          .map((s) => s.trim())
+          .includes(tag);
+
+      return alreadyHas ? base : `${base} • ${tag}`;
+    },
+    []
+  );
+
+  // --- добавление новой записи ---
   const [newEntry, setNewEntry] = useState<{
     duration: string;
     comment: string;
@@ -110,6 +156,12 @@ const TableCellMenu: FC<TableCellMenuProps> = ({
     []
   );
 
+  // NEW: выбор issue type из селекта
+  const handleIssueTypeChange = useCallback((label: string) => {
+    setSelectedIssueTypeLabel(label || null);
+  }, []);
+
+  // NEW: применяем merge при добавлении
   const handleNewSubmitItem = useCallback(() => {
     const error = validateDurationValue(newEntry.duration);
     if (error) {
@@ -117,6 +169,11 @@ const TableCellMenu: FC<TableCellMenuProps> = ({
       return;
     }
     const duration = normalizeDuration(newEntry.duration);
+    const finalComment = mergeCommentWithIssueType(
+      newEntry.comment,
+      selectedIssueTypeLabel
+    );
+
     setData({
       dateCell: menuState.dateField || undefined,
       setState,
@@ -124,21 +181,26 @@ const TableCellMenu: FC<TableCellMenuProps> = ({
       token,
       issueId: menuState.issueId,
       duration,
-      comment: newEntry.comment,
+      comment: finalComment,
     });
+
     setNewEntry({ duration: "", comment: "" });
     onClose();
   }, [
     newEntry,
-    menuState,
+    menuState.dateField,
+    menuState.issueId,
+    mergeCommentWithIssueType,
+    selectedIssueTypeLabel,
+    setAlert,
     setData,
     setState,
-    setAlert,
     token,
     onClose,
     validateDurationValue,
   ]);
 
+  // --- удаление как было ---
   const handleConfirmDeleteAll = useCallback(() => {
     if (menuState.durations) {
       deleteData({
@@ -153,9 +215,7 @@ const TableCellMenu: FC<TableCellMenuProps> = ({
     onClose();
   }, [menuState, token, deleteData, setState, setAlert, onClose]);
 
-  const handleCancelDeleteAll = useCallback(() => {
-    setOpenConfirm(false);
-  }, []);
+  const handleCancelDeleteAll = useCallback(() => setOpenConfirm(false), []);
 
   const handleDeleteItem = useCallback(
     (item: DurationItem) => {
@@ -177,11 +237,14 @@ const TableCellMenu: FC<TableCellMenuProps> = ({
       event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
     ) => {
       const newDurationRaw = event.target.value;
-      setLocalState((prev) =>
-        prev.map((d) =>
-          d.id === item.id ? { ...d, duration: newDurationRaw } : d
-        )
-      );
+      setLocalState((prev) => ({
+        ...prev,
+        durations:
+          prev.durations &&
+          prev.durations.map((d) =>
+            d.id === item.id ? { ...d, duration: newDurationRaw } : d
+          ),
+      }));
       const errorMessage = validateDurationValue(newDurationRaw);
       setValidationErrors((prev) => ({ ...prev, [item.id]: errorMessage }));
     },
@@ -194,13 +257,19 @@ const TableCellMenu: FC<TableCellMenuProps> = ({
       event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
     ) => {
       const newComment = event.target.value;
-      setLocalState((prev) =>
-        prev.map((d) => (d.id === item.id ? { ...d, comment: newComment } : d))
-      );
+      setLocalState((prev) => ({
+        ...prev,
+        durations:
+          prev.durations &&
+          prev.durations.map((d) =>
+            d.id === item.id ? { ...d, comment: newComment } : d
+          ),
+      }));
     },
     []
   );
 
+  // NEW: применяем merge при редактировании
   const handleSubmitItem = useCallback(
     (item: DurationItem) => {
       const errorMessage = validateDurationValue(item.duration);
@@ -209,19 +278,26 @@ const TableCellMenu: FC<TableCellMenuProps> = ({
         return;
       }
       const normalized = normalizeDuration(item.duration);
+      const finalComment = mergeCommentWithIssueType(
+        item.comment ?? "",
+        selectedIssueTypeLabel
+      );
+
       setData({
         setState,
         setAlert,
         token,
         issueId: menuState.issueId,
         duration: normalized,
-        comment: item.comment,
+        comment: finalComment,
         worklogId: item.id,
       });
       onClose();
     },
     [
       validateDurationValue,
+      mergeCommentWithIssueType,
+      selectedIssueTypeLabel,
       setData,
       setState,
       setAlert,
@@ -280,14 +356,26 @@ const TableCellMenu: FC<TableCellMenuProps> = ({
               <CloseIcon />
             </IconButton>
           </Grid>
-          {!isEmpty(localState) && (
+          {!localState.loaded && (
+            <Grid
+              size={12}
+              alignSelf="center"
+              justifySelf="center"
+              textAlign="center"
+            >
+              <CircularProgress />
+            </Grid>
+          )}
+
+          {!isEmpty(localState.durations) && (
             <>
               <Grid size={12}>
                 <Typography variant="h6" color="info">
                   Редактировать отметки времени
                 </Typography>
               </Grid>
-              {localState.map((item) => (
+
+              {localState.durations?.map((item) => (
                 <Fragment key={item.id}>
                   <Grid size={2}>
                     <TextField
@@ -297,29 +385,42 @@ const TableCellMenu: FC<TableCellMenuProps> = ({
                       value={displayDuration(item.duration)}
                       onChange={(e) => handleDurationChange(item, e)}
                       error={Boolean(validationErrors[item.id])}
-                      onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                      onKeyDown={(e) => {
                         e.stopPropagation();
                         if (e.key === "Enter") handleSubmitItem(item);
                       }}
                     />
                   </Grid>
+
                   <Grid size={8}>
                     <TextField
                       name="comment"
                       value={item.comment}
                       onChange={(e) => handleCommentChange(item, e)}
                       aria-label="minimum height"
-                      minRows={2}
                       placeholder="Комментарий"
                       fullWidth
-                      onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                      onKeyDown={(e) => {
                         e.stopPropagation();
                         if (e.key === "Enter") handleSubmitItem(item);
                       }}
                       multiline
                       rows={2}
                     />
+
+                    {localState.issue_type_list && (
+                      <SelectIssueTypeList
+                        issueTypes={localState.issue_type_list}
+                        handleIssueTypeChange={handleIssueTypeChange}
+                        // опционально — если компонент поддерживает выбранное значение
+                        selectedIssueTypeLabel={
+                          selectedIssueTypeLabel ?? (undefined as any)
+                        }
+                        margin="dense"
+                      />
+                    )}
                   </Grid>
+
                   <Grid size={1}>
                     <IconButton
                       onClick={() => handleSubmitItem(item)}
@@ -333,11 +434,13 @@ const TableCellMenu: FC<TableCellMenuProps> = ({
                       <CheckIcon color="success" />
                     </IconButton>
                   </Grid>
+
                   <Grid size={1}>
                     <IconButton onClick={() => handleDeleteItem(item)}>
                       <DeleteOutlineIcon color="error" />
                     </IconButton>
                   </Grid>
+
                   <Grid size={12}>
                     <FormHelperText error>
                       {validationErrors[item.id] || ""}
@@ -362,6 +465,7 @@ const TableCellMenu: FC<TableCellMenuProps> = ({
                   Добавить отметку времени
                 </Typography>
               </Grid>
+
               <Grid size={2}>
                 <TextField
                   required
@@ -369,12 +473,13 @@ const TableCellMenu: FC<TableCellMenuProps> = ({
                   name="duration"
                   value={newEntry.duration}
                   onChange={handleAddNewDuration}
-                  onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                  onKeyDown={(e) => {
                     e.stopPropagation();
                     if (e.key === "Enter") handleNewSubmitItem();
                   }}
                 />
               </Grid>
+
               <Grid size={8}>
                 <TextField
                   name="comment"
@@ -385,14 +490,27 @@ const TableCellMenu: FC<TableCellMenuProps> = ({
                   minRows={2}
                   placeholder="Комментарий"
                   fullWidth
-                  onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                  onKeyDown={(e) => {
                     e.stopPropagation();
                     if (e.key === "Enter") handleNewSubmitItem();
                   }}
                   multiline
                   rows={3}
                 />
+
+                {localState.issue_type_list && (
+                  <SelectIssueTypeList
+                    issueTypes={localState.issue_type_list}
+                    handleIssueTypeChange={handleIssueTypeChange}
+                    // опционально — если компонент поддерживает выбранное значение
+                    selectedIssueTypeLabel={
+                      selectedIssueTypeLabel ?? (undefined as any)
+                    }
+                    margin="dense"
+                  />
+                )}
               </Grid>
+
               <Grid size={2}>
                 <IconButton
                   onClick={handleNewSubmitItem}
@@ -401,6 +519,7 @@ const TableCellMenu: FC<TableCellMenuProps> = ({
                   <CheckIcon color="success" />
                 </IconButton>
               </Grid>
+
               <Grid size={12}>
                 <FormHelperText error>
                   {validationErrors["add_new"] || ""}
@@ -409,6 +528,7 @@ const TableCellMenu: FC<TableCellMenuProps> = ({
             </Grid>
           </>
         )}
+
         <Divider sx={{ mb: 2 }} />
         <MenuItem onClick={() => setOpenConfirm(true)} sx={{ mb: 2 }}>
           <ListItemIcon>
@@ -434,7 +554,7 @@ const TableCellMenu: FC<TableCellMenuProps> = ({
             Удалить
           </Button>
         </DialogActions>
-      </Dialog>
+      </Dialog>{" "}
     </>
   );
 };
