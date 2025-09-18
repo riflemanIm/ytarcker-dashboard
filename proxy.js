@@ -75,17 +75,17 @@ app.get("/api/issues", async (req, res) => {
       const from = startDate;
       //const to = `${endDate}T23:59`;
       const to = endDate;
-      console.log(
-        "from",
-        from,
-        "to",
-        to,
+      // console.log(
+      //   "from",
+      //   from,
+      //   "to",
+      //   to,
 
-        "userId",
-        userId,
-        "login",
-        login
-      );
+      //   "userId",
+      //   userId,
+      //   "login",
+      //   login
+      // );
       // Формируем тело запроса
       let requestBody = {
         start: {
@@ -217,9 +217,10 @@ const searchTracker = async (token, filter) => {
     { filter, order: "-updated" },
     headers(token)
   );
-  console.log("response", response);
+  //console.log("response", response);
   return response.data;
 };
+
 app.get("/api/user_issues", async (req, res) => {
   const { token, userId, login } = req.query;
 
@@ -259,4 +260,31 @@ app.get("/api/user_issues", async (req, res) => {
   }
 });
 
+app.get("/api/issue_type_list", async (req, res) => {
+  const { token, entityKey, email } = req.query;
+
+  // Проверяем токен
+  if (!token) {
+    return res.status(400).json({ error: "token not passed" });
+  }
+  if (!entityKey || entityKey === "undefined" || entityKey === "null") {
+    return res.status(400).json({ error: "entityKey not passed" });
+  }
+
+  if (!email || email === "undefined" || email === "null") {
+    return res.status(400).json({ error: "Either email must be provided" });
+  }
+
+  try {
+    const resp_types = await axios.post(
+      "http://of-srv-apps-001.pmtech.ru:18005/acceptor/yandextracker/projectcontrolwtlist",
+      { entityKey, email }
+    );
+    console.log("resp_types", resp_types.data);
+    res.json({ issues_types: resp_types.data });
+  } catch (error) {
+    console.error("[Ошибка в методе api/issue_type_list]:", error.message);
+    res.status(error.response?.status || 500).json({ error: error.message });
+  }
+});
 app.listen(4000, () => console.log("Proxy server running on port 4000"));
