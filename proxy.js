@@ -275,7 +275,7 @@ app.get("/api/issue_type_list", async (req, res) => {
     const httpsAgent = new https.Agent({ rejectUnauthorized: false });
 
     const resp = await axios.post(
-      "https://of-srv-apps-001.pmtech.ru:18005/acceptor/yandextracker/projectcontrolwtlist",
+      "http://of-srv-apps-001.pmtech.ru:18005/acceptor/yandextracker/projectcontrolwtlist",
       { entityKey, email },
       {
         httpsAgent,
