@@ -264,31 +264,39 @@ app.get("/api/user_issues", async (req, res) => {
 app.get("/api/issue_type_list", async (req, res) => {
   const { token, entityKey, email } = req.query;
 
-  if (!token) {
-    return res.status(400).json({ error: "token not passed" });
-  }
-  if (!entityKey || entityKey === "undefined" || entityKey === "null") {
+  if (!token) return res.status(400).json({ error: "token not passed" });
+  if (!entityKey || entityKey === "undefined" || entityKey === "null")
     return res.status(400).json({ error: "entityKey not passed" });
-  }
-  if (!email || email === "undefined" || email === "null") {
+  if (!email || email === "undefined" || email === "null")
     return res.status(400).json({ error: "Either email must be provided" });
-  }
 
   try {
-    const agent = new https.Agent({
-      rejectUnauthorized: false, // 🔴 отключаем проверку ТОЛЬКО тут
-    });
+    // Отключаем проверку TLS ТОЛЬКО для этого запроса
+    const httpsAgent = new https.Agent({ rejectUnauthorized: false });
 
-    const resp_types = await axios.post(
-      "http://of-srv-apps-001.pmtech.ru:18005/acceptor/yandextracker/projectcontrolwtlist",
+    const resp = await axios.post(
+      "https://of-srv-apps-001.pmtech.ru:18005/acceptor/yandextracker/projectcontrolwtlist",
       { entityKey, email },
-      { httpsAgent: agent } // 👈 применяем только для этого запроса
+      {
+        httpsAgent,
+        timeout: 15000,
+      }
     );
 
-    res.json({ issue_type_list: resp_types.data });
+    res.json({ issue_type_list: resp.data });
   } catch (error) {
-    console.error("[Ошибка в методе api/issue_type_list]:", error.message);
-    res.status(error.response?.status || 500).json({ error: error.message });
+    // Расширенная диагностика
+    const status = error.response?.status || 500;
+    const payload = {
+      error: error.message,
+      code: error.code,
+      cause: error.cause,
+      upstreamStatus: error.response?.status,
+      upstreamData: error.response?.data,
+    };
+    console.error("[api/issue_type_list] upstream error:", payload);
+    res.status(status).json(payload);
   }
 });
+
 app.listen(4000, () => console.log("Proxy server running on port 4000"));
