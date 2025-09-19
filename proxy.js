@@ -1,6 +1,7 @@
 import express from "express";
 import axios from "axios";
 import cors from "cors";
+import https from "https";
 // Функция для отнимания недель от даты
 function subtractWeeks(dateStr, weeks) {
   const date = new Date(dateStr);
@@ -263,24 +264,27 @@ app.get("/api/user_issues", async (req, res) => {
 app.get("/api/issue_type_list", async (req, res) => {
   const { token, entityKey, email } = req.query;
 
-  // Проверяем токен
   if (!token) {
     return res.status(400).json({ error: "token not passed" });
   }
   if (!entityKey || entityKey === "undefined" || entityKey === "null") {
     return res.status(400).json({ error: "entityKey not passed" });
   }
-
   if (!email || email === "undefined" || email === "null") {
     return res.status(400).json({ error: "Either email must be provided" });
   }
 
   try {
+    const agent = new https.Agent({
+      rejectUnauthorized: false, // 🔴 отключаем проверку ТОЛЬКО тут
+    });
+
     const resp_types = await axios.post(
-      "http://of-srv-apps-001.pmtech.ru:18005/acceptor/yandextracker/projectcontrolwtlist",
-      { entityKey, email }
+      "https://of-srv-apps-001.pmtech.ru:18005/acceptor/yandextracker/projectcontrolwtlist",
+      { entityKey, email },
+      { httpsAgent: agent } // 👈 применяем только для этого запроса
     );
-    console.log("resp_types", resp_types.data);
+
     res.json({ issue_type_list: resp_types.data });
   } catch (error) {
     console.error("[Ошибка в методе api/issue_type_list]:", error.message);
