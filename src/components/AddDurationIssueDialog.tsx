@@ -238,24 +238,18 @@ export default function AddDurationIssueDialog({
                 )}
                 renderOption={(props, option) => (
                   // ВАЖНО: props должны быть на li, а не на Grid
-                  <Box component="li" {...props} sx={{ p: 0, m: 0 }}>
-                    <Grid
-                      container
-                      spacing={2}
-                      sx={{ px: 2, py: 1, width: "100%" }}
-                    >
-                      <Grid size={3}>
-                        <Typography variant="subtitle2" color="text.secondary">
-                          [{option.key}]
-                        </Typography>
-                      </Grid>
-                      <Grid size={9}>
-                        <Typography variant="subtitle1">
-                          {option.summary}
-                        </Typography>
-                      </Grid>
+                  <Grid container spacing={2} component="li" {...props}>
+                    <Grid size={3} component="div">
+                      <Typography variant="subtitle2" color="text.secondary">
+                        [{option.key}]
+                      </Typography>
                     </Grid>
-                  </Box>
+                    <Grid size={9} component="div">
+                      <Typography variant="subtitle1">
+                        {option.summary}
+                      </Typography>
+                    </Grid>
+                  </Grid>
                 )}
               />
             </Grid>
