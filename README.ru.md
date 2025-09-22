@@ -3,13 +3,7 @@
 Этот документ на русском.
 See the English version in [README.md](README.md).
 
-# YTracker-Dashboard
 
-... (вступление, функциональность и настройка окружения без изменений) ...
-<!-- русский -->
-
-Этот документ на русском.
-See the English version in [README.md](README.md).
 
 # YTracker-Dashboard
 
