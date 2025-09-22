@@ -1,4 +1,19 @@
-import React, { FC, Fragment, useCallback, useEffect, useState } from "react";
+import { DeleteDataArgs, getIssueTypeList, SetDataArgs } from "@/actions/data";
+import isEmpty, {
+  displayDuration,
+  headerWeekName,
+  isValidDuration,
+  normalizeDuration,
+} from "@/helpers";
+import {
+  buildFinalComment,
+  parseFirstIssueTypeLabel,
+  stripIssueTypeTags,
+} from "@/helpers/issueTypeComment";
+import CheckIcon from "@mui/icons-material/Check";
+import CloseIcon from "@mui/icons-material/Close";
+import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import {
   Button,
   CircularProgress,
@@ -8,7 +23,6 @@ import {
   DialogContentText,
   DialogTitle,
   Divider,
-  FormHelperText,
   Grid2 as Grid,
   IconButton,
   ListItemIcon,
@@ -18,29 +32,22 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import CheckIcon from "@mui/icons-material/Check";
-import CloseIcon from "@mui/icons-material/Close";
-import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
-import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
-import isEmpty, {
-  displayDuration,
-  headerWeekName,
-  isValidDuration,
-  normalizeDuration,
-} from "@/helpers";
+import React, {
+  FC,
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import {
-  DurationItem,
-  MenuState,
   AlertState,
   AppState,
+  DurationItem,
+  MenuState,
   TaskItemMenu,
 } from "../types/global";
-import { SetDataArgs, DeleteDataArgs, getIssueTypeList } from "@/actions/data";
 import SelectIssueTypeList from "./SelectIssueTypeList";
-import {
-  commentHasAnyIssueType,
-  mergeCommentWithIssueType,
-} from "@/helpers/issueTypeComment";
 
 interface TableCellMenuProps {
   open: boolean;
@@ -53,6 +60,12 @@ interface TableCellMenuProps {
   setAlert: (args: AlertState) => void;
 }
 
+type RowUI = {
+  durationRaw: string;
+  cleanComment: string; // комментарий без тегов
+  selectedLabel: string | null; // выбранный тип (распарсенный или выбранный из селекта)
+};
+
 const TableCellMenu: FC<TableCellMenuProps> = ({
   open,
   onClose,
@@ -63,22 +76,30 @@ const TableCellMenu: FC<TableCellMenuProps> = ({
   setData,
   setAlert,
 }) => {
-  // селекты IssueType
-  const [selectedIssueTypeLabelNew, setSelectedIssueTypeLabelNew] = useState<
-    string | null
-  >(null);
-  const [selectedIssueTypeById, setSelectedIssueTypeById] = useState<
-    Record<string, string | null>
-  >({});
-
-  // локальные данные
+  // серверное локальное состояние (как приходит)
   const [localState, setLocalState] = useState<TaskItemMenu>({
     issue_type_list: [],
     durations: menuState.durations || [],
     loaded: true,
   });
-  const issueTypes = localState.issue_type_list ?? [];
+
+  const issueTypes = useMemo(
+    () => localState.issue_type_list ?? [],
+    [localState.issue_type_list]
+  );
   const loaded = localState.loaded ?? true;
+  const durations = useMemo<DurationItem[]>(
+    () => localState.durations ?? [],
+    [localState.durations]
+  );
+
+  // UI-состояние для редактируемых строк
+  const [rows, setRows] = useState<Record<string, RowUI>>({});
+
+  // выбор типа для "добавить новую"
+  const [selectedIssueTypeLabelNew, setSelectedIssueTypeLabelNew] = useState<
+    string | null
+  >(null);
 
   // ошибки
   const [validationErrors, setValidationErrors] = useState<
@@ -86,46 +107,49 @@ const TableCellMenu: FC<TableCellMenuProps> = ({
   >({});
   const [openConfirm, setOpenConfirm] = useState<boolean>(false);
 
-  // загрузка типов
+  // загрузка списков типов при смене issueId
   useEffect(() => {
     if (menuState.issueId) {
       getIssueTypeList({ setLocalState, token, entityKey: menuState.issueId });
     }
   }, [menuState.issueId, token]);
 
-  // синк durations при открытии/обновлении
+  // синхронизация UI-строк при изменении durations
   useEffect(() => {
-    if (menuState.durations && menuState.durations.length > 0) {
-      setLocalState((prev) => ({
-        ...prev,
-        durations: menuState.durations ? [...menuState.durations] : [],
-      }));
-    }
-  }, [menuState.durations]);
+    setRows((prev) => {
+      const next: Record<string, RowUI> = {};
+      for (const d of durations) {
+        const id = String(d.id);
+        const parsedLabel = parseFirstIssueTypeLabel(d.comment ?? "") ?? null;
+        const clean = stripIssueTypeTags(d.comment ?? "");
+        next[id] = {
+          durationRaw: prev[id]?.durationRaw ?? d.duration ?? "",
+          cleanComment: prev[id]?.cleanComment ?? clean,
+          selectedLabel: prev[id]?.selectedLabel ?? parsedLabel,
+        };
+      }
+      return next;
+    });
+  }, [durations]);
 
-  // состояние "добавить новую" отметку
-  const [newEntry, setNewEntry] = useState<{
-    duration: string;
-    comment: string;
-  }>({
-    duration: "",
-    comment: "",
-  });
-
-  // автоподстановка ТОЛЬКО в «Добавить»: если ровно один тип и в комментарии ещё нет метки
+  // автоселект одного типа при редактировании, если ничего не выбрано
   useEffect(() => {
     if (!loaded) return;
     if (issueTypes.length !== 1) return;
-    if (commentHasAnyIssueType(newEntry.comment, issueTypes)) return;
+    setRows((prev) => {
+      const next = { ...prev };
+      const only = issueTypes[0].label;
+      for (const id of Object.keys(next)) {
+        const row = next[id];
+        if (!row.selectedLabel) {
+          next[id] = { ...row, selectedLabel: only };
+        }
+      }
+      return next;
+    });
+  }, [loaded, issueTypes]);
 
-    const only = issueTypes[0].label;
-    setNewEntry((prev) => ({
-      ...prev,
-      comment: mergeCommentWithIssueType(prev.comment, only),
-    }));
-  }, [loaded, issueTypes, newEntry.comment]);
-
-  // валидация длительности
+  // --- валидация длительности ---
   const validateDurationValue = useCallback((rawValue: string): string => {
     const normalized = normalizeDuration(rawValue ?? "");
     if (
@@ -138,93 +162,27 @@ const TableCellMenu: FC<TableCellMenuProps> = ({
     return "";
   }, []);
 
-  // --- handlers: добавить новую отметку ---
-  const handleAddNewDuration = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const value = e.target.value ?? "";
-      setNewEntry((prev) => ({ ...prev, duration: value }));
-      const error = validateDurationValue(value);
-      setValidationErrors((prev) => ({ ...prev, add_new: error }));
-    },
-    [validateDurationValue]
-  );
-
-  const handleAddNewComment = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const value = e.target.value ?? "";
-      setNewEntry((prev) => ({ ...prev, comment: value }));
-    },
-    []
-  );
-
-  const handleIssueTypeChangeNew = useCallback((label: string) => {
-    setSelectedIssueTypeLabelNew(label || null);
-    setNewEntry((prev) => ({
-      ...prev,
-      comment: mergeCommentWithIssueType(prev.comment, label),
-    }));
-    // очистить селект после вставки
-    setTimeout(() => setSelectedIssueTypeLabelNew(null), 0);
-  }, []);
-
-  const handleNewSubmitItem = useCallback(() => {
-    const error = validateDurationValue(newEntry.duration);
-    if (error) {
-      setValidationErrors((prev) => ({ ...prev, add_new: error }));
-      return;
-    }
-    // тип обязателен: подсказку показываем только если действительно нет метки
-    if (!commentHasAnyIssueType(newEntry.comment, issueTypes)) {
-      setValidationErrors((prev) => ({
-        ...prev,
-        add_new: "Укажите тип работы",
-      }));
-      return;
-    }
-
-    setData({
-      dateCell: menuState.dateField || undefined,
-      setState,
-      setAlert,
-      token,
-      issueId: menuState.issueId,
-      duration: normalizeDuration(newEntry.duration ?? ""),
-      comment: newEntry.comment ?? "",
-    });
-    setNewEntry({ duration: "", comment: "" });
-    onClose();
-  }, [
-    validateDurationValue,
-    newEntry.duration,
-    newEntry.comment,
-    issueTypes,
-    setData,
-    menuState.dateField,
-    menuState.issueId,
-    setState,
-    setAlert,
-    token,
-    onClose,
-  ]);
-
-  // --- handlers: редактирование существующих ---
+  // --- РЕДАКТИРОВАНИЕ СУЩЕСТВУЮЩИХ ---
   const handleDurationChange = useCallback(
     (
       item: DurationItem,
       event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
     ) => {
+      const id = String(item.id);
       const newDurationRaw = event.target.value ?? "";
-      setLocalState((prev) => ({
+      setRows((prev) => ({
         ...prev,
-        durations: prev.durations?.map((d) =>
-          d.id === item.id ? { ...d, duration: newDurationRaw } : d
-        ),
+        [id]: {
+          ...(prev[id] ?? {
+            durationRaw: "",
+            cleanComment: "",
+            selectedLabel: null,
+          }),
+          durationRaw: newDurationRaw,
+        },
       }));
       const errorMessage = validateDurationValue(newDurationRaw);
-      setValidationErrors((prev) => ({
-        ...prev,
-        [String(item.id)]: errorMessage,
-      }));
+      setValidationErrors((prev) => ({ ...prev, [id]: errorMessage }));
     },
     [validateDurationValue]
   );
@@ -234,12 +192,18 @@ const TableCellMenu: FC<TableCellMenuProps> = ({
       item: DurationItem,
       event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
     ) => {
+      const id = String(item.id);
       const newComment = event.target.value ?? "";
-      setLocalState((prev) => ({
+      setRows((prev) => ({
         ...prev,
-        durations: prev.durations?.map((d) =>
-          d.id === item.id ? { ...d, comment: newComment } : d
-        ),
+        [id]: {
+          ...(prev[id] ?? {
+            durationRaw: "",
+            cleanComment: "",
+            selectedLabel: null,
+          }),
+          cleanComment: newComment,
+        },
       }));
     },
     []
@@ -247,52 +211,62 @@ const TableCellMenu: FC<TableCellMenuProps> = ({
 
   const handleIssueTypeChangeForItem = useCallback(
     (rowId: string | number, label: string) => {
-      const key = String(rowId);
-      setSelectedIssueTypeById((prev) => ({ ...prev, [key]: label || null }));
-      setLocalState((prev) => ({
+      const id = String(rowId);
+      setRows((prev) => ({
         ...prev,
-        durations: prev.durations?.map((d) =>
-          String(d.id) === key
-            ? {
-                ...d,
-                comment: mergeCommentWithIssueType(d.comment ?? "", label),
-              }
-            : d
-        ),
+        [id]: {
+          ...(prev[id] ?? {
+            durationRaw: "",
+            cleanComment: "",
+            selectedLabel: null,
+          }),
+          selectedLabel: label || null,
+        },
       }));
-      setTimeout(
-        () => setSelectedIssueTypeById((prev) => ({ ...prev, [key]: null })),
-        0
-      );
     },
     []
   );
 
   const handleSubmitItem = useCallback(
     (item: DurationItem) => {
-      const errorMessage = validateDurationValue(item.duration);
+      const id = String(item.id);
+      const row = rows[id];
+      const durationToValidate = row?.durationRaw ?? item.duration ?? "";
+      const errorMessage = validateDurationValue(durationToValidate);
       if (errorMessage) {
+        setValidationErrors((prev) => ({ ...prev, [id]: errorMessage }));
+        return;
+      }
+
+      // тип обязателен для редактирования, если список типов не пуст
+      if ((issueTypes.length ?? 0) > 0 && !row?.selectedLabel) {
         setValidationErrors((prev) => ({
           ...prev,
-          [String(item.id)]: errorMessage,
+          [id]: "Укажите тип работы",
         }));
         return;
       }
+
+      const finalComment = buildFinalComment(
+        row?.cleanComment ?? stripIssueTypeTags(item.comment ?? ""),
+        row?.selectedLabel ?? undefined
+      );
 
       setData({
         setState,
         setAlert,
         token,
         issueId: menuState.issueId,
-        duration: normalizeDuration(item.duration ?? ""),
-        comment: item.comment ?? "",
+        duration: normalizeDuration(durationToValidate),
+        comment: finalComment,
         worklogId: item.id,
       });
       onClose();
     },
     [
+      rows,
       validateDurationValue,
-      issueTypes,
+      issueTypes.length,
       setData,
       setState,
       setAlert,
@@ -302,15 +276,101 @@ const TableCellMenu: FC<TableCellMenuProps> = ({
     ]
   );
 
-  // --- удаление ---
+  // --- ДОБАВЛЕНИЕ НОВОЙ ОТМЕТКИ ---
+  const [newEntry, setNewEntry] = useState<{
+    duration: string;
+    comment: string;
+  }>({
+    duration: "",
+    comment: "",
+  });
+
+  const handleAddNewDuration = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const value = e.target.value ?? "";
+      setNewEntry((p) => ({ ...p, duration: value }));
+      const error = validateDurationValue(value);
+      setValidationErrors((prev) => ({ ...prev, add_new: error }));
+    },
+    [validateDurationValue]
+  );
+
+  const handleAddNewComment = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const value = e.target.value ?? "";
+      setNewEntry((p) => ({ ...p, comment: value }));
+    },
+    []
+  );
+
+  // автоселект одного типа в "Добавить"
+  useEffect(() => {
+    if (!loaded) return;
+    if (issueTypes.length !== 1) return;
+    setSelectedIssueTypeLabelNew((prev) => prev ?? issueTypes[0].label);
+  }, [loaded, issueTypes]);
+
+  const handleIssueTypeChangeNew = useCallback((label: string) => {
+    setSelectedIssueTypeLabelNew(label || null);
+  }, []);
+
+  const handleNewSubmitItem = useCallback(() => {
+    const err = validateDurationValue(newEntry.duration);
+    if (err) {
+      setValidationErrors((prev) => ({ ...prev, add_new: err }));
+      return;
+    }
+
+    // тип обязателен при добавлении, если список типов не пуст
+    if ((issueTypes.length ?? 0) > 0 && !selectedIssueTypeLabelNew) {
+      setValidationErrors((prev) => ({
+        ...prev,
+        add_new: "Укажите тип работы",
+      }));
+      return;
+    }
+
+    const finalComment = buildFinalComment(
+      newEntry.comment ?? "",
+      selectedIssueTypeLabelNew ?? undefined
+    );
+
+    setData({
+      dateCell: menuState.dateField || undefined,
+      setState,
+      setAlert,
+      token,
+      issueId: menuState.issueId,
+      duration: normalizeDuration(newEntry.duration ?? ""),
+      comment: finalComment,
+    });
+    setNewEntry({ duration: "", comment: "" });
+    setSelectedIssueTypeLabelNew(null);
+    onClose();
+  }, [
+    newEntry,
+    validateDurationValue,
+    issueTypes.length,
+    selectedIssueTypeLabelNew,
+    setData,
+    menuState.dateField,
+    menuState.issueId,
+    setState,
+    setAlert,
+    token,
+    onClose,
+  ]);
+
+  // --- УДАЛЕНИЕ ---
   const handleConfirmDeleteAll = useCallback(() => {
-    if (menuState.durations) {
+    const ids = (menuState.durations ?? []).map((i) => i.id);
+    if (ids.length) {
       deleteData({
         token,
         setState,
         setAlert,
         issueId: menuState.issueId,
-        ids: menuState.durations.flat().map((i) => i.id),
+        ids,
       });
     }
     setOpenConfirm(false);
@@ -382,7 +442,18 @@ const TableCellMenu: FC<TableCellMenuProps> = ({
             </IconButton>
           </Grid>
 
-          {!isEmpty(localState.durations) && (
+          {!loaded && (
+            <Grid
+              size={12}
+              alignSelf="center"
+              justifySelf="center"
+              textAlign="center"
+            >
+              <CircularProgress />
+            </Grid>
+          )}
+
+          {!isEmpty(durations) && (
             <>
               <Grid size={12}>
                 <Typography variant="h6" color="info">
@@ -390,13 +461,17 @@ const TableCellMenu: FC<TableCellMenuProps> = ({
                 </Typography>
               </Grid>
 
-              {localState.durations?.map((item) => {
-                const key = String(item.id);
-                const itemError = validationErrors[key];
-                const itemHasType = commentHasAnyIssueType(
-                  item.comment ?? "",
-                  issueTypes
-                );
+              {durations.map((item) => {
+                const id = String(item.id);
+                const row = rows[id] ?? {
+                  durationRaw: item.duration ?? "",
+                  cleanComment: stripIssueTypeTags(item.comment ?? ""),
+                  selectedLabel:
+                    parseFirstIssueTypeLabel(item.comment ?? "") ?? null,
+                };
+                const itemError = validationErrors[id];
+                const typeRequired =
+                  (issueTypes.length ?? 0) > 0 && !row.selectedLabel;
 
                 return (
                   <Fragment key={item.id}>
@@ -405,7 +480,7 @@ const TableCellMenu: FC<TableCellMenuProps> = ({
                         required
                         label="Длительность"
                         name="duration"
-                        value={displayDuration(item.duration)}
+                        value={displayDuration(row.durationRaw)}
                         onChange={(e) => handleDurationChange(item, e)}
                         error={Boolean(itemError)}
                         onKeyDown={(e) => {
@@ -418,7 +493,7 @@ const TableCellMenu: FC<TableCellMenuProps> = ({
                     <Grid size={8}>
                       <TextField
                         name="comment"
-                        value={item.comment ?? ""}
+                        value={row.cleanComment}
                         onChange={(e) => handleCommentChange(item, e)}
                         aria-label="minimum height"
                         placeholder="Комментарий"
@@ -429,8 +504,11 @@ const TableCellMenu: FC<TableCellMenuProps> = ({
                         }}
                         multiline
                         rows={2}
-                        error={Boolean(itemError)}
-                        helperText={itemError}
+                        error={Boolean(itemError) || typeRequired}
+                        helperText={
+                          itemError ||
+                          (typeRequired ? "Укажите тип работы" : "")
+                        }
                       />
 
                       {issueTypes.length > 0 && (
@@ -439,9 +517,7 @@ const TableCellMenu: FC<TableCellMenuProps> = ({
                           handleIssueTypeChange={(label) =>
                             handleIssueTypeChangeForItem(item.id, label)
                           }
-                          selectedIssueTypeLabel={
-                            selectedIssueTypeById[key] ?? ""
-                          }
+                          selectedIssueTypeLabel={row.selectedLabel ?? ""}
                           margin="dense"
                           required
                           loading={!loaded}
@@ -454,11 +530,11 @@ const TableCellMenu: FC<TableCellMenuProps> = ({
                         onClick={() => handleSubmitItem(item)}
                         disabled={
                           !loaded ||
-                          !item.duration ||
-                          item.duration === "P" ||
-                          item.duration === "PT0S" ||
+                          !row.durationRaw ||
+                          row.durationRaw === "P" ||
+                          row.durationRaw === "PT0S" ||
                           Boolean(itemError) ||
-                          !itemHasType
+                          ((issueTypes.length ?? 0) > 0 && !row.selectedLabel)
                         }
                       >
                         <CheckIcon color="success" />
@@ -524,11 +600,11 @@ const TableCellMenu: FC<TableCellMenuProps> = ({
                   rows={3}
                   error={
                     Boolean(validationErrors["add_new"]) ||
-                    !commentHasAnyIssueType(newEntry.comment ?? "", issueTypes)
+                    ((issueTypes.length ?? 0) > 0 && !selectedIssueTypeLabelNew)
                   }
                   helperText={
                     validationErrors["add_new"] ||
-                    (!commentHasAnyIssueType(newEntry.comment ?? "", issueTypes)
+                    ((issueTypes.length ?? 0) > 0 && !selectedIssueTypeLabelNew
                       ? "Укажите тип работы"
                       : "")
                   }
@@ -552,7 +628,7 @@ const TableCellMenu: FC<TableCellMenuProps> = ({
                   disabled={
                     !loaded ||
                     Boolean(validationErrors["add_new"]) ||
-                    !commentHasAnyIssueType(newEntry.comment ?? "", issueTypes)
+                    ((issueTypes.length ?? 0) > 0 && !selectedIssueTypeLabelNew)
                   }
                 >
                   <CheckIcon color="success" />

@@ -1,38 +1,45 @@
-// src/utils/issueTypeComment.ts
-export type IssueType = { label: string; hint?: string };
+// src/helpers/issueTypeComment.ts
 
-export const escapeRegExp = (s: string) =>
-  s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+import type { IssueType } from "@/types/global";
 
-/**
- * Добавляет метку типа в комментарий:
- * - если пусто — "• {label}"
- * - если есть текст — "\n• {label}"
- * - не дублирует, проверяет именно строку-метку "• label"
- */
-export const mergeCommentWithIssueType = (
+export function buildFinalComment(
   comment: string,
   label?: string | null
-): string => {
+): string {
   const base = (comment ?? "").trimEnd();
-  const tag = (label ?? "").trim();
+  const tag = label ? `[ProjectControlWT:${label}]` : "";
   if (!tag) return base;
+  return base ? `${base}\n${tag}` : tag;
+}
 
-  const re = new RegExp(`(^|\\n)\\s*•\\s*${escapeRegExp(tag)}(\\s|$)`);
-  if (re.test(base)) return base;
+export function stripIssueTypeTags(comment: string): string {
+  if (!comment) return "";
+  return comment.replace(/\[ProjectControlWT:[^\]]+\]/g, "").trim();
+}
 
-  return base ? `${base}\n• ${tag}` : `• ${tag}`;
-};
+export function extractIssueTypeLabel(comment: string): string | null {
+  if (!comment) return null;
+  const match = comment.match(/\[ProjectControlWT:([^\]]+)\]/);
+  return match ? match[1] : null;
+}
 
-/** Есть ли в комментарии хотя бы одна метка из списка типов (строка-метка "• label") */
-export const commentHasAnyIssueType = (
+// ✅ Алиас для совместимости с существующими импортами
+export const parseFirstIssueTypeLabel = extractIssueTypeLabel;
+
+/** ✅ Новая функция: есть ли ВООБЩЕ хоть какой-то тег в комментарии */
+export function hasAnyIssueTypeTag(comment: string): boolean {
+  return /\[ProjectControlWT:[^\]]+\]/.test(comment ?? "");
+}
+
+/** Оставляем и эту функцию — «есть ли тег из текущего списка типов» */
+export function commentHasAnyIssueType(
   comment: string,
   list: IssueType[]
-): boolean => {
-  if (!list?.length) return false;
-  const c = comment ?? "";
-  return list.some((t) => {
-    const re = new RegExp(`(^|\\n)\\s*•\\s*${escapeRegExp(t.label)}(\\s|$)`);
-    return re.test(c);
-  });
-};
+): boolean {
+  if (!comment || !list?.length) return false;
+  return list.some((t) =>
+    new RegExp(
+      `\\[ProjectControlWT:${t.label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\]`
+    ).test(comment)
+  );
+}

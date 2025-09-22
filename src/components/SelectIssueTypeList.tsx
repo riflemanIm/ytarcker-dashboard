@@ -1,20 +1,16 @@
+import { IssueType } from "@/types/global";
 import {
+  CircularProgress,
   FormControl,
+  FormHelperText,
   InputLabel,
   MenuItem,
   Select,
   SelectChangeEvent,
-  Typography,
-  FormHelperText,
-  CircularProgress,
   Stack,
+  Typography,
 } from "@mui/material";
 import React from "react";
-
-export interface IssueType {
-  label: string;
-  hint: string;
-}
 
 interface SelectIssueTypeListProps {
   issueTypes: IssueType[];

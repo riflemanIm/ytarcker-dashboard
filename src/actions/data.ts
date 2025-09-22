@@ -298,9 +298,25 @@ export const getIssueTypeList = async ({
       }
     );
     console.log(" res.data.issue_type_list", res.data.issue_type_list);
+
+    // const mok = [
+    //   {
+    //     label: "label1",
+    //     hint: "hint1",
+    //   },
+    //   {
+    //     label: "label2",
+    //     hint: "hint2",
+    //   },
+    //   {
+    //     label: "label3",
+    //     hint: "hint3",
+    //   },
+    // ];
     setLocalState((prev) => ({
       ...prev,
       loaded: true,
+      //issue_type_list: mok,
       issue_type_list: res.data.issue_type_list,
     }));
   } catch (err: any) {
