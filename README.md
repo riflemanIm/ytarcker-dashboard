@@ -89,77 +89,116 @@ Where:
 
 ---
 
-
 ## API Methods
 
-Below is a summary of the backend proxy endpoints used by the dashboard:
+All methods are provided by the proxy server (port 4000).  
+Authentication: pass `token` (OAuth) either as query (GET) or in body (POST/PATCH).
 
 ### `GET /api/issues`
-Fetch all worklog entries within a date range (and optionally for a specific user).  
-**Query Parameters**  
-- `token` (string, required) – OAuth token.  
-- `startDate` (YYYY-MM-DD, required) – start of the range.  
-- `endDate` (YYYY-MM-DD, required) – end of the range.  
-- `userId` (string, optional) – filter by Yandex user ID.  
-- `login` (string, optional) – filter by Yandex login name.  
-**Response**  
+Fetch worklog entries within a date range.  
+**Query Parameters**
+- `token` (string, required)  
+- `startDate` (YYYY-MM-DD, required)  
+- `endDate` (YYYY-MM-DD, required) → server appends `T23:59`  
+- `userId` (string, optional) — filter by author ID  
+- `login` (string, optional) — filter by author login  
+
+**Response**
 ```json
 {
-  "data": [ /* array of worklog objects */ ],
+  "data": [ /* array of worklog objects from Yandex Tracker */ ],
   "users": [
-    { "id": "123", "name": "Jane Doe" },
-    /* ...unique list of users who updated those worklogs... */
+    { "id": "123", "name": "Jane Doe" }
   ]
 }
-``` :contentReference[oaicite:1]{index=1}
-
-### `GET /api/user_issues`
-Retrieve all issues assigned to a user, sorted by last update.  
-**Query Parameters**  
-- `token` (string, required)  
-- `userId` (string, optional) or  
-- `login` (string, optional)  
-**Response**  
-```json
-{
-  "issues": [
-    { "key": "PROJ-123", "summary": "Fix login bug" },
-    /* ... */
-  ]
-}
-``` :contentReference[oaicite:2]{index=2}
-
-### `POST /api/add_time`
-Create a new worklog entry on an issue.  
-**Body Parameters** (JSON)  
-- `token` (string, required)  
-- `issueId` (string, required) – the issue key or ID.  
-- `start` (ISO timestamp, required) – e.g. `"2025-07-14T09:00"`  
-- `duration` (ISO 8601 duration, required) – e.g. `"PT1H30M"`  
-- `comment` (string, optional)  
-**Response**  
-Returns the created worklog object. :contentReference[oaicite:3]{index=3}
-
-### `PATCH /api/edit_time`
-Edit an existing worklog entry.  
-**Body Parameters** (JSON)  
-- `token` (string, required)  
-- `issueId` (string, required)  
-- `worklogId` (string, required)  
-- `duration` (ISO 8601 duration, required)  
-- `comment` (string, optional)  
-**Response**  
-Returns the updated worklog object. :contentReference[oaicite:4]{index=4}
-
-### `POST /api/delete_all`
-Delete multiple worklog entries on an issue.  
-**Body Parameters** (JSON)  
-- `token` (string, required)  
-- `issueId` (string, required)  
-- `ids` (array of worklog IDs, required)  
-**Response**  
-Returns `true` on success. :contentReference[oaicite:5]{index=5}
+```
 
 ---
 
-Don’t hesitate to improve the project, pull requests welcome!"}
+### `POST /api/add_time`
+Create a new worklog entry.  
+**Body Parameters**
+- `token` (string, required)  
+- `issueId` (string, required)  
+- `start` (YYYY-MM-DDTHH:mm, required)  
+- `duration` (ISO 8601 duration, required)  
+- `comment` (string, optional)  
+
+**Response** → created worklog object.
+
+---
+
+### `PATCH /api/edit_time`
+Edit an existing worklog entry.  
+**Body Parameters**
+- `token` (string, required)  
+- `issueId` (string, required)  
+- `worklogId` (string, required)  
+- `duration` (ISO 8601, required)  
+- `comment` (string, optional)  
+
+**Response** → updated worklog object.
+
+---
+
+### `POST /api/delete_all`
+Delete multiple worklog entries.  
+**Body Parameters**
+- `token` (string, required)  
+- `issueId` (string, required)  
+- `ids` (array of worklog IDs, required)  
+
+**Response**
+```json
+true
+```
+
+---
+
+### `GET /api/user_issues`
+Retrieve issues assigned to or created by a user, merged & deduplicated.  
+**Query Parameters**
+- `token` (string, required)  
+- `userId` (string) or `login` (string)  
+
+**Response**
+```json
+{
+  "issues": [
+    { "key": "PROJ-123", "summary": "Fix login bug" }
+  ]
+}
+```
+
+---
+
+### `GET /api/issue_type_list`
+Retrieve issue type list for a given entity key.  
+**Query Parameters**
+- `token` (string, required)  
+- `entityKey` (string, required)  
+- `email` (string, required)  
+
+> TLS verification is disabled **only for this request**. Timeout: 15s.
+
+**Response**
+```json
+{
+  "issue_type_list": [ /* upstream system response */ ]
+}
+```
+
+**Error format**
+```json
+{
+  "error": "message",
+  "code": "ECONNABORTED",
+  "cause": null,
+  "upstreamStatus": 502,
+  "upstreamData": { /* raw upstream error */ }
+}
+```
+
+---
+
+Don’t hesitate to improve the project, pull requests welcome!
