@@ -11,6 +11,7 @@ import {
   parseISODurationToSeconds,
   sumDurations,
 } from "@/helpers";
+import { parseFirstIssueTypeLabel } from "@/helpers/issueTypeComment";
 import AddIcon from "@mui/icons-material/Add";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import { Chip, IconButton, Typography } from "@mui/material";
@@ -178,6 +179,37 @@ const TaskTable: FC<TaskTableProps> = ({
   setAlert,
   idEditable = false,
 }) => {
+  // true => во всех комментариях есть тег; false => хотя бы в одном его нет
+  const cellHasAllTags = useCallback(
+    (rowId: string | number, field: string): boolean => {
+      if (!data) return true;
+
+      // находим все «сырые» элементы, попавшие в эту ячейку
+      const rawItems = data.filter(
+        (r) => r.key === rowId && dayOfWeekNameByDate(dayjs(r.start)) === field
+      );
+
+      // собираем все длительности, у которых может быть comment
+      // допускаем разные формы данных: r.durations?: {comment?: string}[] или r.comment?: string
+      const comments: string[] = [];
+      for (const r of rawItems) {
+        if (Array.isArray((r as any).durations)) {
+          for (const d of (r as any).durations) {
+            if (d && typeof d.comment === "string") comments.push(d.comment);
+          }
+        } else if (typeof (r as any).comment === "string") {
+          comments.push((r as any).comment);
+        }
+      }
+
+      // если комментариев нет совсем — считаем, что тега нет
+      if (comments.length === 0) return false;
+
+      // теги должны быть у всех комментариев
+      return comments.every((c) => !!parseFirstIssueTypeLabel(c));
+    },
+    [data]
+  );
   // Трансформируем «сырые» задачи в строки для DataGrid
   const tableRows = transformData(data);
 
@@ -381,12 +413,13 @@ const TaskTable: FC<TaskTableProps> = ({
             );
           }
           if (idEditable) {
+            const allTagged = cellHasAllTags(params.id, params.field);
             return (
               <Chip
                 label={val}
                 variant="outlined"
                 clickable
-                color="warning"
+                color={allTagged ? "success" : "error"} // <-- тут магия
                 onClick={(e) => handleMenuOpen(e, params)}
               />
             );
