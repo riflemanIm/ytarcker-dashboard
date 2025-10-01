@@ -431,7 +431,7 @@ const TaskTable: FC<TaskTableProps> = ({
                 label={val}
                 variant="outlined"
                 clickable
-                color={allTagged ? "warning" : "error"}
+                color={allTagged ? "success" : "error"}
                 onClick={(e) => handleMenuOpen(e, params)}
               />
             );
@@ -443,7 +443,7 @@ const TaskTable: FC<TaskTableProps> = ({
               variant="body2"
               sx={(theme) => ({
                 color: allTagged
-                  ? theme.palette.warning.main
+                  ? theme.palette.success.main
                   : theme.palette.error.main,
                 fontWeight: 500,
               })}
