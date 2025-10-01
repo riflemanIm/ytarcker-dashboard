@@ -189,27 +189,35 @@ const TaskTable: FC<TaskTableProps> = ({
         (r) => r.key === rowId && dayOfWeekNameByDate(dayjs(r.start)) === field
       );
 
-      // собираем все длительности, у которых может быть comment
-      // допускаем разные формы данных: r.durations?: {comment?: string}[] или r.comment?: string
-      const comments: string[] = [];
+      if (rawItems.length === 0) return false;
+
+      // проверяем каждую duration отдельно
       for (const r of rawItems) {
-        if (Array.isArray((r as any).durations)) {
+        if (
+          Array.isArray((r as any).durations) &&
+          (r as any).durations.length > 0
+        ) {
           for (const d of (r as any).durations) {
-            if (d && typeof d.comment === "string") comments.push(d.comment);
+            const comment = d?.comment ?? "";
+            if (!parseFirstIssueTypeLabel(comment)) {
+              return false; // хотя бы одна отметка без тега
+            }
           }
-        } else if (typeof (r as any).comment === "string") {
-          comments.push((r as any).comment);
+        } else {
+          // если durations нет, проверяем одиночный comment
+          const comment = (r as any).comment ?? "";
+          if (!parseFirstIssueTypeLabel(comment)) {
+            return false;
+          }
         }
       }
 
-      // если комментариев нет совсем — считаем, что тега нет
-      if (comments.length === 0) return false;
-
-      // теги должны быть у всех комментариев
-      return comments.every((c) => !!parseFirstIssueTypeLabel(c));
+      // все отметки имели тег
+      return true;
     },
     [data]
   );
+
   // Трансформируем «сырые» задачи в строки для DataGrid
   const tableRows = transformData(data);
 
@@ -377,8 +385,9 @@ const TaskTable: FC<TaskTableProps> = ({
         renderCell: (params: GridRenderCellParams) => {
           const val = displayDuration(params.value);
           if (params.row.id === "total") return val;
+
+          // если пустая ячейка
           if (val === "" && idEditable) {
-            // Если ячейка пустая, показываем иконку добавления
             return (
               <div
                 style={{
@@ -412,20 +421,38 @@ const TaskTable: FC<TaskTableProps> = ({
               </div>
             );
           }
+
+          // проверяем наличие тегов
+          const allTagged = cellHasAllTags(params.id, params.field);
+
           if (idEditable) {
-            const allTagged = cellHasAllTags(params.id, params.field);
             return (
               <Chip
                 label={val}
                 variant="outlined"
                 clickable
-                color={allTagged ? "success" : "error"} // <-- тут магия
+                color={allTagged ? "warning" : "error"}
                 onClick={(e) => handleMenuOpen(e, params)}
               />
             );
           }
-          return val;
+
+          // если не editable — просто текст, но цветовой акцент
+          return (
+            <Typography
+              variant="body2"
+              sx={(theme) => ({
+                color: allTagged
+                  ? theme.palette.warning.main
+                  : theme.palette.error.main,
+                fontWeight: 500,
+              })}
+            >
+              {val}
+            </Typography>
+          );
         },
+
         // renderEditCell: (params: GridRenderEditCellParams) => (
         //   <input
         //     type="text"
