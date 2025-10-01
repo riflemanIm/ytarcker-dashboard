@@ -62,14 +62,16 @@ const SelectIssueTypeList: React.FC<SelectIssueTypeListProps> = ({
       >
         {(issueTypes ?? []).map((item) => (
           <MenuItem key={item.label} value={item.label}>
-            <Typography variant="body1" whiteSpace="wrap">
-              {item.label}
-            </Typography>
-            {item.hint && item.hint !== item.label && (
-              <Typography variant="body2" whiteSpace="wrap">
-                {item.hint}
+            <div>
+              <Typography variant="body1" whiteSpace="wrap">
+                {item.label}
               </Typography>
-            )}
+              {item.hint && item.hint !== item.label && (
+                <Typography variant="body2" whiteSpace="wrap" color="secondary">
+                  {item.hint}
+                </Typography>
+              )}
+            </div>
           </MenuItem>
         ))}
       </Select>
