@@ -1,5 +1,6 @@
 import { IssueType } from "@/types/global";
 import {
+  Box,
   CircularProgress,
   FormControl,
   FormHelperText,
@@ -62,7 +63,7 @@ const SelectIssueTypeList: React.FC<SelectIssueTypeListProps> = ({
       >
         {(issueTypes ?? []).map((item) => (
           <MenuItem key={item.label} value={item.label}>
-            <div>
+            <Box sx={{ maxWidth: 380 }}>
               <Typography variant="body1" whiteSpace="wrap">
                 {item.label}
               </Typography>
@@ -71,7 +72,7 @@ const SelectIssueTypeList: React.FC<SelectIssueTypeListProps> = ({
                   {item.hint}
                 </Typography>
               )}
-            </div>
+            </Box>
           </MenuItem>
         ))}
       </Select>
