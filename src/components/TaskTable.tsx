@@ -179,41 +179,50 @@ const TaskTable: FC<TaskTableProps> = ({
   setAlert,
   idEditable = false,
 }) => {
-  // true => во всех комментариях есть тег; false => хотя бы в одном его нет
+  // true => у каждой отметки есть тег и он НЕ "Временно не определен"; иначе false
   const cellHasAllTags = useCallback(
     (rowId: string | number, field: string): boolean => {
       if (!data) return true;
 
-      // находим все «сырые» элементы, попавшие в эту ячейку
+      // Нормализация пробелов (в т.ч. неразрывных) для устойчивых проверок
+      const norm = (s: string) => s.replace(/[\u00A0\u202F]/g, " "); // NBSP / NNBSP -> обычный пробел
+
+      // Матчим плохой тег непосредственно в comment:
+      // [ProjectControlWT: Временно не определен]
+      // - любые пробелы вокруг/после двоеточия
+      // - допускаем "определен/определён"
+      const BAD_TAG_RE =
+        /\[\s*ProjectControlWT\s*:\s*Временно\s+не\s*определ[её]н\s*\]/i;
+
       const rawItems = data.filter(
         (r) => r.key === rowId && dayOfWeekNameByDate(dayjs(r.start)) === field
       );
 
       if (rawItems.length === 0) return false;
 
-      // проверяем каждую duration отдельно
       for (const r of rawItems) {
-        if (
-          Array.isArray((r as any).durations) &&
-          (r as any).durations.length > 0
-        ) {
-          for (const d of (r as any).durations) {
-            const comment = d?.comment ?? "";
-            if (!parseFirstIssueTypeLabel(comment)) {
-              return false; // хотя бы одна отметка без тега
-            }
-          }
-        } else {
-          // если durations нет, проверяем одиночный comment
-          const comment = (r as any).comment ?? "";
-          if (!parseFirstIssueTypeLabel(comment)) {
-            return false;
-          }
+        const durations =
+          Array.isArray((r as any).durations) && (r as any).durations.length
+            ? (r as any).durations
+            : [r as any];
+
+        for (const d of durations) {
+          const commentRaw = (d?.comment ?? "").toString();
+          const comment = norm(commentRaw).trim();
+
+          // нет комментария => нет тега
+          if (!comment) return false;
+
+          // Явно запрещённый тег в комментарии
+          if (BAD_TAG_RE.test(comment)) return false;
+
+          // Должен быть какой-то тег вообще
+          const tag = parseFirstIssueTypeLabel(comment);
+          if (!tag) return false;
         }
       }
 
-      // все отметки имели тег
-      return true;
+      return true; // все отметки имеют валидные теги
     },
     [data]
   );

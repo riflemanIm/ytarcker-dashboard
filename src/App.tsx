@@ -100,7 +100,6 @@ const YandexTracker: FC = () => {
       end: rangeEnd.format("YYYY-MM-DD"),
       login: state.fetchByLogin && login ? login : undefined,
     });
-    console.log("viewMode", viewMode);
   }, [
     login,
     state.userId,
@@ -137,7 +136,7 @@ const YandexTracker: FC = () => {
   const handleRefresh = () => {
     fetchForActiveRange();
   };
-  console.log("state.loaded", state.loaded);
+  console.log("state.data", state.data);
   return (
     <>
       {!state.loaded && <LinearProgress />}
