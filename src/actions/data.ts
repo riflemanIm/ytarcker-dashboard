@@ -17,6 +17,10 @@ import { handleLogout } from "@/components/LogInOut";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
+const MSK_OFFSET_MIN = 180; // UTC+3 без перехода на летнее время
+
+const toMSK = (d: dayjs.Dayjs | string | Date) =>
+  dayjs(d).utc().utcOffset(MSK_OFFSET_MIN); // гарантированно приводим к MSK
 
 const apiUrl: string = import.meta.env.VITE_APP_API_URL;
 console.log("apiUrl", apiUrl);
@@ -98,52 +102,52 @@ export const setData = async ({
     } else {
       // Добавляем новую запись, формируем время из dateCell
 
-      // const startDate = () => {
-      //   const HOURS_END_DAY = 18; // конец рабочего для
-      //   if (addEndWorkDayTime && dateCell) {
-      //     //дата из ячейки + добавленное время на конец рабочего дня
-      //     return dateCell
-      //       .add(HOURS_END_DAY, "hours")
-      //       .format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
-      //   }
-      //   if (addEndWorkDayTime) {
-      //     //дата now + добавленное время на конец рабочего дня
-      //     return;
-      //     dayjs()
-      //       .add(HOURS_END_DAY, "hours")
-      //       .format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
-      //   }
-      //   if (dateCell) {
-      //     return dateCell.format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
-      //   }
-
-      //   return dayjs().format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
-      // };
-
       const startDate = () => {
-        const now = dayjs();
-
+        const HOURS_END_DAY = 18; // конец рабочего для
         if (addEndWorkDayTime && dateCell) {
-          // дата из ячейки + текущее время
-          return dayjs(
-            `${dateCell.format("YYYY-MM-DD")}T${now.format("HH:mm:ss.SSSZZ")}`
-          ).format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
+          //дата из ячейки + добавленное время на конец рабочего дня
+          return dateCell
+            .add(HOURS_END_DAY, "hours")
+            .format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
         }
-
         if (addEndWorkDayTime) {
-          // просто now
-          return now.format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
+          //дата now + добавленное время на конец рабочего дня
+          return;
+          dayjs()
+            .add(HOURS_END_DAY, "hours")
+            .format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
         }
-
         if (dateCell) {
-          // дата из ячейки + текущее время
-          return dayjs(
-            `${dateCell.format("YYYY-MM-DD")}T${now.format("HH:mm:ss.SSSZZ")}`
-          ).format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
+          return dateCell.format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
         }
 
-        return now.format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
+        return dayjs().format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
       };
+
+      // const startDate = () => {
+      //   const now = dayjs();
+
+      //   if (addEndWorkDayTime && dateCell) {
+      //     // дата из ячейки + текущее время
+      //     return dayjs(
+      //       `${dateCell.format("YYYY-MM-DD")}T${now.format("HH:mm:ss.SSSZZ")}`
+      //     ).format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
+      //   }
+
+      //   if (addEndWorkDayTime) {
+      //     // просто now
+      //     return now.format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
+      //   }
+
+      //   if (dateCell) {
+      //     // дата из ячейки + текущее время
+      //     return dayjs(
+      //       `${dateCell.format("YYYY-MM-DD")}T${now.format("HH:mm:ss.SSSZZ")}`
+      //     ).format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
+      //   }
+
+      //   return now.format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
+      // };
 
       const payload = {
         token,

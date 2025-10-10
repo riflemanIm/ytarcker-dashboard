@@ -400,10 +400,22 @@ export const displayDuration = (duration: string): string => {
 };
 
 export const dayOfWeekNameByDate = (data: dayjs.Dayjs): string => {
-  const dayOfWeek = dayjs.utc(data).isoWeekday();
-  const dayOfWeekName = daysMap[dayOfWeek - 1];
-  return dayOfWeekName;
+  const dayOfWeek = toMSK(data).isoWeekday(); // 1..7
+  return daysMap[dayOfWeek - 1];
 };
+
+const toMSKISO = (utcStr: string): string => {
+  // вход: строка даты/времени в UTC (например, "...+0000" или "...Z")
+  // выход: ISO-строка в зоне +03:00
+  return dayjs
+    .utc(normalizeTZ(utcStr))
+    .utcOffset(180) // +03:00
+    .format("YYYY-MM-DDTHH:mm:ss.SSSZ"); // например "2025-10-06T12:24:51.128+03:00"
+};
+const MSK_OFFSET_MIN = 180; // UTC+3 без перехода на летнее время
+
+const toMSK = (d: dayjs.Dayjs | string | Date) =>
+  dayjs(d).utc().utcOffset(MSK_OFFSET_MIN); // гарантированно приводим к MSK
 interface getDateOfCurrentWeekday {
   (isoDay: number): dayjs.Dayjs;
 }
@@ -413,26 +425,24 @@ export const dayToNumber = (dayName: DayOfWeek): number => {
 };
 
 export const getDateOfDayName = (dayName: string): dayjs.Dayjs => {
-  const isoDay = dayToNumber(dayName as DayOfWeek);
-  return dayjs()
+  const isoDay = dayToNumber(dayName as DayOfWeek); // 1..7
+  return toMSK(dayjs())
     .startOf("isoWeek")
-    .add(isoDay - 1, "day"); // локально — ОК
+    .add(isoDay - 1, "day");
 };
 
-export const getDateOfCurrentWeekday: getDateOfCurrentWeekday = (
+export const getDateOfCurrentWeekday: (isoDay: number) => dayjs.Dayjs = (
   isoDay: number
-): dayjs.Dayjs => {
-  return dayjs().startOf("isoWeek").add(isoDay, "day"); // локально — ОК
+) => {
+  return toMSK(dayjs()).startOf("isoWeek").add(isoDay, "day");
 };
 
 export const getDateOfWeekday: (
   start: dayjs.Dayjs,
   isoDay: number
-) => dayjs.Dayjs = (
-  start: dayjs.Dayjs, // monday
-  isoDay: number
-): dayjs.Dayjs => {
-  return dayjs(start)
+) => dayjs.Dayjs = (start, isoDay) => {
+  // считаем, что start — это понедельник нужной недели; приводим к MSK и к началу iso-недели на всякий случай
+  return toMSK(start)
     .startOf("isoWeek")
     .add(isoDay - 1, "day");
 };
@@ -445,15 +455,14 @@ export function getWeekRange(historyNumWeek: number | null = null): {
   start: dayjs.Dayjs;
   end: dayjs.Dayjs;
 } {
-  let date = dayjs(); // локально — ОК, для текущей даты пользователя
+  let base = toMSK(dayjs());
 
   if (typeof historyNumWeek === "number") {
-    date = date.subtract(historyNumWeek, "week");
+    base = base.subtract(historyNumWeek, "week");
   }
 
-  const start = date.startOf("isoWeek");
-  const end = date.endOf("isoWeek");
-
+  const start = base.startOf("isoWeek"); // Пн 00:00:00.000 MSK
+  const end = base.endOf("isoWeek"); // Вс 23:59:59.999 MSK
   return { start, end };
 }
 
@@ -509,7 +518,12 @@ export function sumDurations(durations: string[]): string {
 export function aggregateDurations(data: DataItem[]): TaskItem[] {
   const grouped = data.reduce(
     (acc, item) => {
-      const dayOfWeekName = dayOfWeekNameByDate(dayjs(item.start));
+      // 1) конвертируем старт из UTC в MSK
+      const startMSK = toMSKISO(item.start);
+
+      // 2) считаем имя дня недели по MSK
+      const dayOfWeekName = dayOfWeekNameByDate(dayjs(startMSK));
+
       const groupKey = `${item.issue.key}_${item.updatedBy.id}_${dayOfWeekName}`;
       const groupItem: TaskItem = {
         id: item.id,
@@ -521,7 +535,7 @@ export function aggregateDurations(data: DataItem[]): TaskItem[] {
           fio: item.updatedBy.display,
         },
         groupIssue: item.issue.key.split("-")[0],
-        start: item.start,
+        start: startMSK, // ← сохраняем уже MSK-время
         duration: item.duration,
         comment: item.comment,
       };
