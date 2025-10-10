@@ -2,42 +2,49 @@ import express from "express";
 import axios from "axios";
 import cors from "cors";
 import https from "https";
-// Функция для отнимания недель от даты
-function subtractWeeks(dateStr, weeks) {
-  const date = new Date(dateStr);
-  date.setDate(date.getDate() - weeks * 7);
-  const year = date.getFullYear();
-  const month = ("0" + (date.getMonth() + 1)).slice(-2);
-  const day = ("0" + date.getDate()).slice(-2);
-  return `${year}-${month}-${day}`;
+
+const MSK_OFFSET_MS = 3 * 60 * 60 * 1000;
+
+function normalizeOffset(str) {
+  if (!str) return str;
+  // Приводим "+0000" к "+00:00" (и аналогичные "+0300" → "+03:00")
+  return str.replace(/([+-]\d{2})(\d{2})$/, "$1:$2");
 }
 
-/**
- * Фильтрует данные по диапазону дат.
- * @param {string} start - входящая дата
- * @param {number} startTimestamp - Начало диапазона (timestamp)
- * @param {number} endTimestamp - Конец диапазона (timestamp)
- * @returns {boolean} - true если входящая дата попадает в диапазон
- */
-function filterDataByDateRange(start, startTimestamp, endTimestamp) {
-  const itemTimestamp = new Date(start).getTime();
-  return itemTimestamp >= startTimestamp && itemTimestamp <= endTimestamp;
+function parseDateSafe(str) {
+  if (!str) return NaN;
+  const norm = normalizeOffset(str);
+  let ts = Date.parse(norm);
+  if (isNaN(ts)) {
+    // если TZ отсутствует совсем – считаем, что это UTC
+    ts = Date.parse(norm + "Z");
+  }
+  return ts;
 }
-/**
- * Возвращает дату конца текущей недели (воскресенье) в формате YYYY-MM-DD.
- */
-function getEndOfCurrentWeek() {
-  const now = new Date();
-  let day = now.getDay(); // 0 (воскресенье) - 6 (суббота)
-  // Если сегодня не воскресенье, вычисляем оставшиеся дни до воскресенья.
-  const diffToSunday = day === 0 ? 0 : 7 - day;
-  const sunday = new Date(now);
-  sunday.setDate(now.getDate() + diffToSunday);
-  const year = sunday.getFullYear();
-  const month = ("0" + (sunday.getMonth() + 1)).slice(-2);
-  const date = ("0" + sunday.getDate()).slice(-2);
-  return `${year}-${month}-${date}`;
+
+function toMSKISO(str) {
+  const ts = parseDateSafe(str);
+  if (isNaN(ts)) return str; // не ломаем, если пришло что-то необычное
+  const d = new Date(ts + MSK_OFFSET_MS);
+
+  const pad = (n, w = 2) => String(n).padStart(w, "0");
+  const yyyy = d.getUTCFullYear();
+  const mm = pad(d.getUTCMonth() + 1);
+  const dd = pad(d.getUTCDate());
+  const HH = pad(d.getUTCHours());
+  const MM = pad(d.getUTCMinutes());
+  const SS = pad(d.getUTCSeconds());
+  const mmm = pad(d.getUTCMilliseconds(), 3);
+
+  return `${yyyy}-${mm}-${dd}T${HH}:${MM}:${SS}.${mmm}+03:00`;
 }
+// Сдвигаем startDate на -3 часа (UTC коррекция)
+const shiftHours = (dateStr, hours) => {
+  const ts = Date.parse(dateStr);
+  if (isNaN(ts)) return dateStr;
+  const shifted = new Date(ts + hours * 60 * 60 * 1000);
+  return shifted.toISOString().slice(0, 16); // YYYY-MM-DDTHH:mm
+};
 
 const headers = (token) => ({
   headers: {
@@ -53,12 +60,6 @@ app.use(express.json());
 app.get("/api/issues", async (req, res) => {
   let { token, startDate, endDate, userId, login } = req.query;
   console.log("token", token);
-  endDate = `${endDate}T23:59`;
-  // Преобразование startDate и endDate из строки в дату
-  const startDateObj = new Date(startDate);
-  const endDateObj = new Date(endDate);
-  // const startTimestamp = startDateObj.getTime();
-  // const endTimestamp = endDateObj.getTime();
 
   try {
     if (token) {
@@ -73,9 +74,8 @@ app.get("/api/issues", async (req, res) => {
           : null;
 
       // Форматирование диапазона запроса (строки остаются строками)
-      const from = startDate;
-      //const to = `${endDate}T23:59`;
-      const to = endDate;
+      const from = shiftHours(startDate, -3);
+      const to = `${endDate}T23:59`;
       // console.log(
       //   "from",
       //   from,
@@ -110,7 +110,15 @@ app.get("/api/issues", async (req, res) => {
       // const data = response.data.filter((it) =>
       //   filterDataByDateRange(it.start, startTimestamp, endTimestamp)
       // );
-      const data = response.data;
+      const raw = response.data;
+
+      // Приводим время к MSK
+      const data = raw.map((it) => ({
+        ...it,
+        start: toMSKISO(it.start),
+        createdAt: toMSKISO(it.createdAt),
+        updatedAt: toMSKISO(it.updatedAt),
+      }));
 
       // Формируем список пользователей без повторов
       let users = data.map((it) => ({

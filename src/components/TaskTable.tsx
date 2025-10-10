@@ -10,6 +10,7 @@ import {
   normalizeDuration,
   parseISODurationToSeconds,
   sumDurations,
+  toTarget, // ⬅️ добавили
 } from "@/helpers";
 import { parseFirstIssueTypeLabel } from "@/helpers/issueTypeComment";
 import AddIcon from "@mui/icons-material/Add";
@@ -32,6 +33,7 @@ import TableCellMenu from "./TableCellMenu";
 
 dayjs.locale("ru");
 dayjs.extend(utc);
+
 export const durationComparator = (a: string, b: string): number =>
   parseISODurationToSeconds(a) - parseISODurationToSeconds(b);
 
@@ -46,7 +48,6 @@ interface TaskTableProps {
   idEditable: boolean;
 }
 
-// Компонент для отображения задачи (с переходом по ссылке, если она есть)
 const IssueDisplay: FC<{
   display: string;
   href?: string | null;
@@ -82,7 +83,6 @@ const IssueDisplay: FC<{
   </>
 );
 
-// Промежуточный тип для группировки, где для каждого дня хранится массив строк (длительностей)
 interface RawTransformedRow {
   id: string;
   issue: TaskItemIssue;
@@ -108,6 +108,7 @@ const transformData = (data: TaskItem[]): TransformedTaskRow[] => {
     const dayName: DayOfWeek = dayOfWeekNameByDate(
       dayjs(item.start)
     ) as DayOfWeek;
+
     if (!grouped[item.key]) {
       grouped[item.key] = {
         id: item.key,
@@ -124,7 +125,7 @@ const transformData = (data: TaskItem[]): TransformedTaskRow[] => {
         total: "",
       };
     }
-    // Добавляем длительность в массив для нужного дня
+
     (
       grouped[item.key][
         dayName as keyof Omit<
@@ -152,6 +153,7 @@ const transformData = (data: TaskItem[]): TransformedTaskRow[] => {
       saturday,
       sunday,
     ];
+
     return {
       id: rawRow.id,
       issue: rawRow.issue,
@@ -179,22 +181,49 @@ const TaskTable: FC<TaskTableProps> = ({
   setAlert,
   idEditable = false,
 }) => {
-  // true => у каждой отметки есть тег и он НЕ "Временно не определен"; иначе false
+  // --- 0) Выравниваем «шапку недели» под данные / выбранную неделю ---
+  const viewStart = useMemo(() => {
+    const s = toTarget(start).startOf("isoWeek");
+    const e = s.endOf("isoWeek");
+
+    const hasInThisWeek = data.some((i) => {
+      const d = toTarget(i.start);
+      return d.isSameOrAfter(s) && d.isSameOrBefore(e);
+    });
+
+    if (hasInThisWeek) return s;
+
+    // если в выбранной неделе нет данных — подстраиваемся под самую раннюю запись
+    if (data.length) {
+      const first = data
+        .map((i) => toTarget(i.start))
+        .sort((a, b) => a.valueOf() - b.valueOf())[0];
+      return first.startOf("isoWeek");
+    }
+
+    return s;
+  }, [start, data]);
+
+  // --- 1) Берём только записи этой недели (важно для сумм/колонок) ---
+  const dataForWeek = useMemo(() => {
+    const s = viewStart;
+    const e = viewStart.endOf("isoWeek");
+    return data.filter((i) => {
+      const d = toTarget(i.start);
+      return d.isSameOrAfter(s) && d.isSameOrBefore(e);
+    });
+  }, [data, viewStart]);
+
+  // --- 2) Проверка тегов для ячейки (внутри этой недели) ---
   const cellHasAllTags = useCallback(
     (rowId: string | number, field: string): boolean => {
-      if (!data) return true;
+      if (!dataForWeek) return true;
 
-      // Нормализация пробелов (в т.ч. неразрывных) для устойчивых проверок
-      const norm = (s: string) => s.replace(/[\u00A0\u202F]/g, " "); // NBSP / NNBSP -> обычный пробел
-
-      // Матчим плохой тег непосредственно в comment:
-      // [ProjectControlWT: Временно не определен]
-      // - любые пробелы вокруг/после двоеточия
-      // - допускаем "определен/определён"
+      const norm = (s: string) => s.replace(/[\u00A0\u202F]/g, " ");
       const BAD_TAG_RE =
         /\[\s*ProjectControlWT\s*:\s*Временно\s+не\s*определ[её]н\s*\]/i;
 
-      const rawItems = data.filter(
+      const rawItems = dataForWeek.filter(
         (r) => r.key === rowId && dayOfWeekNameByDate(dayjs(r.start)) === field
       );
 
@@ -210,44 +239,35 @@ const TaskTable: FC<TaskTableProps> = ({
           const commentRaw = (d?.comment ?? "").toString();
           const comment = norm(commentRaw).trim();
 
-          // нет комментария => нет тега
           if (!comment) return false;
-
-          // Явно запрещённый тег в комментарии
           if (BAD_TAG_RE.test(comment)) return false;
 
-          // Должен быть какой-то тег вообще
           const tag = parseFirstIssueTypeLabel(comment);
           if (!tag) return false;
         }
       }
-
-      return true; // все отметки имеют валидные теги
+      return true;
     },
-    [data]
+    [dataForWeek]
   );
 
-  // Трансформируем «сырые» задачи в строки для DataGrid
-  const tableRows = transformData(data);
+  // --- 3) Строим строки по отфильтрованным данным ---
+  const tableRows = useMemo(() => transformData(dataForWeek), [dataForWeek]);
 
-  // --- Шаг 1: Вычисляем, какой ключ (monday/tuesday/…) соответствует сегодняшней дате ---
-  // todayKey будет, например, "tuesday" если сегодня вторник в пределах недели start..start+6дн
+  // --- 4) Определяем «сегодняшний» столбец в рамках viewStart ---
   const todayKey: DayOfWeek | "" = useMemo(() => {
-    const today = dayjs().startOf("day");
-    // Перебираем весь daysMap (массив: ["monday","tuesday",…])
+    const today = toTarget(dayjs()).startOf("day");
     for (const day of daysMap) {
-      // получаем дату этого «day» (DAY_OF_WEEK) в рамках недели start..start+6
-      const dateOfThisDay = getDateOfWeekday(start, dayToNumber(day)).startOf(
-        "day"
-      );
-      if (dateOfThisDay.isSame(today)) {
-        return day;
-      }
+      const dateOfThisDay = getDateOfWeekday(
+        viewStart,
+        dayToNumber(day)
+      ).startOf("day");
+      if (dateOfThisDay.isSame(today)) return day;
     }
     return "";
-  }, [start]);
+  }, [viewStart]);
 
-  // Менеджер контекстного меню ячеек (при клике на Chip с длительностью)
+  // --- 5) Контекстное меню по клику на ячейку ---
   const [menuState, setMenuState] = useState<MenuState>({
     anchorEl: null,
     issue: null,
@@ -257,12 +277,11 @@ const TaskTable: FC<TaskTableProps> = ({
     dateField: null,
   });
 
-  // Используем GridRenderCellParams вместо any для handleMenuOpen
   const handleMenuOpen = useCallback(
     (event: React.MouseEvent<HTMLElement>, params: GridRenderCellParams) => {
       const foundRow =
-        data != null
-          ? data.find(
+        dataForWeek != null
+          ? dataForWeek.find(
               (row) =>
                 dayOfWeekNameByDate(dayjs(row.start)) === params.field &&
                 row.key === params.id
@@ -276,13 +295,14 @@ const TaskTable: FC<TaskTableProps> = ({
         issueId: params.row.issueId,
         durations: foundRow ?? null,
         dateField: getDateOfWeekday(
-          start,
+          viewStart,
           dayToNumber(params.field as DayOfWeek)
         ),
       });
     },
-    [data, start]
+    [dataForWeek, viewStart]
   );
+
   const handleMenuClose = useCallback(() => {
     setMenuState({
       anchorEl: null,
@@ -294,7 +314,7 @@ const TaskTable: FC<TaskTableProps> = ({
     });
   }, []);
 
-  // Обработка редактирования «сырых» значений времени: нормализация, валидация, вызов setData
+  // --- 6) Сохранение времени в выбранный день текущей (viewStart) недели ---
   const handleCellEdit = useCallback(
     (field: DayOfWeek, newValue: string, issueId: string) => {
       const normalizedValue = normalizeDuration(newValue);
@@ -314,7 +334,7 @@ const TaskTable: FC<TaskTableProps> = ({
         return false;
       }
       try {
-        const dateCell = getDateOfWeekday(start, dayToNumber(field));
+        const dateCell = getDateOfWeekday(viewStart, dayToNumber(field)); // ⬅️ viewStart
         setData({
           dateCell,
           setState,
@@ -330,16 +350,15 @@ const TaskTable: FC<TaskTableProps> = ({
         return false;
       }
     },
-    [start, setData, setState, setAlert, token]
+    [viewStart, setData, setState, setAlert, token]
   );
 
-  // --- Шаг 2: формируем колонки, подключая классы для «текущего» столбца ---
+  // --- 7) Колонки (шапка дат строится от viewStart) ---
   const columns: GridColDef[] = [
     {
       field: "issue",
       headerName: "Название",
       flex: 4,
-
       sortable: false,
       renderCell: (params: GridRenderCellParams) =>
         params.row.id !== "total" ? (
@@ -352,23 +371,11 @@ const TaskTable: FC<TaskTableProps> = ({
           params.value.display
         ),
     },
-    {
-      field: "issueId",
-      headerName: "Key",
-      flex: 1.5,
-      sortable: true,
-    },
-    // {
-    //   field: "groupIssue",
-    //   headerName: "Группа",
-    //   flex: 1.5,
-    //   sortable: false,
-    // },
-    // Динамически создаём по одному столбцу на каждый день недели
+    { field: "issueId", headerName: "Key", flex: 1.5, sortable: true },
+
     ...daysMap.map((day) => {
-      // Вычисляем форматированный заголовок (например, "Вт 03.06")
       const header = `${headerWeekName[day]} ${getDateOfWeekday(
-        start,
+        viewStart,
         dayToNumber(day)
       ).format("DD.MM")}`;
 
@@ -378,16 +385,11 @@ const TaskTable: FC<TaskTableProps> = ({
         flex: 1,
         editable: false,
         sortable: true,
-        // кастомный компаратор — проталкивает row.id="total" вниз
         sortComparator: (v1: string, v2: string, params1, params2) => {
-          // total-строку всегда вниз
           if (params1.id === "total") return 1;
           if (params2.id === "total") return -1;
-          // сортируем по секундам
           return durationComparator(v1, v2);
         },
-
-        // Здесь добавляем классы, если day === todayKey
         headerClassName: day === todayKey ? "current-column-header" : "",
         cellClassName: (params: GridRenderCellParams) =>
           params.field === todayKey ? "current-column-cell" : "",
@@ -395,7 +397,6 @@ const TaskTable: FC<TaskTableProps> = ({
           const val = displayDuration(params.value);
           if (params.row.id === "total") return val;
 
-          // если пустая ячейка
           if (val === "" && idEditable) {
             return (
               <div
@@ -431,7 +432,6 @@ const TaskTable: FC<TaskTableProps> = ({
             );
           }
 
-          // проверяем наличие тегов
           const allTagged = cellHasAllTags(params.id, params.field);
 
           if (idEditable) {
@@ -446,7 +446,6 @@ const TaskTable: FC<TaskTableProps> = ({
             );
           }
 
-          // если не editable — просто текст, но цветовой акцент
           return (
             <Typography
               variant="body2"
@@ -461,79 +460,23 @@ const TaskTable: FC<TaskTableProps> = ({
             </Typography>
           );
         },
-
-        // renderEditCell: (params: GridRenderEditCellParams) => (
-        //   <input
-        //     type="text"
-        //     autoFocus
-        //     style={{
-        //       border: "none",
-        //       outline: "none",
-        //       width: "100%",
-        //       height: "100%",
-        //       fontSize: "inherit",
-        //       fontFamily: "inherit",
-        //       padding: "0 8px",
-        //       boxSizing: "border-box",
-        //     }}
-        //     defaultValue=""
-        //     onBlur={(e: React.FocusEvent<HTMLInputElement, Element>) => {
-        //       params.api.setEditCellValue({
-        //         id: params.id,
-        //         field: params.field,
-        //         value: (e.target as HTMLInputElement).value,
-        //       });
-        //       params.api.stopCellEditMode({
-        //         id: params.id,
-        //         field: params.field,
-        //       });
-        //     }}
-        //     onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
-        //       if (e.key === "Enter") {
-        //         params.api.setEditCellValue({
-        //           id: params.id,
-        //           field: params.field,
-        //           value: (e.target as HTMLInputElement).value,
-        //         });
-        //         params.api.stopCellEditMode({
-        //           id: params.id,
-        //           field: params.field,
-        //         });
-        //       } else if (e.key === "Escape") {
-        //         params.api.stopCellEditMode({
-        //           id: params.id,
-        //           field: params.field,
-        //           ignoreModifications: true,
-        //         });
-        //       }
-        //     }}
-        //   />
-        // ),
       } as GridColDef;
     }),
-    {
-      field: "total",
-      headerName: "Итого",
-      sortable: false,
-      //sortComparator: (v1: string, v2: string) => durationComparator(v1, v2),
 
-      flex: 1.5,
-    },
+    { field: "total", headerName: "Итого", sortable: false, flex: 1.5 },
   ];
 
-  // --- Шаг 3: вычисляем строку «Итого» по всем задачам ---
+  // --- 8) Строка «Итого» по отфильтрованным строкам ---
   const calculateTotalRow = useCallback(
     (rows: TransformedTaskRow[]): TransformedTaskRow => {
       const totals: Record<string, string> = {};
       const totalsVals: Record<string, string> = {};
       daysMap.forEach((field) => {
         totals[field] = displayDuration(
-          sumDurations(
-            rows.map((row) => (row as unknown as Record<string, string>)[field])
-          )
+          sumDurations(rows.map((row) => (row as any)[field] as string))
         );
         totalsVals[field] = sumDurations(
-          rows.map((row) => (row as unknown as Record<string, string>)[field])
+          rows.map((row) => (row as any)[field] as string)
         );
       });
 
@@ -548,6 +491,7 @@ const TaskTable: FC<TaskTableProps> = ({
     },
     []
   );
+
   const totalRow = useMemo(
     () => calculateTotalRow(tableRows),
     [tableRows, calculateTotalRow]
@@ -560,28 +504,19 @@ const TaskTable: FC<TaskTableProps> = ({
         columns={columns}
         disableColumnMenu
         pageSizeOptions={[15]}
-        // Перехват single-click по пустой ячейке-«дню»
-        onCellClick={(
-          params,
-          event // MuiEvent<React.MouseEvent>
-        ) => {
-          // проверяем, что это одинарный клик по одному из столбцов дней
+        onCellClick={(params, event) => {
           if (
             idEditable &&
             daysMap.includes(params.field as DayOfWeek) &&
             params.value === "P" &&
             (event as React.MouseEvent).detail === 1
           ) {
-            // открываем ваше меню точно так же, как по кнопке AddIcon
             handleMenuOpen(
               event as React.MouseEvent<HTMLElement>,
               params as GridRenderCellParams
             );
           }
         }}
-        // Разрешаем редактировать ячейку, только если там «P» (плейсхолдер пустого значения)
-
-        //isCellEditable={(params) => params.value === "P"}
         processRowUpdate={(updatedRow, originalRow) =>
           handleCellEdit(
             Object.keys(updatedRow).find(
@@ -599,10 +534,7 @@ const TaskTable: FC<TaskTableProps> = ({
         }
         getRowClassName={(params) => (params.id === "total" ? "no-hover" : "")}
         sx={{
-          // Обычные стили для «no-hover»-строки
           "& .no-hover:hover": { backgroundColor: "transparent !important" },
-
-          // --- Стили для подсветки «текущего» столбца ---
           "& .current-column-header": {
             backgroundColor: "rgba(200, 220, 255, 0.5)",
           },

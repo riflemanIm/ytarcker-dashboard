@@ -2,24 +2,21 @@ import { Box, Stack, Typography, IconButton } from "@mui/material";
 import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import * as React from "react";
-import {
-  clampDateToRange,
-  displayDuration,
-  enumerateISOWeeks,
-  formatWeekLabel,
-  normalizeWorklogItem,
-  startOfDay,
-  startOfISOWeek,
-  sumDurations,
-  toDate,
-  weekKey,
-  WorklogItem,
-} from "../helpers";
-import dayjs from "dayjs";
-
+import dayjs, { Dayjs } from "dayjs";
 import "dayjs/locale/ru";
 
+import {
+  displayDuration,
+  normalizeWorklogItem,
+  sumDurations,
+  toDate, // можно удалить, если в проекте не нужен
+  WorklogItem,
+  // ⬇️ обязательно импортируй этот хелпер из helpers (как делали в TaskTable)
+  toTarget,
+} from "../helpers";
+
 dayjs.locale("ru");
+
 // --- IssueDisplay, как в TaskTable ---
 const IssueDisplay: React.FC<{
   display: string;
@@ -67,12 +64,22 @@ export interface WorklogWeeklyReportProps {
   height?: number;
 }
 
+// утилиты именно для этой таблицы (в целевом поясе)
+const weekKeyTz = (monday: Dayjs) => monday.format("YYYY-MM-DD"); // ключ недели
+const formatWeekLabelTz = (monday: Dayjs) => {
+  const sunday = monday.add(6, "day");
+  const dd = (n: number) => String(n).padStart(2, "0");
+  const monShort = monday.format("MMM"); // локаль ru
+  return `W${monday.isoWeek()} (${dd(monday.date())}–${dd(sunday.date())} ${monShort})`;
+};
+
 export default function WorklogWeeklyReport({
   from,
   to,
   data,
   height = 520,
 }: WorklogWeeklyReportProps) {
+  // 1) распаковываем массив
   const inputArray: AnyObj[] = React.useMemo(() => {
     if (!data) return [];
     return Array.isArray(data)
@@ -82,24 +89,29 @@ export default function WorklogWeeklyReport({
         : [];
   }, [data]);
 
+  // 2) нормализуем в WorklogItem (оставляем start как есть — со своим оффсетом)
   const items: WorklogItem[] = React.useMemo(
     () => inputArray.map(normalizeWorklogItem).filter(Boolean) as WorklogItem[],
     [inputArray]
   );
 
-  const fromD = React.useMemo(() => startOfDay(toDate(from)), [from]);
-  const toD = React.useMemo(() => {
-    const d = toDate(to);
-    const end = new Date(d);
-    end.setHours(23, 59, 59, 999);
-    return end;
-  }, [to]);
+  // 3) границы периода в целевом поясе (Пн 00:00:00 — Вс 23:59:59)
+  const fromT = React.useMemo(() => toTarget(from).startOf("isoWeek"), [from]);
+  const toT = React.useMemo(() => toTarget(to).endOf("isoWeek"), [to]);
 
-  const weeks = React.useMemo(
-    () => enumerateISOWeeks(fromD, toD),
-    [fromD, toD]
-  );
+  // 4) список понедельников (в целевом поясе)
+  const weeks = React.useMemo(() => {
+    const arr: Dayjs[] = [];
+    let cur = fromT.clone().startOf("isoWeek");
+    const last = toT.clone().endOf("isoWeek");
+    while (cur.isSameOrBefore(last)) {
+      arr.push(cur.clone());
+      cur = cur.add(1, "week");
+    }
+    return arr;
+  }, [fromT, toT]);
 
+  // 5) строим колонки и строки
   const { rows, columns } = React.useMemo(() => {
     const cols: GridColDef[] = [
       {
@@ -133,10 +145,10 @@ export default function WorklogWeeklyReport({
     ];
 
     weeks.forEach((monday) => {
-      const key = weekKey(monday);
+      const key = weekKeyTz(monday);
       cols.push({
         field: key,
-        headerName: formatWeekLabel(monday),
+        headerName: formatWeekLabelTz(monday),
         flex: 1,
         sortable: false,
         filterable: false,
@@ -172,14 +184,15 @@ export default function WorklogWeeklyReport({
     type RowAcc = Record<string, any>;
     const byIssue: Record<string, RowAcc> = {};
 
+    // ⚡️ ВАЖНО: для каждой записи используем её родной оффсет, но
+    // переводим в целевой пояс перед определением недели
     for (const wl of items) {
-      const startDate = toDate(wl.start);
-      const inRange = clampDateToRange(startDate, fromD, toD);
-      if (!inRange) continue;
+      const d = toTarget(wl.start); // момент в целевом поясе
+      if (d.isBefore(fromT) || d.isAfter(toT)) continue; // вне диапазона
 
       const issueKey = wl.issue.key;
       const issueTitle = wl.issue.display || "";
-      const wk = weekKey(startOfISOWeek(inRange));
+      const wk = weekKeyTz(d.startOf("isoWeek"));
 
       if (!byIssue[issueKey]) {
         byIssue[issueKey] = {
@@ -203,7 +216,7 @@ export default function WorklogWeeklyReport({
 
     const rows = Object.values(byIssue).map((row) => {
       weeks.forEach((monday) => {
-        const key = weekKey(monday);
+        const key = weekKeyTz(monday);
         if (!(key in row)) row[key] = "PT0M";
       });
       return row;
@@ -218,7 +231,7 @@ export default function WorklogWeeklyReport({
 
       let grandISO = "PT0M";
       weeks.forEach((monday) => {
-        const key = weekKey(monday);
+        const key = weekKeyTz(monday);
         const weekISO = rows.reduce(
           (accISO: string, r: any) =>
             sumDurations([accISO, String(r[key] ?? "PT0M")]),
@@ -233,7 +246,7 @@ export default function WorklogWeeklyReport({
     }
 
     return { rows, columns: cols };
-  }, [weeks, fromD, toD, items]);
+  }, [weeks, fromT, toT, items]);
 
   return (
     <Stack gap={1} sx={{ width: "100%" }}>
@@ -241,8 +254,8 @@ export default function WorklogWeeklyReport({
         Месячный отчёт по неделям
       </Typography>
       <Typography variant="body2" color="text.secondary" align="center">
-        Период: {dayjs(fromD).format("DD.MM.YYYY")} —{" "}
-        {dayjs(toD).format("DD.MM.YYYY")} (Пн–Вс)
+        Период: {fromT.format("DD.MM.YYYY")} — {toT.format("DD.MM.YYYY")}{" "}
+        (Пн–Вс)
       </Typography>
       <Box sx={{ height, width: "100%" }}>
         <DataGrid

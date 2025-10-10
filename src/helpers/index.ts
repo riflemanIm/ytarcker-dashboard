@@ -41,11 +41,157 @@ const ADMIN_LOGINS = [
 ];
 /** ===== Общие хелперы для дат/форматов/агрегаций ===== */
 
-// "+0000" → "+00:00" (нужен для корректного парсинга Date)
+// === CONFIG: целевой пояс для UI (MSK по умолчанию) ===
+const TARGET_OFFSET_MIN = 180; // UTC+3
+
+// "+0000" → "+00:00" (на всякий случай для нестандартных таймзонных суффиксов)
 export function normalizeTZ(s: string): string {
   if (typeof s !== "string") return s as any;
   if (/[+-]\d{2}:\d{2}$/.test(s)) return s;
   return s.replace(/([+-]\d{2})(\d{2})$/, "$1:$2");
+}
+
+// Привести дату/строку c любым оффсетом к целевому поясу (MSK)
+export const toTarget = (d: dayjs.Dayjs | string | Date): dayjs.Dayjs => {
+  if (typeof d === "string") {
+    // ВАЖНО: сначала распарсить с её родным оффсетом, затем перевести в целевой
+    return dayjs(normalizeTZ(d)).utc().utcOffset(TARGET_OFFSET_MIN);
+  }
+  // для Dayjs/Date: считаем, что это "момент", переводим его в целевой пояс
+  return dayjs(d).utc().utcOffset(TARGET_OFFSET_MIN);
+};
+
+// Вернуть ISO строку в целевом поясе (для хранения/рендера)
+export const toTargetISO = (src: string | Date | dayjs.Dayjs): string =>
+  toTarget(src).format("YYYY-MM-DDTHH:mm:ss.SSSZ");
+
+// День недели (monday..sunday) в целевом поясе
+export const dayOfWeekNameByDate = (data: dayjs.Dayjs): string => {
+  const daysMap: DayOfWeek[] = [
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+    "sunday",
+  ];
+  const dow = toTarget(data).isoWeekday(); // 1..7
+  return daysMap[dow - 1];
+};
+
+// Номер дня недели ISO (1..7) в целевом поясе
+export const dayToNumber = (dayName: DayOfWeek): number => {
+  const daysMap: DayOfWeek[] = [
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+    "sunday",
+  ];
+  return daysMap.indexOf(dayName.toLowerCase() as DayOfWeek) + 1;
+};
+
+// Дата выбранного имени дня текущей недели (в целевом поясе)
+export const getDateOfDayName = (dayName: string): dayjs.Dayjs => {
+  const isoDay = dayToNumber(dayName as DayOfWeek); // 1..7
+  return toTarget(dayjs())
+    .startOf("isoWeek")
+    .add(isoDay - 1, "day");
+};
+
+// Дата iso-дня текущей недели (1..7) в целевом поясе
+export const getDateOfCurrentWeekday = (isoDay: number): dayjs.Dayjs =>
+  toTarget(dayjs())
+    .startOf("isoWeek")
+    .add(isoDay - 1, "day");
+
+// Дата iso-дня недели, чей понедельник = start (в целевом поясе)
+export const getDateOfWeekday = (
+  start: dayjs.Dayjs,
+  isoDay: number
+): dayjs.Dayjs =>
+  toTarget(start)
+    .startOf("isoWeek")
+    .add(isoDay - 1, "day");
+
+// Диапазон недели (Пн–Вс) относительно "сейчас" или смещения historyNumWeek, в целевом поясе
+export function getWeekRange(historyNumWeek: number | null = null): {
+  start: dayjs.Dayjs;
+  end: dayjs.Dayjs;
+} {
+  let base = toTarget(dayjs());
+  if (typeof historyNumWeek === "number") {
+    base = base.subtract(historyNumWeek, "week");
+  }
+  return {
+    start: base.startOf("isoWeek"),
+    end: base.endOf("isoWeek"),
+  };
+}
+
+// Эта дата внутри текущей недели? (в целевом поясе)
+export function isDateInCurrentWeek(date: dayjs.Dayjs): boolean {
+  const nowTz = toTarget(dayjs());
+  const weekStart = nowTz.startOf("isoWeek");
+  const weekEnd = nowTz.endOf("isoWeek");
+  const d = toTarget(date);
+  return d.isSameOrAfter(weekStart) && d.isSameOrBefore(weekEnd);
+}
+
+// Агрегация: используем исходный оффсет записи, но для вычисления дня — целевой пояс.
+// По желанию можно сохранять start уже в целевой зоне (toTargetISO), чтобы всё было однородно.
+export function aggregateDurations(data: DataItem[]): TaskItem[] {
+  const daysMap: DayOfWeek[] = [
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+    "sunday",
+  ];
+
+  const grouped = data.reduce(
+    (acc, item) => {
+      // item.start уже содержит таймзону (например, "+00:00" или "+03:00")
+      const startInTarget = toTarget(item.start); // учитываем родной оффсет, затем приводим к целевому
+
+      const dayOfWeekName = dayOfWeekNameByDate(startInTarget);
+      const groupKey = `${item.issue.key}_${item.updatedBy.id}_${dayOfWeekName}`;
+
+      const groupItem: TaskItem = {
+        id: item.id,
+        key: `${item.issue.key}_${item.updatedBy.id}`,
+        issueId: item.issue.key,
+        issue: {
+          display: item.issue.display,
+          href: `https://tracker.yandex.ru/${item.issue.key}`,
+          fio: item.updatedBy.display,
+        },
+        groupIssue: item.issue.key.split("-")[0],
+        // Храним start уже в целевой зоне, чтобы дальше всё было консистентно
+        start: toTargetISO(item.start),
+        duration: item.duration,
+        comment: item.comment,
+      };
+
+      (acc[groupKey] ||= []).push(groupItem);
+      return acc;
+    },
+    {} as Record<string, TaskItem[]>
+  );
+
+  return Object.values(grouped).map((group) => {
+    const durations = group.map(
+      (i) =>
+        ({ id: i.id, duration: i.duration, comment: i.comment }) as DurationItem
+    );
+    const totalDuration = sumDurations(group.map((i) => i.duration));
+    return { ...group[0], duration: totalDuration, durations };
+  });
 }
 
 // Безопасно получить Date из строки/Date
@@ -219,49 +365,6 @@ export function normalizeWorklogItem(
   };
 }
 
-type AnyItem = Record<string, any>;
-
-const normalizeToWorklog = (x: AnyItem) => {
-  // 1) Сырые логи ЯТ — уже подходят
-  if (x?.issue?.key && x?.start && x?.duration) {
-    return {
-      issue: { key: x.issue.key, display: x.issue.display ?? "" },
-      start: x.start,
-      duration: toIsoDuration(x.duration),
-    };
-  }
-
-  // 2) Частые альтернативные названия полей
-  const key =
-    x.issueKey ?? x.key ?? x.issue_id ?? x.issueId ?? x.id ?? "UNKNOWN";
-  const display =
-    x.issueTitle ?? x.title ?? x.summary ?? x.issue?.display ?? "";
-
-  // время начала
-  const start =
-    x.start ??
-    x.started ??
-    x.startedAt ??
-    x.date ??
-    x.createdAt ??
-    x.updatedAt ?? // на крайний случай
-    null;
-
-  // длительность
-  const durationRaw =
-    (x.duration ?? x.spent ?? x.spentSeconds ?? x.seconds ?? x.minutes)
-      ? Number(x.minutes) * 60
-      : null;
-
-  return start
-    ? {
-        issue: { key: String(key), display: String(display ?? "") },
-        start: String(start),
-        duration: toIsoDuration(durationRaw),
-      }
-    : null; // если нет ни одного поля начала — пропустим
-};
-
 export const isSuperLogin = (login: string | null | undefined): boolean => {
   if (!login) return false;
   return ADMIN_LOGINS.includes(login);
@@ -277,11 +380,6 @@ export function parseISODurationToSeconds(dur: string): number {
   return +h * 3600 + +m * 60 + +s;
 }
 
-export function isDateInCurrentWeek(date: dayjs.Dayjs): boolean {
-  const weekStart = dayjs().startOf("isoWeek");
-  const weekEnd = dayjs().endOf("isoWeek");
-  return date.isSameOrAfter(weekStart) && date.isSameOrBefore(weekEnd);
-}
 export const isValidDuration = (duration: string): boolean => {
   // Обновлённое регулярное выражение для ISO8601 длительности без поддержки лет и секунд
   console.log("duration", duration);
@@ -399,72 +497,23 @@ export const displayDuration = (duration: string): string => {
   return parts.join(" ");
 };
 
-export const dayOfWeekNameByDate = (data: dayjs.Dayjs): string => {
-  const dayOfWeek = toMSK(data).isoWeekday(); // 1..7
-  return daysMap[dayOfWeek - 1];
-};
+// ==== MSK helpers (UTC+3) ====
+const MSK_OFFSET_MIN = 180; // UTC+3, без DST
 
-const toMSKISO = (utcStr: string): string => {
-  // вход: строка даты/времени в UTC (например, "...+0000" или "...Z")
-  // выход: ISO-строка в зоне +03:00
-  return dayjs
-    .utc(normalizeTZ(utcStr))
-    .utcOffset(180) // +03:00
-    .format("YYYY-MM-DDTHH:mm:ss.SSSZ"); // например "2025-10-06T12:24:51.128+03:00"
-};
-const MSK_OFFSET_MIN = 180; // UTC+3 без перехода на летнее время
-
-const toMSK = (d: dayjs.Dayjs | string | Date) =>
-  dayjs(d).utc().utcOffset(MSK_OFFSET_MIN); // гарантированно приводим к MSK
-interface getDateOfCurrentWeekday {
-  (isoDay: number): dayjs.Dayjs;
-}
-
-export const dayToNumber = (dayName: DayOfWeek): number => {
-  return daysMap.indexOf(dayName.toLowerCase() as DayOfWeek) + 1; // ISO-нумерация
-};
-
-export const getDateOfDayName = (dayName: string): dayjs.Dayjs => {
-  const isoDay = dayToNumber(dayName as DayOfWeek); // 1..7
-  return toMSK(dayjs())
-    .startOf("isoWeek")
-    .add(isoDay - 1, "day");
-};
-
-export const getDateOfCurrentWeekday: (isoDay: number) => dayjs.Dayjs = (
-  isoDay: number
-) => {
-  return toMSK(dayjs()).startOf("isoWeek").add(isoDay, "day");
-};
-
-export const getDateOfWeekday: (
-  start: dayjs.Dayjs,
-  isoDay: number
-) => dayjs.Dayjs = (start, isoDay) => {
-  // считаем, что start — это понедельник нужной недели; приводим к MSK и к началу iso-недели на всякий случай
-  return toMSK(start)
-    .startOf("isoWeek")
-    .add(isoDay - 1, "day");
-};
-
-/**
- * Возвращает даты начала и конца недели.
- * @param historyNumWeek - Количество недель назад (null - текущая неделя)
- */
-export function getWeekRange(historyNumWeek: number | null = null): {
-  start: dayjs.Dayjs;
-  end: dayjs.Dayjs;
-} {
-  let base = toMSK(dayjs());
-
-  if (typeof historyNumWeek === "number") {
-    base = base.subtract(historyNumWeek, "week");
+// Приводит любую дату/время к зоне MSK
+export const toMSK = (d: dayjs.Dayjs | string | Date): dayjs.Dayjs => {
+  if (typeof d === "string") {
+    return dayjs.utc(normalizeTZ(d)).utcOffset(MSK_OFFSET_MIN);
   }
+  return dayjs(d).utc().utcOffset(MSK_OFFSET_MIN);
+};
 
-  const start = base.startOf("isoWeek"); // Пн 00:00:00.000 MSK
-  const end = base.endOf("isoWeek"); // Вс 23:59:59.999 MSK
-  return { start, end };
-}
+// Специально для строк UTC из API -> ISO в +03:00
+export const toMSKISO = (utcStr: string): string =>
+  dayjs
+    .utc(normalizeTZ(utcStr))
+    .utcOffset(MSK_OFFSET_MIN)
+    .format("YYYY-MM-DDTHH:mm:ss.SSSZ");
 
 export function sumDurations(durations: string[]): string {
   const minutesInWorkDay = 8 * 60; // 8 часов = 1 «рабочий» день
@@ -513,56 +562,6 @@ export function sumDurations(durations: string[]): string {
     if (minutes > 0) result += `${minutes}M`;
   }
   return result;
-}
-
-export function aggregateDurations(data: DataItem[]): TaskItem[] {
-  const grouped = data.reduce(
-    (acc, item) => {
-      // 1) конвертируем старт из UTC в MSK
-      const startMSK = toMSKISO(item.start);
-
-      // 2) считаем имя дня недели по MSK
-      const dayOfWeekName = dayOfWeekNameByDate(dayjs(startMSK));
-
-      const groupKey = `${item.issue.key}_${item.updatedBy.id}_${dayOfWeekName}`;
-      const groupItem: TaskItem = {
-        id: item.id,
-        key: `${item.issue.key}_${item.updatedBy.id}`,
-        issueId: item.issue.key,
-        issue: {
-          display: item.issue.display,
-          href: `https://tracker.yandex.ru/${item.issue.key}`,
-          fio: item.updatedBy.display,
-        },
-        groupIssue: item.issue.key.split("-")[0],
-        start: startMSK, // ← сохраняем уже MSK-время
-        duration: item.duration,
-        comment: item.comment,
-      };
-
-      if (!acc[groupKey]) {
-        acc[groupKey] = [groupItem];
-      } else {
-        acc[groupKey].push(groupItem);
-      }
-      return acc;
-    },
-    {} as Record<string, TaskItem[]>
-  );
-
-  return Object.values(grouped).map((group) => {
-    const durations = group.map(
-      (i) =>
-        ({ id: i.id, duration: i.duration, comment: i.comment }) as DurationItem
-    );
-    const totalDuration = sumDurations(group.map((i) => i.duration));
-
-    return {
-      ...group[0],
-      duration: totalDuration,
-      durations,
-    };
-  });
 }
 
 //  Пример использования:
