@@ -140,7 +140,7 @@ app.post("/api/add_time", async (req, res) => {
 
     // Добавляем новый worklog
     const url = `https://api.tracker.yandex.net/v2/issues/${issueId}/worklog`;
-    console.log("========== start =========\n", start);
+    console.log("========== add_time start =========\n", start);
     const { data } = await axios.post(
       url,
       { start, duration, comment },

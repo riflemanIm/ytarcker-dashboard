@@ -98,18 +98,51 @@ export const setData = async ({
     } else {
       // Добавляем новую запись, формируем время из dateCell
 
+      // const startDate = () => {
+      //   const HOURS_END_DAY = 18; // конец рабочего для
+      //   if (addEndWorkDayTime && dateCell) {
+      //     //дата из ячейки + добавленное время на конец рабочего дня
+      //     return dateCell
+      //       .add(HOURS_END_DAY, "hours")
+      //       .format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
+      //   }
+      //   if (addEndWorkDayTime) {
+      //     //дата now + добавленное время на конец рабочего дня
+      //     return;
+      //     dayjs()
+      //       .add(HOURS_END_DAY, "hours")
+      //       .format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
+      //   }
+      //   if (dateCell) {
+      //     return dateCell.format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
+      //   }
+
+      //   return dayjs().format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
+      // };
+
       const startDate = () => {
+        const now = dayjs();
+
         if (addEndWorkDayTime && dateCell) {
-          return dateCell.add(18, "hours").format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
-        }
-        if (addEndWorkDayTime) {
-          dayjs().add(18, "hours").format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
-        }
-        if (dateCell) {
-          return dateCell.format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
+          // дата из ячейки + текущее время
+          return dayjs(
+            `${dateCell.format("YYYY-MM-DD")}T${now.format("HH:mm:ss.SSSZZ")}`
+          ).format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
         }
 
-        return dayjs().format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
+        if (addEndWorkDayTime) {
+          // просто now
+          return now.format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
+        }
+
+        if (dateCell) {
+          // дата из ячейки + текущее время
+          return dayjs(
+            `${dateCell.format("YYYY-MM-DD")}T${now.format("HH:mm:ss.SSSZZ")}`
+          ).format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
+        }
+
+        return now.format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
       };
 
       const payload = {
