@@ -15,11 +15,18 @@ import {
 import { parseFirstIssueTypeLabel } from "@/helpers/issueTypeComment";
 import AddIcon from "@mui/icons-material/Add";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
-import { Chip, IconButton, Typography } from "@mui/material";
+import { Box, Chip, IconButton, Typography } from "@mui/material";
 import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import dayjs, { Dayjs } from "dayjs";
 import utc from "dayjs/plugin/utc";
-import React, { FC, useCallback, useMemo, useState } from "react";
+import React, {
+  FC,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   AlertState,
   AppState,
@@ -30,9 +37,19 @@ import {
   TransformedTaskRow,
 } from "../types/global";
 import TableCellMenu from "./TableCellMenu";
+import TableCellInfoPopover from "./TableCellInfoPopover";
 
 dayjs.locale("ru");
 dayjs.extend(utc);
+
+const createEmptyMenuState = (): MenuState => ({
+  anchorEl: null,
+  issue: null,
+  field: null,
+  issueId: null,
+  durations: null,
+  dateField: null,
+});
 
 export const durationComparator = (a: string, b: string): number =>
   parseISODurationToSeconds(a) - parseISODurationToSeconds(b);
@@ -45,7 +62,7 @@ interface TaskTableProps {
   setData: (args: SetDataArgs) => Promise<void>;
   deleteData: (args: DeleteDataArgs) => void;
   setAlert: React.Dispatch<React.SetStateAction<AlertState>>;
-  idEditable: boolean;
+  isEditable: boolean;
 }
 
 const IssueDisplay: FC<{
@@ -179,7 +196,7 @@ const TaskTable: FC<TaskTableProps> = ({
   setData,
   deleteData,
   setAlert,
-  idEditable = false,
+  isEditable = false,
 }) => {
   // --- 0) Выравниваем «шапку недели» под данные / выбранную неделю ---
   const viewStart = useMemo(() => {
@@ -268,17 +285,42 @@ const TaskTable: FC<TaskTableProps> = ({
   }, [viewStart]);
 
   // --- 5) Контекстное меню по клику на ячейку ---
-  const [menuState, setMenuState] = useState<MenuState>({
-    anchorEl: null,
-    issue: null,
-    field: null,
-    issueId: null,
-    durations: null,
-    dateField: null,
-  });
+  const [menuState, setMenuState] = useState<MenuState>(createEmptyMenuState);
+  const [infoState, setInfoState] = useState<MenuState>(createEmptyMenuState);
+  const [infoOpen, setInfoOpen] = useState(false);
+  const popoverPaperRef = useRef<HTMLDivElement | null>(null);
+  const infoCloseTimer = useRef<number | null>(null);
+
+  const clearInfoCloseTimer = useCallback(() => {
+    if (infoCloseTimer.current != null) {
+      window.clearTimeout(infoCloseTimer.current);
+      infoCloseTimer.current = null;
+    }
+  }, []);
+
+  const closeInfo = useCallback(() => {
+    clearInfoCloseTimer();
+    setInfoOpen(false);
+    setInfoState(createEmptyMenuState());
+  }, [clearInfoCloseTimer, setInfoOpen, setInfoState]);
+
+  const scheduleInfoClose = useCallback(() => {
+    clearInfoCloseTimer();
+    infoCloseTimer.current = window.setTimeout(() => {
+      infoCloseTimer.current = null;
+      const anchorHovered = infoState.anchorEl?.matches?.(":hover");
+      const popoverHovered = popoverPaperRef.current?.matches?.(":hover");
+      if (anchorHovered || popoverHovered) {
+        return;
+      }
+      closeInfo();
+    }, 3000);
+  }, [clearInfoCloseTimer, closeInfo, infoState.anchorEl]);
 
   const handleMenuOpen = useCallback(
     (event: React.MouseEvent<HTMLElement>, params: GridRenderCellParams) => {
+      clearInfoCloseTimer();
+      const anchor = event.currentTarget as HTMLElement;
       const foundRow =
         dataForWeek != null
           ? dataForWeek.find(
@@ -289,7 +331,7 @@ const TaskTable: FC<TaskTableProps> = ({
           : null;
 
       setMenuState({
-        anchorEl: event.currentTarget,
+        anchorEl: anchor,
         issue: params.row.issue.display,
         field: params.field as DayOfWeek,
         issueId: params.row.issueId,
@@ -300,19 +342,95 @@ const TaskTable: FC<TaskTableProps> = ({
         ),
       });
     },
-    [dataForWeek, viewStart]
+    [dataForWeek, viewStart, setMenuState]
   );
 
   const handleMenuClose = useCallback(() => {
-    setMenuState({
-      anchorEl: null,
-      issue: null,
-      field: null,
-      issueId: null,
-      durations: null,
-      dateField: null,
-    });
-  }, []);
+    setMenuState(createEmptyMenuState());
+  }, [setMenuState]);
+
+  const handleInfoOpen = useCallback(
+    (event: React.MouseEvent<HTMLElement>, params: GridRenderCellParams) => {
+      clearInfoCloseTimer();
+      const anchor = event.currentTarget as HTMLElement;
+      const foundRow =
+        dataForWeek != null
+          ? dataForWeek.find(
+              (row) =>
+                dayOfWeekNameByDate(dayjs(row.start)) === params.field &&
+                row.key === params.id
+            )?.durations
+          : null;
+
+      if (!foundRow || foundRow.length === 0) {
+        closeInfo();
+        return;
+      }
+
+      // закрываем предыдущий поповер, если он открыт
+      closeInfo();
+
+      const nextState: MenuState = {
+        anchorEl: anchor,
+        issue: params.row.issue.display,
+        field: params.field as DayOfWeek,
+        issueId: params.row.issueId,
+        durations: foundRow,
+        dateField: getDateOfWeekday(
+          viewStart,
+          dayToNumber(params.field as DayOfWeek)
+        ),
+      };
+
+      setInfoState(nextState);
+      setInfoOpen(true);
+    },
+    [
+      dataForWeek,
+      viewStart,
+      closeInfo,
+      setInfoState,
+      setInfoOpen,
+      clearInfoCloseTimer,
+    ]
+  );
+
+  const handleCellInfoLeave = useCallback(
+    (event?: React.MouseEvent<HTMLElement>) => {
+      const nextTarget = event?.relatedTarget as Node | null;
+      if (
+        event &&
+        nextTarget &&
+        popoverPaperRef.current?.contains(nextTarget)
+      ) {
+        return;
+      }
+      scheduleInfoClose();
+    },
+    [scheduleInfoClose]
+  );
+
+  const handlePopoverMouseLeave = useCallback(
+    (event: React.MouseEvent<HTMLElement>) => {
+      const nextTarget = event.relatedTarget as Node | null;
+      const anchor = infoState.anchorEl;
+      if (anchor && nextTarget && anchor.contains(nextTarget)) {
+        return;
+      }
+      scheduleInfoClose();
+    },
+    [infoState.anchorEl, scheduleInfoClose]
+  );
+
+  const handlePopoverMouseEnter = useCallback(() => {
+    clearInfoCloseTimer();
+  }, [clearInfoCloseTimer]);
+
+  useEffect(() => {
+    return () => {
+      clearInfoCloseTimer();
+    };
+  }, [clearInfoCloseTimer]);
 
   // --- 6) Сохранение времени в выбранный день текущей (viewStart) недели ---
   const handleCellEdit = useCallback(
@@ -397,7 +515,7 @@ const TaskTable: FC<TaskTableProps> = ({
           const val = displayDuration(params.value);
           if (params.row.id === "total") return val;
 
-          if (val === "" && idEditable) {
+          if (val === "" && isEditable) {
             return (
               <div
                 style={{
@@ -434,7 +552,7 @@ const TaskTable: FC<TaskTableProps> = ({
 
           const allTagged = cellHasAllTags(params.id, params.field);
 
-          if (idEditable) {
+          if (isEditable) {
             return (
               <Chip
                 label={val}
@@ -446,18 +564,39 @@ const TaskTable: FC<TaskTableProps> = ({
             );
           }
 
+          if (val === "") {
+            return (
+              <Typography
+                variant="body2"
+                sx={(theme) => ({
+                  color: allTagged
+                    ? theme.palette.success.main
+                    : theme.palette.error.main,
+                  fontWeight: 500,
+                })}
+              >
+                {val}
+              </Typography>
+            );
+          }
+
           return (
-            <Typography
-              variant="body2"
-              sx={(theme) => ({
-                color: allTagged
-                  ? theme.palette.success.main
-                  : theme.palette.error.main,
-                fontWeight: 500,
-              })}
+            <Box
+              onMouseEnter={(e) => handleInfoOpen(e, params)}
+              onMouseLeave={handleCellInfoLeave}
             >
-              {val}
-            </Typography>
+              <Typography
+                variant="body2"
+                sx={(theme) => ({
+                  color: allTagged
+                    ? theme.palette.success.main
+                    : theme.palette.error.main,
+                  fontWeight: 500,
+                })}
+              >
+                {val}
+              </Typography>
+            </Box>
           );
         },
       } as GridColDef;
@@ -506,7 +645,7 @@ const TaskTable: FC<TaskTableProps> = ({
         pageSizeOptions={[15]}
         onCellClick={(params, event) => {
           if (
-            idEditable &&
+            isEditable &&
             daysMap.includes(params.field as DayOfWeek) &&
             params.value === "P" &&
             (event as React.MouseEvent).detail === 1
@@ -553,6 +692,15 @@ const TaskTable: FC<TaskTableProps> = ({
         setData={setData}
         setState={setState}
         setAlert={setAlert}
+      />
+      <TableCellInfoPopover
+        open={infoOpen}
+        onClose={closeInfo}
+        menuState={infoState}
+        onPaperMouseEnter={handlePopoverMouseEnter}
+        onPaperMouseLeave={handlePopoverMouseLeave}
+        onCloseButtonClick={() => handleCellInfoLeave()}
+        paperRef={popoverPaperRef}
       />
     </>
   );

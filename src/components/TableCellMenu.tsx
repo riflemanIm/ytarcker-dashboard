@@ -1,11 +1,6 @@
-import React, {
-  FC,
-  Fragment,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import CloseIcon from "@mui/icons-material/Close";
+import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import {
   Button,
   CircularProgress,
@@ -25,11 +20,16 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import CloseIcon from "@mui/icons-material/Close";
-import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
-import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import React, {
+  FC,
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
-import { DeleteDataArgs, getIssueTypeList, SetDataArgs } from "@/actions/data";
+import { getIssueTypeList } from "@/actions/data";
 import isEmpty, {
   displayDuration,
   headerWeekName,
@@ -42,25 +42,9 @@ import {
   stripIssueTypeTags,
 } from "@/helpers/issueTypeComment";
 
-import {
-  AlertState,
-  AppState,
-  DurationItem,
-  MenuState,
-  TaskItemMenu,
-} from "../types/global";
+import { EditableCellMenuProps } from "@/types/menu";
+import { DurationItem, TaskItemMenu } from "../types/global";
 import SelectIssueTypeList from "./SelectIssueTypeList";
-
-interface TableCellMenuProps {
-  open: boolean;
-  onClose: () => void;
-  menuState: MenuState;
-  setState: React.Dispatch<React.SetStateAction<AppState>>;
-  deleteData: (args: DeleteDataArgs) => void;
-  token: string | null;
-  setData: (args: SetDataArgs) => void;
-  setAlert: (args: AlertState) => void;
-}
 
 type RowUI = {
   durationRaw: string;
@@ -68,7 +52,7 @@ type RowUI = {
   selectedLabel: string | null; // выбранный тип из селекта
 };
 
-const TableCellMenu: FC<TableCellMenuProps> = ({
+const TableCellMenu: FC<EditableCellMenuProps> = ({
   open,
   onClose,
   menuState,

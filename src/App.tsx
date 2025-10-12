@@ -298,7 +298,7 @@ const YandexTracker: FC = () => {
                     setData={setData}
                     deleteData={deleteData}
                     setAlert={setAlert}
-                    idEditable={state.fetchByLogin}
+                    isEditable={state.fetchByLogin}
                   />
                 ) : (
                   <WorklogWeeklyReport

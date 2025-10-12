@@ -16,10 +16,6 @@ import { handleLogout } from "@/components/LogInOut";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
-const MSK_OFFSET_MIN = 180; // UTC+3 без перехода на летнее время
-
-const toMSK = (d: dayjs.Dayjs | string | Date) =>
-  dayjs(d).utc().utcOffset(MSK_OFFSET_MIN); // гарантированно приводим к MSK
 
 const apiUrl: string = import.meta.env.VITE_APP_API_URL;
 
