@@ -382,7 +382,6 @@ export function parseISODurationToSeconds(dur: string): number {
 
 export const isValidDuration = (duration: string): boolean => {
   // Обновлённое регулярное выражение для ISO8601 длительности без поддержки лет и секунд
-  console.log("duration", duration);
   const iso8601DurationRegex =
     /^P(?=\d|T\d)(?:(\d+W)?(\d+D)?)(?:T(?=\d+[HM])(?:(\d+H)?(\d+M)?))?$/i;
   return iso8601DurationRegex.test(duration);

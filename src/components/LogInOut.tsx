@@ -51,8 +51,6 @@ const LogInOut: React.FC<LogInOutProps> = ({ token, setAuth }) => {
             if (login) {
               localStorage.setItem("yandex_login", login);
 
-              console.log("Yandex login:", login);
-
               setAuth((prev) => ({
                 ...prev,
                 login: login.includes("@") ? login.split("@")[0] : login,

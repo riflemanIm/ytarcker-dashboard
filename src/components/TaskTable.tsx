@@ -345,7 +345,7 @@ const TaskTable: FC<TaskTableProps> = ({
         });
         return true;
       } catch (err: any) {
-        console.log("ERROR ", err.message);
+        console.error("handleCellEdit error:", err.message);
         setAlert({ open: true, severity: "error", message: err.message });
         return false;
       }

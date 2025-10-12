@@ -50,7 +50,6 @@ import {
   TaskItemMenu,
 } from "../types/global";
 import SelectIssueTypeList from "./SelectIssueTypeList";
-import { CheckBox } from "@mui/icons-material";
 
 interface TableCellMenuProps {
   open: boolean;

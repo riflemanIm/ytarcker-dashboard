@@ -9,7 +9,6 @@ import {
   displayDuration,
   normalizeWorklogItem,
   sumDurations,
-  toDate, // можно удалить, если в проекте не нужен
   WorklogItem,
   // ⬇️ обязательно импортируй этот хелпер из helpers (как делали в TaskTable)
   toTarget,

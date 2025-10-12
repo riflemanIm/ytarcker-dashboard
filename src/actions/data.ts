@@ -1,8 +1,7 @@
-import { Button } from "@mui/material";
 import dayjs, { Dayjs } from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
-import axios, { AxiosError } from "axios";
+import axios from "axios";
 import isEmpty from "@/helpers";
 import {
   AlertState,
@@ -23,7 +22,6 @@ const toMSK = (d: dayjs.Dayjs | string | Date) =>
   dayjs(d).utc().utcOffset(MSK_OFFSET_MIN); // гарантированно приводим к MSK
 
 const apiUrl: string = import.meta.env.VITE_APP_API_URL;
-console.log("apiUrl", apiUrl);
 
 export const getData = async ({
   userId,
@@ -55,7 +53,7 @@ export const getData = async ({
     }
 
     const errorMessage = err instanceof Error ? err.message : String(err);
-    console.log("ERROR ", errorMessage);
+    console.error("getData error:", errorMessage);
     setState((prev) => ({ ...prev, loaded: true }));
   }
 };
@@ -102,21 +100,23 @@ export const setData = async ({
     } else {
       // Добавляем новую запись, формируем время из dateCell
 
-      const startDate = () => {
-        const HOURS_END_DAY = 18; // конец рабочего для
+      const startDate = (): string => {
+        const HOURS_END_DAY = 18; // конец рабочего дня
+
         if (addEndWorkDayTime && dateCell) {
-          //дата из ячейки + добавленное время на конец рабочего дня
+          // дата из ячейки + конец рабочего дня
           return dateCell
             .add(HOURS_END_DAY, "hours")
             .format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
         }
-        if (addEndWorkDayTime) {
-          //дата now + добавленное время на конец рабочего дня
-          return;
-          dayjs()
+
+        if (addEndWorkDayTime && !dateCell) {
+          // текущая дата + конец рабочего дня
+          return dayjs()
             .add(HOURS_END_DAY, "hours")
             .format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
         }
+
         if (dateCell) {
           return dateCell.format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
         }
@@ -227,7 +227,6 @@ export const deleteData = async ({
     if (res.status !== 200) {
       throw new Error("Ошибка удаления данных");
     }
-    console.log("===data==", res.data);
     if (res.data === true) {
       setState((prev: AppState) => ({
         ...prev,
@@ -334,8 +333,6 @@ export const getIssueTypeList = async ({
         params: { token, entityKey, email: yandex_login },
       }
     );
-    console.log(" res.data.issue_type_list", res.data.issue_type_list);
-
     // const mok = [
     //   {
     //     label: "label1",

@@ -59,7 +59,6 @@ app.use(express.json());
 
 app.get("/api/issues", async (req, res) => {
   let { token, startDate, endDate, userId, login } = req.query;
-  console.log("token", token);
 
   try {
     if (token) {
@@ -127,13 +126,12 @@ app.get("/api/issues", async (req, res) => {
       }));
       users = [...new Map(users.map((item) => [item.id, item])).values()];
 
-      console.log("data.length ", data.length);
       res.json({ data, users });
     } else {
       res.status(400).json({ error: "token not pass" });
     }
   } catch (error) {
-    console.log(error.message);
+    console.error("[/api/issues] error:", error.message);
     res.status(error.response?.status || 500).json({ error: error.message });
   }
 });
@@ -148,7 +146,6 @@ app.post("/api/add_time", async (req, res) => {
 
     // Добавляем новый worklog
     const url = `https://api.tracker.yandex.net/v2/issues/${issueId}/worklog`;
-    console.log("========== start =========\n", start);
     const { data } = await axios.post(
       url,
       { start, duration, comment },
