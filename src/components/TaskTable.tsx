@@ -314,7 +314,7 @@ const TaskTable: FC<TaskTableProps> = ({
         return;
       }
       closeInfo();
-    }, 3000);
+    }, 15000);
   }, [clearInfoCloseTimer, closeInfo, infoState.anchorEl]);
 
   const handleMenuOpen = useCallback(
@@ -381,6 +381,7 @@ const TaskTable: FC<TaskTableProps> = ({
           dayToNumber(params.field as DayOfWeek)
         ),
       };
+      console.log("params", params);
 
       setInfoState(nextState);
       setInfoOpen(true);
@@ -582,16 +583,17 @@ const TaskTable: FC<TaskTableProps> = ({
 
           return (
             <Box
-              onMouseEnter={(e) => handleInfoOpen(e, params)}
-              onMouseLeave={handleCellInfoLeave}
+              //onMouseEnter={(e) => handleInfoOpen(e, params)}
+              onClick={(e) => handleInfoOpen(e, params)}
+              //onMouseLeave={handleCellInfoLeave}
             >
               <Typography
-                variant="body2"
+                variant="button"
                 sx={(theme) => ({
                   color: allTagged
                     ? theme.palette.success.main
                     : theme.palette.error.main,
-                  fontWeight: 500,
+                  fontWeight: 600,
                 })}
               >
                 {val}

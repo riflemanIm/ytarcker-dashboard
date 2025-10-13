@@ -187,7 +187,12 @@ export function aggregateDurations(data: DataItem[]): TaskItem[] {
   return Object.values(grouped).map((group) => {
     const durations = group.map(
       (i) =>
-        ({ id: i.id, duration: i.duration, comment: i.comment }) as DurationItem
+        ({
+          id: i.id,
+          duration: i.duration,
+          start: i.start,
+          comment: i.comment,
+        }) as DurationItem
     );
     const totalDuration = sumDurations(group.map((i) => i.duration));
     return { ...group[0], duration: totalDuration, durations };
@@ -494,6 +499,13 @@ export const displayDuration = (duration: string): string => {
   if (parts.length === 0) return "";
 
   return parts.join(" ");
+};
+
+export const displayStartTime = (start?: string | null): string => {
+  if (!start) return "";
+  const value = toTarget(start);
+  if (!value.isValid()) return "";
+  return value.format("HH:mm");
 };
 
 // ==== MSK helpers (UTC+3) ====

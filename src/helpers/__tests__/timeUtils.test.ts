@@ -93,4 +93,16 @@ describe("aggregateDurations", () => {
     expect(mondayEntry?.issue.href).toBe("https://tracker.yandex.ru/PRJ-1");
     expect(mondayEntry?.issue.fio).toBe("User One");
   });
+
+  it("keeps normalized start timestamps for individual duration entries", () => {
+    const mondayEntry = result.find(
+      (entry) => dayjs(entry.start).isoWeekday() === 1
+    );
+    expect(mondayEntry?.durations?.[0]?.start).toBe(
+      "2024-07-01T12:00:00.000+03:00"
+    );
+    expect(mondayEntry?.durations?.[1]?.start).toBe(
+      "2024-07-01T14:00:00.000+03:00"
+    );
+  });
 });

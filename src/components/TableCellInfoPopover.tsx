@@ -1,4 +1,4 @@
-import { displayDuration } from "@/helpers";
+import { displayDuration, displayStartTime } from "@/helpers";
 import {
   parseFirstIssueTypeLabel,
   stripIssueTypeTags,
@@ -76,16 +76,24 @@ const TableCellInfoPopover: FC<BaseCellMenuProps> = ({
           <DialogContentText>Нет записей для отображения.</DialogContentText>
         ) : (
           <List dense disablePadding>
-            {items.map(({ id, duration, comment }) => {
+            {items.map(({ id, duration, comment, start }) => {
               const tag = parseFirstIssueTypeLabel(comment ?? "");
               const cleanComment = stripIssueTypeTags(comment ?? "");
+              const startLabel = displayStartTime(start);
               return (
                 <ListItem key={id} alignItems="flex-start" disableGutters>
                   <ListItemText
                     primary={
-                      <Typography variant="body1" fontWeight={600}>
-                        {displayDuration(duration)}
-                      </Typography>
+                      <Stack spacing={0.25}>
+                        <Typography variant="body1" fontWeight={600}>
+                          {displayDuration(duration)}
+                        </Typography>
+                        {startLabel && (
+                          <Typography variant="caption" color="text.secondary">
+                            {startLabel}
+                          </Typography>
+                        )}
+                      </Stack>
                     }
                     secondary={
                       <Stack component="div" spacing={0.5}>

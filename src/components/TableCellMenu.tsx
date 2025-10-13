@@ -18,6 +18,7 @@ import {
   Menu,
   MenuItem,
   TextField,
+  Stack,
   Typography,
 } from "@mui/material";
 import React, {
@@ -32,6 +33,7 @@ import React, {
 import { getIssueTypeList } from "@/actions/data";
 import isEmpty, {
   displayDuration,
+  displayStartTime,
   headerWeekName,
   isValidDuration,
   normalizeDuration,
@@ -530,21 +532,34 @@ const TableCellMenu: FC<EditableCellMenuProps> = ({
                 const typeRequired =
                   issueTypes.length > 0 && !row.selectedLabel;
 
+                const startLabel = displayStartTime(item.start);
                 return (
                   <Fragment key={item.id}>
                     <Grid size={2}>
-                      <TextField
-                        required
-                        label="Длительность"
-                        name="duration"
-                        value={displayDuration(row.durationRaw)}
-                        onChange={(e) => handleDurationChange(item, e)}
-                        error={Boolean(itemError)}
-                        onKeyDown={(e) => {
-                          e.stopPropagation();
-                          if (e.key === "Enter") handleSaveAllEdits();
-                        }}
-                      />
+                      <Stack spacing={0.5}>
+                        <TextField
+                          required
+                          label="Длительность"
+                          name="duration"
+                          value={displayDuration(row.durationRaw)}
+                          onChange={(e) => handleDurationChange(item, e)}
+                          error={Boolean(itemError)}
+                          fullWidth
+                          onKeyDown={(e) => {
+                            e.stopPropagation();
+                            if (e.key === "Enter") handleSaveAllEdits();
+                          }}
+                        />
+                        {startLabel && (
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{ lineHeight: 1.4 }}
+                          >
+                            {startLabel}
+                          </Typography>
+                        )}
+                      </Stack>
                     </Grid>
 
                     <Grid size={8}>

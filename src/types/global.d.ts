@@ -66,6 +66,7 @@ export type DayOfWeek =
 export interface DurationItem {
   id: string;
   duration: string;
+  start: string;
   comment?: string;
 }
 
