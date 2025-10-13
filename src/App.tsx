@@ -136,6 +136,8 @@ const YandexTracker: FC = () => {
   const handleRefresh = () => {
     fetchForActiveRange();
   };
+
+  console.log("state", state);
   return (
     <>
       {!state.loaded && <LinearProgress />}

@@ -441,7 +441,10 @@ export const daysMap: DayOfWeek[] = [
   "sunday",
 ];
 
+const WORK_DAYS_PER_WEEK = 5;
+
 export const displayDuration = (duration: string): string => {
+  if (typeof duration !== "string") return "";
   // Если “P” (плейсхолдер пустого значения) — возвращаем пустую строку
   if (duration === "P") return "";
 
@@ -451,13 +454,13 @@ export const displayDuration = (duration: string): string => {
   const matches = duration.match(regex);
   if (!matches) return duration; // если не подошло под формат, возвращаем оригинал
 
-  const [, years, weeks, days, hours, minutes, seconds] = matches;
+  const [, , weeks, days, hours, minutes, seconds] = matches;
 
   // 1) Считаем общее число “дней” из недель и дней:
-  //    - каждая неделя = 7 дней
+  //    - каждая неделя = 5 рабочих дней
   //    - каждый день = 1 день (далее переведём в часы)
   let totalDays = 0;
-  if (weeks) totalDays += parseInt(weeks, 10) * 7;
+  if (weeks) totalDays += parseInt(weeks, 10) * WORK_DAYS_PER_WEEK;
   if (days) totalDays += parseInt(days, 10);
 
   // 2) Считаем общее число “часов” (без учёта дней, их перенесём позже):
@@ -528,30 +531,39 @@ export const toMSKISO = (utcStr: string): string =>
 
 export function sumDurations(durations: string[]): string {
   const minutesInWorkDay = 8 * 60; // 8 часов = 1 «рабочий» день
+  const isoRegex =
+    /^P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)W)?(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?$/i;
 
   // Пустые "P" → "PT0M"
   const normalized = durations.map((d) => (d === "P" ? "PT0M" : d));
 
-  let standardDays = 0; // сумма чистых 24-часовых дней
-  let extraMinutes = 0; // минуты из всего остального
+  let standardDays = 0; // колич. «рабочих» дней
+  let extraMinutes = 0; // накопленные минуты из часов/минут/секунд
 
   normalized.forEach((dur) => {
-    // 1) Вытаскиваем дни из форм вида PnD или PnDT...
-    const dayMatch = dur.match(/P(\d+)D/);
-    if (dayMatch) {
-      standardDays += parseInt(dayMatch[1], 10);
+    const match = dur.match(isoRegex);
+    if (!match) {
+      return;
     }
 
-    // 2) Вытаскиваем часы/минуты из части после "T"
-    const timeMatch = dur.match(/T(?:(\d+)H)?(?:(\d+)M)?/);
-    if (timeMatch) {
-      const hours = timeMatch[1] ? parseInt(timeMatch[1], 10) : 0;
-      const mins = timeMatch[2] ? parseInt(timeMatch[2], 10) : 0;
-      extraMinutes += hours * 60 + mins;
-    } else if (!dayMatch) {
-      // Сюда попадут строки без D и без T —
-      // но мы заранее заменили "P" на "PT0M",
-      // так что здесь не случится сюрпризов.
+    const [, , , weeks, days, hours, minutes, seconds] = match;
+
+    if (weeks) {
+      standardDays += parseInt(weeks, 10) * WORK_DAYS_PER_WEEK;
+    }
+
+    if (days) {
+      standardDays += parseInt(days, 10);
+    }
+
+    if (hours) {
+      extraMinutes += parseInt(hours, 10) * 60;
+    }
+    if (minutes) {
+      extraMinutes += parseInt(minutes, 10);
+    }
+    if (seconds) {
+      extraMinutes += Math.floor(parseInt(seconds, 10) / 60);
     }
   });
 
@@ -572,7 +584,7 @@ export function sumDurations(durations: string[]): string {
     if (hours > 0) result += `${hours}H`;
     if (minutes > 0) result += `${minutes}M`;
   }
-  return result;
+  return result === "P" ? "PT0M" : result;
 }
 
 //  Пример использования:

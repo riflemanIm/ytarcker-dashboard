@@ -4,6 +4,7 @@ import isoWeek from "dayjs/plugin/isoWeek";
 
 import {
   aggregateDurations,
+  displayDuration,
   isValidDuration,
   normalizeDuration,
   sumDurations,
@@ -29,6 +30,12 @@ describe("duration helpers", () => {
     expect(sumDurations(["PT1H", "PT2H30M"])).toBe("PT3H30M");
     expect(sumDurations(["PT4H", "PT4H"])).toBe("P1D");
     expect(sumDurations(["P1D", "PT4H"])).toBe("P1DT4H");
+  });
+
+  it("converts ISO weeks into five working days for display and sums", () => {
+    expect(displayDuration("P1W")).toBe("5d");
+    expect(sumDurations(["P1W"])).toBe("P5D");
+    expect(sumDurations(["P1W", "PT4H"])).toBe("P5DT4H");
   });
 });
 
