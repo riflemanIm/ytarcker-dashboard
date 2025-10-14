@@ -638,6 +638,12 @@ const TaskTable: FC<TaskTableProps> = ({
     [tableRows, calculateTotalRow]
   );
 
+  const isEmptyDurationValue = (value: unknown): boolean => {
+    if (value == null) return true;
+    if (typeof value !== "string") return false;
+    return value === "P" || value === "PT0M" || value.trim() === "";
+  };
+
   return (
     <>
       <DataGrid
@@ -648,8 +654,9 @@ const TaskTable: FC<TaskTableProps> = ({
         onCellClick={(params, event) => {
           if (
             isEditable &&
+            params.row.id !== "total" &&
             daysMap.includes(params.field as DayOfWeek) &&
-            params.value === "P" &&
+            isEmptyDurationValue(params.value) &&
             (event as React.MouseEvent).detail === 1
           ) {
             handleMenuOpen(
