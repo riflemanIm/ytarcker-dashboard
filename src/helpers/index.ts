@@ -38,6 +38,9 @@ const ADMIN_LOGINS = [
   "n.kovalevskaya",
   "e.pavlova",
   "y.akhatov",
+  "d.karelin",
+  "v.zyryanov",
+  "e.boyarkina",
 ];
 /** ===== Общие хелперы для дат/форматов/агрегаций ===== */
 
