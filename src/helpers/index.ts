@@ -594,8 +594,6 @@ export function sumDurations(durations: string[]): string {
 // const durations = ["P1D", "PT4H", "PT45M", "PT2H30M"];
 // const result = sumDurations(durations);
 
-// console.log(result); // Выведет максимально возможный формат, например "P1DT7H15M"
-
 const isEmpty = (value: unknown) => {
   return (
     value == null ||

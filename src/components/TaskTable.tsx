@@ -381,7 +381,6 @@ const TaskTable: FC<TaskTableProps> = ({
           dayToNumber(params.field as DayOfWeek)
         ),
       };
-      console.log("params", params);
 
       setInfoState(nextState);
       setInfoOpen(true);
