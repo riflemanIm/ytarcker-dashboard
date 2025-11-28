@@ -291,6 +291,41 @@ export const getUserIssues = async ({
   }
 };
 
+export interface SearchIssuesArgs {
+  token: string | null;
+  searchStr: string;
+}
+
+export const searchIssues = async ({
+  token,
+  searchStr,
+}: SearchIssuesArgs): Promise<Issue[]> => {
+  if (!token) {
+    throw new Error("token not passed");
+  }
+
+  const query = searchStr.trim();
+  if (!query) {
+    return [];
+  }
+
+  try {
+    const res = await axios.get<{ issues: Issue[] }>(
+      `${apiUrl}/api/search_issues`,
+      {
+        params: { token, search_str: query },
+      }
+    );
+    return res.data.issues;
+  } catch (err: any) {
+    console.error("[Ошибка в searchIssues]:", err.message);
+    if (axios.isAxiosError(err) && err.response?.status === 401) {
+      handleLogout();
+    }
+    throw err;
+  }
+};
+
 export const getIssueTypeList = async ({
   setLocalState,
   token,

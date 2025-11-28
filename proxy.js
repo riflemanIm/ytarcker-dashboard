@@ -216,15 +216,47 @@ app.post("/api/delete_all", async (req, res) => {
   }
 });
 // Получить все задачи пользователя, отсортированные по последнему обновлению
-const searchTracker = async (token, filter) => {
+const trackerSearchRequest = async (token, body) => {
   const url = "https://api.tracker.yandex.net/v3/issues/_search?perPage=10000";
-  const response = await axios.post(
-    url,
-    { filter, order: "-updated" },
-    headers(token)
-  );
-  //console.log("response", response);
-  return response.data;
+  const response = await axios.post(url, body, headers(token));
+  const payload = response.data;
+
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+
+  if (Array.isArray(payload?.issues)) {
+    return payload.issues;
+  }
+
+  return [];
+};
+
+const searchTracker = (token, filter) =>
+  trackerSearchRequest(token, { filter, order: "-updated" });
+
+const searchTrackerByText = (token, text) =>
+  trackerSearchRequest(token, { query: text, order: "-updated" });
+
+const fetchIssueComments = async (token, issueId) => {
+  if (!issueId) return "";
+  try {
+    const { data } = await axios.get(
+      `https://api.tracker.yandex.net/v2/issues/${issueId}/comments`,
+      headers(token)
+    );
+    if (!Array.isArray(data)) return "";
+    return data
+      .map((comment) => comment.text ?? comment.textHtml ?? "")
+      .join("\n");
+  } catch (error) {
+    console.error(
+      "[fetchIssueComments] error:",
+      error.response?.status,
+      error.message
+    );
+    return "";
+  }
 };
 
 app.get("/api/user_issues", async (req, res) => {
@@ -262,6 +294,42 @@ app.get("/api/user_issues", async (req, res) => {
     res.json({ issues: Array.from(uniqueMap.values()) });
   } catch (error) {
     console.error("[Ошибка в методе /api/user_issues]:", error.message);
+    res.status(error.response?.status || 500).json({ error: error.message });
+  }
+});
+
+app.get("/api/search_issues", async (req, res) => {
+  const { token, search_str: searchStrRaw } = req.query;
+
+  if (!token) {
+    return res.status(400).json({ error: "token not passed" });
+  }
+
+  const searchStr =
+    typeof searchStrRaw === "string" ? searchStrRaw.trim() : undefined;
+
+  if (!searchStr) {
+    return res.status(400).json({ error: "search_str must be provided" });
+  }
+
+  try {
+    const issues = await searchTrackerByText(token, searchStr);
+
+    const normalized = await Promise.all(
+      issues.map(async (issue) => ({
+        key: issue.key,
+        summary: issue.summary,
+        status: issue.status?.display,
+        queue: issue.queue?.key,
+        assignee: issue.assignee?.display,
+        description: issue.description ?? issue?.descriptionHtml ?? "",
+        commentsText: await fetchIssueComments(token, issue.id),
+      }))
+    );
+
+    res.json({ issues: normalized });
+  } catch (error) {
+    console.error("[Ошибка в методе /api/search_issues]:", error.message);
     res.status(error.response?.status || 500).json({ error: error.message });
   }
 });

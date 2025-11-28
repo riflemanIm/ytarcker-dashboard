@@ -1,35 +1,122 @@
 import * as React from "react";
-import { IconButton, Tooltip } from "@mui/material";
+import {
+  Button,
+  ListItemIcon,
+  ListItemText,
+  Menu,
+  MenuItem,
+  Tooltip,
+} from "@mui/material";
 import DateRangeIcon from "@mui/icons-material/DateRange";
 import TodayIcon from "@mui/icons-material/Today";
+import SearchIcon from "@mui/icons-material/Search";
+import { ViewMode } from "../types/global";
 
 export interface ToggleViewButtonProps {
-  viewMode: "table" | "report";
-  onToggle: () => void;
+  viewMode: ViewMode;
+  onChange: (mode: ViewMode) => void;
 }
 
+type IconComponent = typeof TodayIcon;
+
+const VIEW_MODE_OPTIONS: Record<
+  ViewMode,
+  { icon: IconComponent; tooltip: string; menuLabel: string }
+> = {
+  table: {
+    icon: TodayIcon,
+    tooltip: "Показать таблицу списания времени за неделю",
+    menuLabel: "Таблица списания",
+  },
+  report: {
+    icon: DateRangeIcon,
+    tooltip: "Показать месячный отчёт по неделям",
+    menuLabel: "Месячный отчёт",
+  },
+  search: {
+    icon: SearchIcon,
+    tooltip: "Перейти в поиск по задачам",
+    menuLabel: "Поиск по задачам",
+  },
+};
+
+const VIEW_MODE_ORDER: ViewMode[] = ["table", "report", "search"];
+
 /**
- * Кнопка-переключатель представления между TaskTable и WorklogWeeklyReport.
- *
- * - Если `viewMode === "table"` → показываем иконку DateRange (переключение к отчёту).
- * - Если `viewMode === "report"` → показываем иконку Today (переключение к недельной таблице).
+ * Кнопка-переключатель представления между TaskTable, WorklogWeeklyReport и SearchIssues.
  */
 export default function ToggleViewButton({
   viewMode,
-  onToggle,
+  onChange,
 }: ToggleViewButtonProps) {
-  const tooltip =
-    viewMode === "table"
-      ? "Показать месячный отчёт по неделям "
-      : "Показать таблицу списания в времени за неделю";
+  const [anchorEl, setAnchorEl] = React.useState<HTMLElement | null>(null);
 
-  const Icon = viewMode === "table" ? DateRangeIcon : TodayIcon;
+  const currentOption = VIEW_MODE_OPTIONS[viewMode];
+  const Icon = currentOption.icon;
+
+  const handleOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleSelect = (mode: ViewMode) => {
+    onChange(mode);
+    handleClose();
+  };
 
   return (
-    <Tooltip title={tooltip}>
-      <IconButton onClick={onToggle} color="primary">
-        <Icon />
-      </IconButton>
-    </Tooltip>
+    <>
+      <Tooltip title={currentOption.tooltip}>
+        <Button
+          onClick={handleOpen}
+          startIcon={<Icon sx={{ fontSize: 28 }} />}
+          sx={(theme) => ({
+            borderRadius: 2.5,
+            px: 2.5,
+            py: 1.25,
+            textTransform: "none",
+            fontWeight: 600,
+            fontSize: 15,
+            background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.light})`,
+            color: theme.palette.getContrastText(theme.palette.primary.main),
+            boxShadow: "0px 10px 25px rgba(25, 118, 210, 0.35)",
+            transition: "transform 0.2s ease, box-shadow 0.2s ease",
+            "&:hover": {
+              transform: "translateY(-2px)",
+              boxShadow: "0px 14px 30px rgba(25, 118, 210, 0.45)",
+              background: `linear-gradient(135deg, ${theme.palette.primary.dark}, ${theme.palette.primary.main})`,
+            },
+          })}
+        >
+          {currentOption.menuLabel}
+        </Button>
+      </Tooltip>
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleClose}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        transformOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        {VIEW_MODE_ORDER.map((mode) => {
+          const OptionIcon = VIEW_MODE_OPTIONS[mode].icon;
+          return (
+            <MenuItem
+              key={mode}
+              selected={mode === viewMode}
+              onClick={() => handleSelect(mode)}
+            >
+              <ListItemIcon>
+                <OptionIcon fontSize="small" />
+              </ListItemIcon>
+              <ListItemText primary={VIEW_MODE_OPTIONS[mode].menuLabel} />
+            </MenuItem>
+          );
+        })}
+      </Menu>
+    </>
   );
 }

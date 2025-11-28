@@ -2,9 +2,11 @@ import RefreshIcon from "@mui/icons-material/Refresh";
 import {
   Alert,
   AlertColor,
+  Box,
   Grid2 as Grid,
   IconButton,
   LinearProgress,
+  Paper,
   Stack,
   Typography,
 } from "@mui/material";
@@ -17,6 +19,7 @@ import DurationAlert from "./components/DurationAlert";
 import FetchModeSwitch from "./components/FetchModeSwitch";
 import LogInOut from "./components/LogInOut";
 import ReportDateRange from "./components/ReportDateRange";
+import SearchIssues from "./components/SearchIssues";
 import TaskTable from "./components/TaskTable";
 import ToggleViewButton from "./components/ToggleViewButton";
 import WeekNavigator from "./components/WeekNavigator";
@@ -26,7 +29,13 @@ import isEmpty, {
   getWeekRange,
   isSuperLogin,
 } from "./helpers";
-import { AlertState, AppState, AuthState, DataItem } from "./types/global";
+import {
+  AlertState,
+  AppState,
+  AuthState,
+  DataItem,
+  ViewMode,
+} from "./types/global";
 
 const YandexTracker: FC = () => {
   const yandex_login = localStorage.getItem("yandex_login") ?? "";
@@ -67,9 +76,7 @@ const YandexTracker: FC = () => {
   };
 
   // Переключатель представлений
-  const [viewMode, setViewMode] = useState<"table" | "report">("table");
-  const toggleView = () =>
-    setViewMode((v) => (v === "table" ? "report" : "table"));
+  const [viewMode, setViewMode] = useState<ViewMode>("table");
 
   // НЕДЕЛЬНЫЙ РЕЖИМ (TaskTable)
   const [weekOffset, setWeekOffset] = useState<number>(0);
@@ -86,6 +93,7 @@ const YandexTracker: FC = () => {
   );
 
   const fetchForActiveRange = useCallback(() => {
+    if (viewMode === "search") return;
     if (!(login || state.userId) || !token) return;
 
     const rangeStart = viewMode === "report" ? reportFrom : start;
@@ -152,112 +160,153 @@ const YandexTracker: FC = () => {
         }}
         spacing={3}
       >
-        {login && isSuperLogin(login) && state.loaded && (
-          <>
-            <Grid
-              size="auto"
-              alignSelf="center"
-              justifySelf="center"
-              textAlign="center"
-            >
-              <FetchModeSwitch
-                fetchByLogin={state.fetchByLogin}
-                login={login}
-                onToggle={toggleFetchMode}
-                disabled={!state.loaded}
-              />
-            </Grid>
-            <Grid
-              size="grow"
-              alignSelf="center"
-              justifySelf="center"
-              textAlign="center"
-            >
-              {isEmpty(state.users) && !state.fetchByLogin ? (
-                <Alert severity="info">Нет сотрудников за этот период</Alert>
-              ) : (
-                <AutocompleteUsers
-                  userId={state.userId}
-                  handleSelectedUsersChange={handleSelectedUsersChange}
-                  users={state.users}
-                  disabled={!state.loaded || state.fetchByLogin}
-                />
-              )}
-            </Grid>
-          </>
-        )}
-        {token && state.loaded && (
-          <Grid
-            size="auto"
-            alignSelf="center"
-            justifySelf="center"
-            textAlign="center"
+        <Grid size={12}>
+          <Paper
+            elevation={2}
+            sx={(theme) => ({
+              p: { xs: 2, md: 3 },
+              borderRadius: 3,
+              backgroundImage:
+                theme.palette.mode === "light"
+                  ? `linear-gradient(135deg, ${theme.palette.grey[50]}, ${theme.palette.primary.light}33)`
+                  : `linear-gradient(135deg, ${theme.palette.background.paper}, ${theme.palette.grey[900]})`,
+              border: `1px solid ${theme.palette.divider}`,
+              boxShadow:
+                theme.palette.mode === "light"
+                  ? "0px 10px 25px rgba(15, 23, 42, 0.08)"
+                  : theme.shadows[3],
+            })}
           >
-            {/* Левая панель: кнопка-переключатель и навигатор/диапазон */}
             <Stack
-              direction="row"
-              gap={1}
-              alignItems="center"
-              justifyContent="center"
+              direction={{ xs: "column", lg: "row" }}
+              spacing={3}
+              alignItems="stretch"
+              justifyContent="space-between"
+              flexWrap="wrap"
             >
-              {isSuperLogin(login) && (
-                <ToggleViewButton viewMode={viewMode} onToggle={toggleView} />
-              )}
-              {viewMode === "table" ? (
-                <WeekNavigator
-                  start={start}
-                  end={end}
-                  onPrevious={handlePrevious}
-                  onNext={handleNext}
-                  disableNext={weekOffset === -6}
-                />
-              ) : (
-                <ReportDateRange
-                  from={reportFrom}
-                  to={reportTo}
-                  onPrevMonth={() => {
-                    setReportFrom((prev) =>
-                      prev.add(-1, "month").startOf("month")
-                    );
-                    setReportTo((prev) => prev.add(-1, "month").endOf("month"));
-                  }}
-                  onThisMonth={() => {
-                    setReportFrom(dayjs().startOf("month"));
-                    setReportTo(dayjs().endOf("month"));
-                  }}
-                  onNextMonth={() => {
-                    setReportFrom((prev) =>
-                      prev.add(1, "month").startOf("month")
-                    );
-                    setReportTo((prev) => prev.add(1, "month").endOf("month"));
-                  }}
-                />
-              )}
+              <Stack
+                direction={{ xs: "column", md: "row" }}
+                spacing={2}
+                alignItems={{ xs: "flex-start", md: "center" }}
+                flexWrap="wrap"
+                sx={{ flex: "1 1 200px", minWidth: { xs: "100%", md: 220 } }}
+              >
+                {token && state.loaded && isSuperLogin(login) && (
+                  <ToggleViewButton viewMode={viewMode} onChange={setViewMode} />
+                )}
+              </Stack>
+
+              <Stack
+                direction={{ xs: "column", md: "row" }}
+                spacing={2}
+                alignItems={{ xs: "flex-start", md: "center" }}
+                flexWrap="wrap"
+                sx={{ flex: "1 1 280px", minWidth: { xs: "100%", md: 280 } }}
+              >
+                {token && state.loaded && isSuperLogin(login) && (
+                  <Box sx={{ flex: 1 }}>
+                    {viewMode === "table" ? (
+                      <WeekNavigator
+                        start={start}
+                        end={end}
+                        onPrevious={handlePrevious}
+                        onNext={handleNext}
+                        disableNext={weekOffset === -6}
+                      />
+                    ) : (
+                      <ReportDateRange
+                        from={reportFrom}
+                        to={reportTo}
+                        onPrevMonth={() => {
+                          setReportFrom((prev) =>
+                            prev.add(-1, "month").startOf("month")
+                          );
+                          setReportTo((prev) =>
+                            prev.add(-1, "month").endOf("month")
+                          );
+                        }}
+                        onThisMonth={() => {
+                          setReportFrom(dayjs().startOf("month"));
+                          setReportTo(dayjs().endOf("month"));
+                        }}
+                        onNextMonth={() => {
+                          setReportFrom((prev) =>
+                            prev.add(1, "month").startOf("month")
+                          );
+                          setReportTo((prev) =>
+                            prev.add(1, "month").endOf("month")
+                          );
+                        }}
+                      />
+                    )}
+                  </Box>
+                )}
+              </Stack>
+
+              {token &&
+                state.loaded &&
+                login &&
+                isSuperLogin(login) &&
+                (
+                  <Stack
+                    direction={{ xs: "column", md: "row" }}
+                    spacing={2}
+                    alignItems="stretch"
+                    flexWrap="wrap"
+                    sx={{ flex: "2 1 420px", minWidth: { xs: "100%", md: 420 } }}
+                  >
+                    <FetchModeSwitch
+                      fetchByLogin={state.fetchByLogin}
+                      login={login}
+                      onToggle={toggleFetchMode}
+                      disabled={!state.loaded}
+                    />
+                    {isEmpty(state.users) && !state.fetchByLogin ? (
+                      <Alert severity="info" sx={{ flex: 1 }}>
+                        Нет сотрудников за этот период
+                      </Alert>
+                    ) : (
+                      <Box sx={{ flex: 1, minWidth: 260 }}>
+                        <AutocompleteUsers
+                          userId={state.userId}
+                          handleSelectedUsersChange={
+                            handleSelectedUsersChange
+                          }
+                          users={state.users}
+                          disabled={!state.loaded || state.fetchByLogin}
+                        />
+                      </Box>
+                    )}
+                  </Stack>
+                )}
+
+              <Stack
+                direction="row"
+                spacing={1.5}
+                alignItems="center"
+                justifyContent="flex-end"
+                flexWrap="wrap"
+                sx={{ minWidth: { xs: "100%", md: 200 } }}
+              >
+                {token && state.loaded && (
+                  <IconButton
+                    onClick={handleRefresh}
+                    sx={(theme) => ({
+                      backgroundColor:
+                        theme.palette.mode === "light"
+                          ? theme.palette.common.white
+                          : theme.palette.grey[800],
+                      boxShadow: "0 6px 20px rgba(15, 23, 42, 0.15)",
+                    })}
+                  >
+                    <RefreshIcon color="primary" />
+                  </IconButton>
+                )}
+                <LogInOut token={token} setAuth={setAuth} />
+              </Stack>
             </Stack>
-          </Grid>
-        )}
-
-        {token && state.loaded && (
-          <Grid
-            size={1}
-            alignSelf="center"
-            justifySelf="center"
-            textAlign="center"
-          >
-            <IconButton onClick={handleRefresh} color="primary">
-              <RefreshIcon />
-            </IconButton>
-          </Grid>
-        )}
-        <Grid
-          size="grow"
-          alignSelf="center"
-          justifySelf="center"
-          textAlign={state.loaded ? "right" : "center"}
-        >
-          <LogInOut token={token} setAuth={setAuth} />
+          </Paper>
         </Grid>
-
         {token && state.loaded && (
           <Grid
             size={12}
@@ -277,6 +326,7 @@ const YandexTracker: FC = () => {
                     {state.fetchByLogin ? "по задачам" : "по сотрудникам"}
                   </>
                 )}
+                {viewMode === "search" && <>Поиск по задачам</>}
               </Typography>
               {state.fetchByLogin && viewMode === "table" && (
                 <AddDurationIssueDialog
@@ -289,7 +339,9 @@ const YandexTracker: FC = () => {
               )}
             </Stack>
 
-            {!isEmpty(state.data) ? (
+            {viewMode === "search" ? (
+              <SearchIssues token={token} />
+            ) : !isEmpty(state.data) ? (
               <>
                 {viewMode === "table" ? (
                   <TaskTable

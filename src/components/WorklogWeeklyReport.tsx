@@ -1,6 +1,5 @@
-import { Box, Stack, Typography, IconButton } from "@mui/material";
+import { Box, Stack, Typography } from "@mui/material";
 import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
-import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import * as React from "react";
 import dayjs, { Dayjs } from "dayjs";
 import "dayjs/locale/ru";
@@ -13,46 +12,9 @@ import {
   // ⬇️ обязательно импортируй этот хелпер из helpers (как делали в TaskTable)
   toTarget,
 } from "../helpers";
+import IssueDisplay from "./IssueDisplay";
 
 dayjs.locale("ru");
-
-// --- IssueDisplay, как в TaskTable ---
-const IssueDisplay: React.FC<{
-  display: string;
-  href?: string | null;
-  fio?: string | null;
-}> = ({ display, href = null, fio = null }) => (
-  <>
-    <Typography variant="subtitle1" sx={{ position: "relative", left: -7 }}>
-      {href && (
-        <IconButton
-          component="a"
-          href={href}
-          target="_blank"
-          sx={(theme) => ({
-            borderRadius: "50%",
-            color: theme.palette.primary.light,
-            "&:hover": {
-              color: theme.palette.primary.main,
-            },
-          })}
-        >
-          <OpenInNewIcon fontSize="small" />
-        </IconButton>
-      )}
-      {display}
-    </Typography>
-    {fio && (
-      <Typography
-        variant="subtitle2"
-        color="text.secondary"
-        sx={{ position: "relative", top: -5, left: 30 }}
-      >
-        {fio}
-      </Typography>
-    )}
-  </>
-);
 
 type AnyObj = Record<string, any>;
 

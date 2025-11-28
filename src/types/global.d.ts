@@ -3,6 +3,11 @@ import { Dayjs } from "dayjs";
 export interface Issue {
   key: string;
   summary: string;
+  status?: string;
+  queue?: string;
+  assignee?: string;
+  description?: string;
+  commentsText?: string;
   [key: string]: any;
 }
 export interface IssueType {
@@ -44,6 +49,8 @@ export interface AppState {
   fetchByLogin: boolean;
   issues: Issue[];
 }
+
+export type ViewMode = "table" | "report" | "search";
 
 export interface GetDataArgs {
   userId: string | null;

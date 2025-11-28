@@ -14,7 +14,6 @@ import {
 } from "@/helpers";
 import { parseFirstIssueTypeLabel } from "@/helpers/issueTypeComment";
 import AddIcon from "@mui/icons-material/Add";
-import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import { Box, Chip, IconButton, Typography } from "@mui/material";
 import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import dayjs, { Dayjs } from "dayjs";
@@ -36,6 +35,7 @@ import {
   TaskItemIssue,
   TransformedTaskRow,
 } from "../types/global";
+import IssueDisplay from "./IssueDisplay";
 import TableCellMenu from "./TableCellMenu";
 import TableCellInfoPopover from "./TableCellInfoPopover";
 
@@ -64,41 +64,6 @@ interface TaskTableProps {
   setAlert: React.Dispatch<React.SetStateAction<AlertState>>;
   isEditable: boolean;
 }
-
-const IssueDisplay: FC<{
-  display: string;
-  href?: string | null;
-  fio: string | null;
-}> = ({ display, href = null, fio = null }) => (
-  <>
-    <Typography variant="subtitle1" sx={{ position: "relative", left: -7 }}>
-      {href && (
-        <IconButton
-          component="a"
-          href={href}
-          target="_blank"
-          sx={(theme) => ({
-            borderRadius: "50%",
-            color: theme.palette.primary.light,
-            "&:hover": {
-              color: theme.palette.primary.main,
-            },
-          })}
-        >
-          <OpenInNewIcon />
-        </IconButton>
-      )}
-      {display}
-    </Typography>
-    <Typography
-      variant="subtitle2"
-      color="text.secondary"
-      sx={{ position: "relative", top: -5, left: 30 }}
-    >
-      {fio}
-    </Typography>
-  </>
-);
 
 interface RawTransformedRow {
   id: string;
