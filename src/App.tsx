@@ -1,12 +1,8 @@
-import RefreshIcon from "@mui/icons-material/Refresh";
 import {
   Alert,
   AlertColor,
-  Box,
   Grid2 as Grid,
-  IconButton,
   LinearProgress,
-  Paper,
   Stack,
   Typography,
 } from "@mui/material";
@@ -14,15 +10,10 @@ import dayjs from "dayjs";
 import { FC, useCallback, useEffect, useState } from "react";
 import { deleteData, getData, getUserIssues, setData } from "./actions/data";
 import AddDurationIssueDialog from "./components/AddDurationIssueDialog";
-import AutocompleteUsers from "./components/AutocompleteUsers";
+import AppHeader from "./components/AppHeader";
 import DurationAlert from "./components/DurationAlert";
-import FetchModeSwitch from "./components/FetchModeSwitch";
-import LogInOut from "./components/LogInOut";
-import ReportDateRange from "./components/ReportDateRange";
 import SearchIssues from "./components/SearchIssues";
 import TaskTable from "./components/TaskTable";
-import ToggleViewButton from "./components/ToggleViewButton";
-import WeekNavigator from "./components/WeekNavigator";
 import WorklogWeeklyReport from "./components/WorklogWeeklyReport";
 import isEmpty, {
   aggregateDurations,
@@ -91,6 +82,21 @@ const YandexTracker: FC = () => {
   const [reportTo, setReportTo] = useState<dayjs.Dayjs>(() =>
     dayjs().endOf("month")
   );
+
+  const handlePrevReportMonth = () => {
+    setReportFrom((prev) => prev.add(-1, "month").startOf("month"));
+    setReportTo((prev) => prev.add(-1, "month").endOf("month"));
+  };
+
+  const handleThisReportMonth = () => {
+    setReportFrom(dayjs().startOf("month"));
+    setReportTo(dayjs().endOf("month"));
+  };
+
+  const handleNextReportMonth = () => {
+    setReportFrom((prev) => prev.add(1, "month").startOf("month"));
+    setReportTo((prev) => prev.add(1, "month").endOf("month"));
+  };
 
   const fetchForActiveRange = useCallback(() => {
     if (viewMode === "search") return;
@@ -161,151 +167,37 @@ const YandexTracker: FC = () => {
         spacing={3}
       >
         <Grid size={12}>
-          <Paper
-            elevation={2}
-            sx={(theme) => ({
-              p: { xs: 2, md: 3 },
-              borderRadius: 3,
-              backgroundImage:
-                theme.palette.mode === "light"
-                  ? `linear-gradient(135deg, ${theme.palette.grey[50]}, ${theme.palette.primary.light}33)`
-                  : `linear-gradient(135deg, ${theme.palette.background.paper}, ${theme.palette.grey[900]})`,
-              border: `1px solid ${theme.palette.divider}`,
-              boxShadow:
-                theme.palette.mode === "light"
-                  ? "0px 10px 25px rgba(15, 23, 42, 0.08)"
-                  : theme.shadows[3],
-            })}
-          >
-            <Stack
-              direction={{ xs: "column", lg: "row" }}
-              spacing={3}
-              alignItems="stretch"
-              justifyContent="space-between"
-              flexWrap="wrap"
-            >
-              <Stack
-                direction={{ xs: "column", md: "row" }}
-                spacing={2}
-                alignItems={{ xs: "flex-start", md: "center" }}
-                flexWrap="wrap"
-                sx={{ flex: "1 1 200px", minWidth: { xs: "100%", md: 220 } }}
-              >
-                {token && state.loaded && isSuperLogin(login) && (
-                  <ToggleViewButton viewMode={viewMode} onChange={setViewMode} />
-                )}
-              </Stack>
-
-              <Stack
-                direction={{ xs: "column", md: "row" }}
-                spacing={2}
-                alignItems={{ xs: "flex-start", md: "center" }}
-                flexWrap="wrap"
-                sx={{ flex: "1 1 280px", minWidth: { xs: "100%", md: 280 } }}
-              >
-                {token && state.loaded && isSuperLogin(login) && (
-                  <Box sx={{ flex: 1 }}>
-                    {viewMode === "table" ? (
-                      <WeekNavigator
-                        start={start}
-                        end={end}
-                        onPrevious={handlePrevious}
-                        onNext={handleNext}
-                        disableNext={weekOffset === -6}
-                      />
-                    ) : (
-                      <ReportDateRange
-                        from={reportFrom}
-                        to={reportTo}
-                        onPrevMonth={() => {
-                          setReportFrom((prev) =>
-                            prev.add(-1, "month").startOf("month")
-                          );
-                          setReportTo((prev) =>
-                            prev.add(-1, "month").endOf("month")
-                          );
-                        }}
-                        onThisMonth={() => {
-                          setReportFrom(dayjs().startOf("month"));
-                          setReportTo(dayjs().endOf("month"));
-                        }}
-                        onNextMonth={() => {
-                          setReportFrom((prev) =>
-                            prev.add(1, "month").startOf("month")
-                          );
-                          setReportTo((prev) =>
-                            prev.add(1, "month").endOf("month")
-                          );
-                        }}
-                      />
-                    )}
-                  </Box>
-                )}
-              </Stack>
-
-              {token &&
-                state.loaded &&
-                login &&
-                isSuperLogin(login) &&
-                (
-                  <Stack
-                    direction={{ xs: "column", md: "row" }}
-                    spacing={2}
-                    alignItems="stretch"
-                    flexWrap="wrap"
-                    sx={{ flex: "2 1 420px", minWidth: { xs: "100%", md: 420 } }}
-                  >
-                    <FetchModeSwitch
-                      fetchByLogin={state.fetchByLogin}
-                      login={login}
-                      onToggle={toggleFetchMode}
-                      disabled={!state.loaded}
-                    />
-                    {isEmpty(state.users) && !state.fetchByLogin ? (
-                      <Alert severity="info" sx={{ flex: 1 }}>
-                        Нет сотрудников за этот период
-                      </Alert>
-                    ) : (
-                      <Box sx={{ flex: 1, minWidth: 260 }}>
-                        <AutocompleteUsers
-                          userId={state.userId}
-                          handleSelectedUsersChange={
-                            handleSelectedUsersChange
-                          }
-                          users={state.users}
-                          disabled={!state.loaded || state.fetchByLogin}
-                        />
-                      </Box>
-                    )}
-                  </Stack>
-                )}
-
-              <Stack
-                direction="row"
-                spacing={1.5}
-                alignItems="center"
-                justifyContent="flex-end"
-                flexWrap="wrap"
-                sx={{ minWidth: { xs: "100%", md: 200 } }}
-              >
-                {token && state.loaded && (
-                  <IconButton
-                    onClick={handleRefresh}
-                    sx={(theme) => ({
-                      backgroundColor:
-                        theme.palette.mode === "light"
-                          ? theme.palette.common.white
-                          : theme.palette.grey[800],
-                      boxShadow: "0 6px 20px rgba(15, 23, 42, 0.15)",
-                    })}
-                  >
-                    <RefreshIcon color="primary" />
-                  </IconButton>
-                )}
-                <LogInOut token={token} setAuth={setAuth} />
-              </Stack>
-            </Stack>
-          </Paper>
+          <AppHeader
+            token={token}
+            login={login}
+            isSuperUser={!!(login && isSuperLogin(login))}
+            loaded={state.loaded}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            weekNavigation={{
+              start,
+              end,
+              onPrevious: handlePrevious,
+              onNext: handleNext,
+              disableNext: weekOffset === -6,
+            }}
+            reportRange={{
+              from: reportFrom,
+              to: reportTo,
+              onPrevMonth: handlePrevReportMonth,
+              onThisMonth: handleThisReportMonth,
+              onNextMonth: handleNextReportMonth,
+            }}
+            showRangeControls={viewMode !== "search"}
+            fetchByLogin={state.fetchByLogin}
+            onToggleFetchMode={toggleFetchMode}
+            users={state.users}
+            userId={state.userId}
+            handleSelectedUsersChange={handleSelectedUsersChange}
+            onRefresh={handleRefresh}
+            showRefresh={viewMode !== "search"}
+            setAuth={setAuth}
+          />
         </Grid>
         {token && state.loaded && (
           <Grid

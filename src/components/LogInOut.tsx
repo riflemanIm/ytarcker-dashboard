@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { Button, Typography } from "@mui/material";
+import { Box, Button, Typography } from "@mui/material";
 import axios from "axios";
 
 import { AuthState } from "../types/global";
@@ -76,13 +76,13 @@ const LogInOut: React.FC<LogInOutProps> = ({ token, setAuth }) => {
   }, []);
 
   return token ? (
-    <>
+    <Box textAlign="right">
       <Button onClick={() => handleLogout()}>Выйти </Button>
 
       <Typography variant="subtitle1" color="text.secondary">
         {localStorage.getItem("yandex_login")}
       </Typography>
-    </>
+    </Box>
   ) : (
     <Button onClick={handleLogin}>Войти</Button>
   );

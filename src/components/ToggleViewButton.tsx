@@ -72,21 +72,22 @@ export default function ToggleViewButton({
       <Tooltip title={currentOption.tooltip}>
         <Button
           onClick={handleOpen}
-          startIcon={<Icon sx={{ fontSize: 28 }} />}
+          startIcon={<Icon style={{ fontSize: 30 }} />}
           sx={(theme) => ({
             borderRadius: 2.5,
             px: 2.5,
             py: 1.25,
             textTransform: "none",
-            fontWeight: 600,
+            fontWeight: 500,
             fontSize: 15,
             background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.light})`,
             color: theme.palette.getContrastText(theme.palette.primary.main),
-            boxShadow: "0px 10px 25px rgba(25, 118, 210, 0.35)",
+            boxShadow: "0px 8px 18px rgba(25, 118, 210, 0.25)",
             transition: "transform 0.2s ease, box-shadow 0.2s ease",
             "&:hover": {
+              color: "#fff",
               transform: "translateY(-2px)",
-              boxShadow: "0px 14px 30px rgba(25, 118, 210, 0.45)",
+              boxShadow: "0px 12px 24px rgba(25, 118, 210, 0.35)",
               background: `linear-gradient(135deg, ${theme.palette.primary.dark}, ${theme.palette.primary.main})`,
             },
           })}
@@ -110,7 +111,7 @@ export default function ToggleViewButton({
               onClick={() => handleSelect(mode)}
             >
               <ListItemIcon>
-                <OptionIcon fontSize="small" />
+                <OptionIcon fontSize="medium" />
               </ListItemIcon>
               <ListItemText primary={VIEW_MODE_OPTIONS[mode].menuLabel} />
             </MenuItem>
