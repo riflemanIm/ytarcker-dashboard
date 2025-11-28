@@ -98,133 +98,143 @@ const AppHeader: FC<AppHeaderProps> = ({
             : theme.shadows[3],
       }}
     >
-      <Stack spacing={isMobile ? 2 : 3}>
+      <Box
+        sx={(theme) => ({
+          display: "grid",
+          gap: theme.spacing(isMobile ? 2 : 3),
+          gridTemplateColumns: {
+            xs: "1fr",
+            md: showUserSelection
+              ? "auto minmax(280px, 1fr) auto"
+              : "auto auto",
+          },
+          alignItems: "center",
+        })}
+      >
         <Stack
-          direction={{ xs: "column", md: "row" }}
-          spacing={isMobile ? 2 : 3}
-          alignItems={{ xs: "stretch", md: "center" }}
-          justifyContent="space-between"
+          direction={{ xs: "column", sm: "row" }}
+          spacing={2}
+          alignItems={{ xs: "flex-start", sm: "center" }}
+          justifyContent="flex-start"
           flexWrap="wrap"
-          sx={{ gap: isMobile ? 2 : 1.5 }}
+          sx={{ minWidth: 220 }}
         >
-          <Stack
-            direction={{ xs: "column", md: "row" }}
-            spacing={2}
-            alignItems={{ xs: "stretch", md: "center" }}
-            flexWrap="wrap"
-            sx={{ flex: { xs: "1 1 100%", md: "1 1 0" }, minWidth: 220 }}
-          >
-            {showAdminControls && (
+          {showAdminControls && (
+            <Box sx={{ alignSelf: { xs: "flex-start", sm: "center" } }}>
               <ToggleViewButton
                 viewMode={viewMode}
                 onChange={onViewModeChange}
               />
-            )}
+            </Box>
+          )}
 
-            {showRange && (
-              <Box
-                sx={{ flex: 1, minWidth: { xs: "100%", sm: 240, padding: 8 } }}
-              >
-                {viewMode === "table" ? (
-                  <WeekNavigator
-                    start={weekNavigation.start}
-                    end={weekNavigation.end}
-                    onPrevious={weekNavigation.onPrevious}
-                    onNext={weekNavigation.onNext}
-                    disableNext={weekNavigation.disableNext}
-                  />
-                ) : (
-                  <ReportDateRange
-                    from={reportRange.from}
-                    to={reportRange.to}
-                    onPrevMonth={reportRange.onPrevMonth}
-                    onThisMonth={reportRange.onThisMonth}
-                    onNextMonth={reportRange.onNextMonth}
-                  />
-                )}
-              </Box>
-            )}
-          </Stack>
-
-          {showUserSelection && (
-            <Stack
-              direction={{ xs: "column", md: "row" }}
-              spacing={2}
-              alignItems={{ xs: "stretch", md: "center" }}
-              flexWrap="wrap"
+          {showRange && (
+            <Box
               sx={{
-                flex: { xs: "1 1 100%", md: "1 1 0" },
-                minWidth: fetchByLogin ? 220 : undefined,
+                flex: 1,
+                width: { xs: "100%", sm: "auto" },
+                minWidth: { xs: "100%", sm: 260 },
               }}
             >
+              {viewMode === "table" ? (
+                <WeekNavigator
+                  start={weekNavigation.start}
+                  end={weekNavigation.end}
+                  onPrevious={weekNavigation.onPrevious}
+                  onNext={weekNavigation.onNext}
+                  disableNext={weekNavigation.disableNext}
+                />
+              ) : (
+                <ReportDateRange
+                  from={reportRange.from}
+                  to={reportRange.to}
+                  onPrevMonth={reportRange.onPrevMonth}
+                  onThisMonth={reportRange.onThisMonth}
+                  onNextMonth={reportRange.onNextMonth}
+                />
+              )}
+            </Box>
+          )}
+        </Stack>
+
+        {showUserSelection && (
+          <Stack
+            direction="row"
+            spacing={2}
+            alignItems="center"
+            flexWrap="nowrap"
+            sx={{
+              width: "100%",
+              minWidth: fetchByLogin ? 220 : undefined,
+              overflow: "auto",
+            }}
+          >
+            <Box sx={{ flexShrink: 0 }}>
               <FetchModeSwitch
                 fetchByLogin={fetchByLogin}
                 login={login ?? ""}
                 onToggle={onToggleFetchMode}
                 disabled={!loaded}
               />
-              {isEmpty(users) && !fetchByLogin ? (
-                <Alert severity="info" sx={{ flex: 1 }}>
-                  Нет сотрудников за этот период
-                </Alert>
-              ) : (
-                <Box
-                  sx={{
-                    flex: 1,
-                    minWidth: fetchByLogin
-                      ? { xs: "100%", sm: 160 }
-                      : undefined,
-                  }}
-                >
-                  <AutocompleteUsers
-                    userId={userId}
-                    handleSelectedUsersChange={handleSelectedUsersChange}
-                    users={users}
-                    disabled={!loaded || fetchByLogin}
-                  />
-                </Box>
-              )}
-            </Stack>
-          )}
-
-          <Stack
-            direction={{ xs: "column-reverse", md: "row" }}
-            spacing={2}
-            alignItems={{ xs: "stretch", md: "center" }}
-            justifyContent={{ xs: "flex-start", md: "flex-end" }}
-            sx={{
-              flex: { xs: "1 1 100%", md: "0 0 auto" },
-              minWidth: { xs: "100%", md: 200 },
-            }}
-          >
-            {showRefresh && showControls && (
-              <IconButton
-                onClick={onRefresh}
+            </Box>
+            {isEmpty(users) && !fetchByLogin ? (
+              <Alert severity="info" sx={{ flex: 1, minWidth: 160 }}>
+                Нет сотрудников за этот период
+              </Alert>
+            ) : (
+              <Box
                 sx={{
-                  alignSelf: { xs: "flex-start", md: "center" },
-                  borderRadius: "50%",
-                  width: 56,
-                  height: 56,
-                  color: theme.palette.background.default,
-                  background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.light})`,
-                  boxShadow: "0px 8px 18px rgba(25, 118, 210, 0.25)",
-                  transition: "transform 0.2s ease, box-shadow 0.2s ease",
-                  "&:hover": {
-                    transform: "translateY(-2px)",
-                    boxShadow: "0px 12px 24px rgba(25, 118, 210, 0.35)",
-                    background: `linear-gradient(135deg, ${theme.palette.primary.dark}, ${theme.palette.primary.main})`,
-                  },
+                  flex: 1,
+                  minWidth: 160,
                 }}
               >
-                <RefreshIcon />
-              </IconButton>
+                <AutocompleteUsers
+                  userId={userId}
+                  handleSelectedUsersChange={handleSelectedUsersChange}
+                  users={users}
+                  disabled={!loaded || fetchByLogin}
+                />
+              </Box>
             )}
-            <Box sx={{ alignSelf: { xs: "flex-end", md: "center" } }}>
-              <LogInOut token={token} setAuth={setAuth} />
-            </Box>
           </Stack>
+        )}
+
+        <Stack
+          direction={{ xs: "row-reverse", md: "row" }}
+          spacing={2}
+          alignItems="center"
+          justifyContent={{ xs: "space-between", md: "flex-end" }}
+          sx={{
+            width: "100%",
+            minWidth: { xs: "100%", md: 220 },
+          }}
+        >
+          <Box sx={{ display: "flex", justifyContent: "flex-end", flex: 1 }}>
+            <LogInOut token={token} setAuth={setAuth} />
+          </Box>
+          {showRefresh && showControls && (
+            <IconButton
+              onClick={onRefresh}
+              sx={{
+                borderRadius: "50%",
+                width: 56,
+                height: 56,
+                color: theme.palette.background.default,
+                background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.light})`,
+                boxShadow: "0px 8px 18px rgba(25, 118, 210, 0.25)",
+                transition: "transform 0.2s ease, box-shadow 0.2s ease",
+                "&:hover": {
+                  transform: "translateY(-2px)",
+                  boxShadow: "0px 12px 24px rgba(25, 118, 210, 0.35)",
+                  background: `linear-gradient(135deg, ${theme.palette.primary.dark}, ${theme.palette.primary.main})`,
+                },
+              }}
+            >
+              <RefreshIcon />
+            </IconButton>
+          )}
         </Stack>
-      </Stack>
+      </Box>
     </Paper>
   );
 };
