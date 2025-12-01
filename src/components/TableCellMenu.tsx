@@ -54,6 +54,8 @@ type RowUI = {
   selectedLabel: string | null; // выбранный тип из селекта
 };
 
+const RECENT_ISSUE_TYPES_KEY = "recent_issue_types";
+
 const TableCellMenu: FC<EditableCellMenuProps> = ({
   open,
   onClose,
@@ -98,6 +100,53 @@ const TableCellMenu: FC<EditableCellMenuProps> = ({
     Record<string, string>
   >({});
   const [openConfirm, setOpenConfirm] = useState(false);
+  const [recentIssueTypes, setRecentIssueTypes] = useState<string[]>([]);
+
+  const availableRecentTypes = useMemo(
+    () =>
+      recentIssueTypes.filter((label) =>
+        issueTypes.some((type) => type.label === label)
+      ),
+    [recentIssueTypes, issueTypes]
+  );
+
+  const rememberRecentIssueType = useCallback((label: string | null) => {
+    if (!label || typeof window === "undefined") return;
+    setRecentIssueTypes((prev) => {
+      const next = [label, ...prev.filter((item) => item !== label)].slice(
+        0,
+        2
+      );
+      try {
+        window.localStorage.setItem(
+          RECENT_ISSUE_TYPES_KEY,
+          JSON.stringify(next)
+        );
+      } catch (error) {
+        console.error("Failed to store issue types", error);
+      }
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const stored = window.localStorage.getItem(RECENT_ISSUE_TYPES_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          setRecentIssueTypes(
+            parsed
+              .filter((item): item is string => typeof item === "string")
+              .slice(0, 2)
+          );
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load stored issue types", error);
+    }
+  }, []);
 
   // Загрузка типов
   useEffect(() => {
@@ -216,6 +265,7 @@ const TableCellMenu: FC<EditableCellMenuProps> = ({
   const handleIssueTypeChangeForItem = useCallback(
     (rowId: string | number, label: string) => {
       const id = String(rowId);
+      const normalizedLabel = label || null;
       setRows((prev) => ({
         ...prev,
         [id]: {
@@ -224,11 +274,12 @@ const TableCellMenu: FC<EditableCellMenuProps> = ({
             selectedLabel: null,
             durationRaw: "",
           }),
-          selectedLabel: label || null,
+          selectedLabel: normalizedLabel,
         },
       }));
+      rememberRecentIssueType(normalizedLabel);
     },
-    []
+    [rememberRecentIssueType]
   );
 
   // === Общее сохранение ВСЕХ изменений в блоке редактирования ===
@@ -367,9 +418,14 @@ const TableCellMenu: FC<EditableCellMenuProps> = ({
     []
   );
 
-  const handleIssueTypeChangeNew = useCallback((label: string) => {
-    setSelectedIssueTypeLabelNew(label || null);
-  }, []);
+  const handleIssueTypeChangeNew = useCallback(
+    (label: string) => {
+      const normalizedLabel = label || null;
+      setSelectedIssueTypeLabelNew(normalizedLabel);
+      rememberRecentIssueType(normalizedLabel);
+    },
+    [rememberRecentIssueType]
+  );
 
   const handleNewSubmitItem = useCallback(() => {
     const err = validateDurationValue(newEntry.duration);
@@ -584,16 +640,44 @@ const TableCellMenu: FC<EditableCellMenuProps> = ({
                       />
 
                       {issueTypes.length > 0 && (
-                        <SelectIssueTypeList
-                          issueTypes={issueTypes}
-                          handleIssueTypeChange={(label) =>
-                            handleIssueTypeChangeForItem(item.id, label)
-                          }
-                          selectedIssueTypeLabel={row.selectedLabel ?? ""}
-                          margin="dense"
-                          required
-                          loading={!loaded}
-                        />
+                        <>
+                          <SelectIssueTypeList
+                            issueTypes={issueTypes}
+                            handleIssueTypeChange={(label) =>
+                              handleIssueTypeChangeForItem(item.id, label)
+                            }
+                            selectedIssueTypeLabel={row.selectedLabel ?? ""}
+                            margin="dense"
+                            required
+                            loading={!loaded}
+                          />
+                          {availableRecentTypes.length > 0 && (
+                            <Stack spacing={0.5} mt={1}>
+                              <Typography variant="caption" color="text.secondary">
+                                Последние выбранные типы работ
+                              </Typography>
+                              <Stack
+                                direction="row"
+                                spacing={1}
+                                flexWrap="wrap"
+                                rowGap={1}
+                              >
+                                {availableRecentTypes.map((label) => (
+                                  <Button
+                                    key={`${item.id}-${label}`}
+                                    size="small"
+                                    variant="outlined"
+                                    onClick={() =>
+                                      handleIssueTypeChangeForItem(item.id, label)
+                                    }
+                                  >
+                                    {label}
+                                  </Button>
+                                ))}
+                              </Stack>
+                            </Stack>
+                          )}
+                        </>
                       )}
                     </Grid>
 
@@ -682,14 +766,40 @@ const TableCellMenu: FC<EditableCellMenuProps> = ({
                 />
 
                 {issueTypes.length > 0 && (
-                  <SelectIssueTypeList
-                    issueTypes={issueTypes}
-                    handleIssueTypeChange={handleIssueTypeChangeNew}
-                    selectedIssueTypeLabel={selectedIssueTypeLabelNew ?? ""}
-                    margin="dense"
-                    required
-                    loading={!loaded}
-                  />
+                  <>
+                    <SelectIssueTypeList
+                      issueTypes={issueTypes}
+                      handleIssueTypeChange={handleIssueTypeChangeNew}
+                      selectedIssueTypeLabel={selectedIssueTypeLabelNew ?? ""}
+                      margin="dense"
+                      required
+                      loading={!loaded}
+                    />
+                    {availableRecentTypes.length > 0 && (
+                      <Stack spacing={0.5} mt={1}>
+                        <Typography variant="caption" color="text.secondary">
+                          Последние выбранные типы работ
+                        </Typography>
+                        <Stack
+                          direction="row"
+                          spacing={1}
+                          flexWrap="wrap"
+                          rowGap={1}
+                        >
+                          {availableRecentTypes.map((label) => (
+                            <Button
+                              key={`new-${label}`}
+                              size="small"
+                              variant="outlined"
+                              onClick={() => handleIssueTypeChangeNew(label)}
+                            >
+                              {label}
+                            </Button>
+                          ))}
+                        </Stack>
+                      </Stack>
+                    )}
+                  </>
                 )}
               </Grid>
 

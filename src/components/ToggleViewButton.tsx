@@ -1,15 +1,14 @@
-import * as React from "react";
+import DateRangeIcon from "@mui/icons-material/DateRange";
+import SearchIcon from "@mui/icons-material/Search";
+import TodayIcon from "@mui/icons-material/Today";
 import {
   Button,
   ListItemIcon,
   ListItemText,
   Menu,
   MenuItem,
-  Tooltip,
 } from "@mui/material";
-import DateRangeIcon from "@mui/icons-material/DateRange";
-import TodayIcon from "@mui/icons-material/Today";
-import SearchIcon from "@mui/icons-material/Search";
+import * as React from "react";
 import { ViewMode } from "../types/global";
 
 export interface ToggleViewButtonProps {
@@ -69,32 +68,31 @@ export default function ToggleViewButton({
 
   return (
     <>
-      <Tooltip title={currentOption.tooltip}>
-        <Button
-          onClick={handleOpen}
-          startIcon={<Icon style={{ fontSize: 30 }} />}
-          sx={(theme) => ({
-            borderRadius: 2.5,
-            px: 2.5,
-            py: 1.25,
-            textTransform: "none",
-            fontWeight: 500,
-            fontSize: 15,
-            background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.light})`,
-            color: theme.palette.getContrastText(theme.palette.primary.main),
-            boxShadow: "0px 8px 18px rgba(25, 118, 210, 0.25)",
-            transition: "transform 0.2s ease, box-shadow 0.2s ease",
-            "&:hover": {
-              color: "#fff",
-              transform: "translateY(-2px)",
-              boxShadow: "0px 12px 24px rgba(25, 118, 210, 0.35)",
-              background: `linear-gradient(135deg, ${theme.palette.primary.dark}, ${theme.palette.primary.main})`,
-            },
-          })}
-        >
-          {currentOption.menuLabel}
-        </Button>
-      </Tooltip>
+      <Button
+        onClick={handleOpen}
+        startIcon={<Icon style={{ fontSize: 30 }} />}
+        sx={(theme) => ({
+          borderRadius: 2.5,
+          px: 2.5,
+          py: 1.25,
+          textTransform: "none",
+          fontWeight: 500,
+          fontSize: 15,
+          background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.light})`,
+          color: theme.palette.getContrastText(theme.palette.primary.main),
+          boxShadow: "0px 8px 18px rgba(25, 118, 210, 0.25)",
+          transition: "transform 0.2s ease, box-shadow 0.2s ease",
+          "&:hover": {
+            color: "#fff",
+            transform: "translateY(-2px)",
+            boxShadow: "0px 12px 24px rgba(25, 118, 210, 0.35)",
+            background: `linear-gradient(135deg, ${theme.palette.primary.dark}, ${theme.palette.primary.main})`,
+          },
+        })}
+      >
+        {currentOption.menuLabel}
+      </Button>
+
       <Menu
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
