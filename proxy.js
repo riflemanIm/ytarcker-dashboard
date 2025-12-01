@@ -235,8 +235,15 @@ const trackerSearchRequest = async (token, body) => {
 const searchTracker = (token, filter) =>
   trackerSearchRequest(token, { filter, order: "-updated" });
 
-const searchTrackerByText = (token, text) =>
-  trackerSearchRequest(token, { query: text, order: "-updated" });
+const searchTrackerByText = (token, text, queue) => {
+  const queryParts = [];
+  if (queue) {
+    queryParts.push(`queue:${queue}`);
+  }
+  queryParts.push(text);
+  const body = { query: queryParts.join(" ").trim(), order: "-updated" };
+  return trackerSearchRequest(token, body);
+};
 
 const fetchIssueComments = async (token, issueId) => {
   if (!issueId) return "";
@@ -298,8 +305,33 @@ app.get("/api/user_issues", async (req, res) => {
   }
 });
 
+app.get("/api/queues", async (req, res) => {
+  const { token } = req.query;
+
+  if (!token) {
+    return res.status(400).json({ error: "token not passed" });
+  }
+
+  try {
+    const response = await axios.get(
+      "https://api.tracker.yandex.net/v2/queues?perPage=1000",
+      headers(token)
+    );
+    const payload = Array.isArray(response.data) ? response.data : [];
+    const queues = payload.map((queue) => ({
+      id: String(queue.id ?? ""),
+      key: queue.key,
+      name: queue.name ?? queue.display ?? queue.key,
+    }));
+    res.json({ queues });
+  } catch (error) {
+    console.error("[Ошибка в методе /api/queues]:", error.message);
+    res.status(error.response?.status || 500).json({ error: error.message });
+  }
+});
+
 app.get("/api/search_issues", async (req, res) => {
-  const { token, search_str: searchStrRaw } = req.query;
+  const { token, search_str: searchStrRaw, queue: queueRaw } = req.query;
 
   if (!token) {
     return res.status(400).json({ error: "token not passed" });
@@ -312,8 +344,15 @@ app.get("/api/search_issues", async (req, res) => {
     return res.status(400).json({ error: "search_str must be provided" });
   }
 
+  const queueValue =
+    typeof queueRaw === "string" && queueRaw.trim().length
+      ? queueRaw.trim()
+      : undefined;
+  const queue =
+    queueValue && queueValue.toLowerCase() !== "all" ? queueValue : undefined;
+
   try {
-    const issues = await searchTrackerByText(token, searchStr);
+    const issues = await searchTrackerByText(token, searchStr, queue);
 
     const normalized = await Promise.all(
       issues.map(async (issue) => ({

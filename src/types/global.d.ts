@@ -41,6 +41,12 @@ export interface User {
   name: string;
 }
 
+export interface QueueInfo {
+  id?: string;
+  key: string;
+  name: string;
+}
+
 export interface AppState {
   loaded: boolean;
   userId: string | null;

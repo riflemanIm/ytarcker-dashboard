@@ -1,4 +1,10 @@
-import { useState, Fragment, ReactNode } from "react";
+import {
+  useState,
+  useEffect,
+  Fragment,
+  ReactNode,
+  ChangeEvent,
+} from "react";
 import {
   Alert,
   Box,
@@ -8,13 +14,14 @@ import {
   LinearProgress,
   List,
   ListItem,
+  MenuItem,
   Paper,
   Stack,
   TextField,
   Typography,
 } from "@mui/material";
-import { searchIssues } from "@/actions/data";
-import { Issue } from "@/types/global";
+import { getQueues, searchIssues } from "@/actions/data";
+import { Issue, QueueInfo } from "@/types/global";
 import IssueDisplay from "./IssueDisplay";
 
 const escapeRegExp = (value: string) =>
@@ -106,6 +113,8 @@ interface SearchIssuesProps {
   token: string | null;
 }
 
+const ALL_QUEUES_VALUE = "all";
+
 const SearchIssues = ({ token }: SearchIssuesProps) => {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Issue[]>([]);
@@ -113,6 +122,42 @@ const SearchIssues = ({ token }: SearchIssuesProps) => {
   const [error, setError] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
   const [appliedQuery, setAppliedQuery] = useState("");
+  const [queues, setQueues] = useState<QueueInfo[]>([]);
+  const [queuesLoading, setQueuesLoading] = useState(false);
+  const [selectedQueue, setSelectedQueue] = useState(ALL_QUEUES_VALUE);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    if (!token) {
+      setQueues([]);
+      setSelectedQueue(ALL_QUEUES_VALUE);
+      setQueuesLoading(false);
+      return undefined;
+    }
+
+    setQueuesLoading(true);
+    getQueues(token)
+      .then((data) => {
+        if (isMounted) {
+          setQueues(data);
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setQueues([]);
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setQueuesLoading(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [token]);
 
   const handleSearch = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -132,7 +177,14 @@ const SearchIssues = ({ token }: SearchIssuesProps) => {
     setLoading(true);
     setError(null);
     try {
-      const issues = await searchIssues({ token, searchStr: trimmedQuery });
+      const queue =
+        selectedQueue === ALL_QUEUES_VALUE ? undefined : selectedQueue;
+
+      const issues = await searchIssues({
+        token,
+        searchStr: trimmedQuery,
+        queue,
+      });
       setResults(issues);
       setHasSearched(true);
       setAppliedQuery(trimmedQuery);
@@ -148,6 +200,12 @@ const SearchIssues = ({ token }: SearchIssuesProps) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleQueueChange = (
+    event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    setSelectedQueue(event.target.value);
   };
 
   return (
@@ -167,6 +225,21 @@ const SearchIssues = ({ token }: SearchIssuesProps) => {
         spacing={2}
         onSubmit={handleSearch}
       >
+        <TextField
+          select
+          label="Очередь"
+          value={selectedQueue}
+          onChange={handleQueueChange}
+          disabled={!token || queuesLoading}
+          sx={{ minWidth: { xs: "100%", md: 220 } }}
+        >
+          <MenuItem value={ALL_QUEUES_VALUE}>Все очереди</MenuItem>
+          {queues.map((queue) => (
+            <MenuItem key={queue.key} value={queue.key}>
+              {queue.name ?? queue.key}
+            </MenuItem>
+          ))}
+        </TextField>
         <TextField
           fullWidth
           label="Ключ, название или текст задачи"

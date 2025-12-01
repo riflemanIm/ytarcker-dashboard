@@ -10,6 +10,7 @@ import {
   GetDataArgs,
   Issue,
   IssueType,
+  QueueInfo,
   TaskItemMenu,
 } from "@/types/global";
 import { handleLogout } from "@/components/LogInOut";
@@ -294,11 +295,35 @@ export const getUserIssues = async ({
 export interface SearchIssuesArgs {
   token: string | null;
   searchStr: string;
+  queue?: string;
 }
+
+export const getQueues = async (token: string | null): Promise<QueueInfo[]> => {
+  if (!token) {
+    return [];
+  }
+
+  try {
+    const res = await axios.get<{ queues: QueueInfo[] }>(
+      `${apiUrl}/api/queues`,
+      {
+        params: { token },
+      }
+    );
+    return res.data.queues ?? [];
+  } catch (err: any) {
+    console.error("[Ошибка в getQueues]:", err.message);
+    if (axios.isAxiosError(err) && err.response?.status === 401) {
+      handleLogout();
+    }
+    return [];
+  }
+};
 
 export const searchIssues = async ({
   token,
   searchStr,
+  queue,
 }: SearchIssuesArgs): Promise<Issue[]> => {
   if (!token) {
     throw new Error("token not passed");
@@ -310,10 +335,19 @@ export const searchIssues = async ({
   }
 
   try {
+    const params: Record<string, string> = {
+      token: token!,
+      search_str: query,
+    };
+
+    if (queue) {
+      params.queue = queue;
+    }
+
     const res = await axios.get<{ issues: Issue[] }>(
       `${apiUrl}/api/search_issues`,
       {
-        params: { token, search_str: query },
+        params,
       }
     );
     return res.data.issues;
