@@ -46,6 +46,47 @@ const shiftHours = (dateStr, hours) => {
   return shifted.toISOString().slice(0, 16); // YYYY-MM-DDTHH:mm
 };
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const withRetries = async (factory, { retries = 3, baseDelay = 500 } = {}) => {
+  let attempt = 0;
+  while (true) {
+    try {
+      return await factory();
+    } catch (error) {
+      const status = error?.response?.status;
+      if (status !== 429 || attempt >= retries) {
+        throw error;
+      }
+      const delay = baseDelay * Math.pow(2, attempt);
+      await sleep(delay);
+      attempt += 1;
+    }
+  }
+};
+
+const mapWithConcurrency = async (items, mapper, limit = 5) => {
+  if (!Array.isArray(items) || items.length === 0) return [];
+  const result = new Array(items.length);
+  let cursor = 0;
+
+  const worker = async () => {
+    while (true) {
+      let index;
+      if (cursor >= items.length) break;
+      index = cursor;
+      cursor += 1;
+      result[index] = await mapper(items[index], index);
+    }
+  };
+
+  const workers = Array.from({ length: Math.min(limit, items.length) }).map(
+    () => worker()
+  );
+  await Promise.all(workers);
+  return result;
+};
+
 const headers = (token) => ({
   headers: {
     Authorization: `OAuth ${token}`,
@@ -56,6 +97,9 @@ const headers = (token) => ({
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+const SEARCH_DEFAULT_PER_PAGE = 20;
+const SEARCH_MAX_PER_PAGE = 50;
 
 app.get("/api/issues", async (req, res) => {
   let { token, startDate, endDate, userId, login } = req.query;
@@ -216,52 +260,117 @@ app.post("/api/delete_all", async (req, res) => {
   }
 });
 // Получить все задачи пользователя, отсортированные по последнему обновлению
-const trackerSearchRequest = async (token, body) => {
-  const url = "https://api.tracker.yandex.net/v3/issues/_search?perPage=10000";
-  const response = await axios.post(url, body, headers(token));
-  const payload = response.data;
+const MAX_TRACKER_PER_PAGE = 1000;
+const DEFAULT_TRACKER_PAGE = 1;
+const DEFAULT_TRACKER_PER_PAGE = 20;
 
-  if (Array.isArray(payload)) {
-    return payload;
-  }
-
-  if (Array.isArray(payload?.issues)) {
-    return payload.issues;
-  }
-
-  return [];
+const toNumberOrFallback = (value, fallback) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
 };
 
-const searchTracker = (token, filter) =>
-  trackerSearchRequest(token, { filter, order: "-updated" });
+const trackerSearchRequest = async (token, body, options = {}) => {
+  const requestedPage = toNumberOrFallback(options.page, DEFAULT_TRACKER_PAGE);
+  const requestedPerPage = toNumberOrFallback(
+    options.perPage,
+    DEFAULT_TRACKER_PER_PAGE
+  );
+  const page = Math.max(1, Math.floor(requestedPage));
+  const perPage = Math.max(
+    1,
+    Math.min(MAX_TRACKER_PER_PAGE, Math.floor(requestedPerPage))
+  );
 
-const searchTrackerByText = (token, text, queue) => {
+  const url = `https://api.tracker.yandex.net/v3/issues/_search?perPage=${perPage}&page=${page}`;
+  const response = await withRetries(
+    () => axios.post(url, body, headers(token)),
+    { retries: 4, baseDelay: 600 }
+  );
+  const payload = response.data ?? {};
+
+  let issues = [];
+  if (Array.isArray(payload)) {
+    issues = payload;
+  } else if (Array.isArray(payload?.issues)) {
+    issues = payload.issues;
+  }
+
+  const extractNumber = (...values) => {
+    for (const value of values) {
+      const num = Number(value);
+      if (Number.isFinite(num)) {
+        return num;
+      }
+    }
+    return undefined;
+  };
+
+  const meta = payload?.meta ?? payload?._meta ?? {};
+  const totalFromPayload = extractNumber(
+    payload?.total,
+    payload?.totalCount,
+    meta?.total,
+    meta?.totalCount
+  );
+  const total = totalFromPayload ?? issues.length;
+  const resolvedPage = extractNumber(payload?.page, meta?.page) ?? page;
+  const resolvedPerPage =
+    extractNumber(payload?.perPage, payload?.pageSize, meta?.perPage) ??
+    perPage;
+
+  const hasMore =
+    typeof totalFromPayload === "number"
+      ? totalFromPayload > resolvedPage * resolvedPerPage
+      : issues.length === resolvedPerPage;
+
+  return {
+    issues,
+    total,
+    page: resolvedPage,
+    perPage: resolvedPerPage,
+    hasMore,
+  };
+};
+
+const searchTracker = (token, filter, options = {}) => {
+  const mergedOptions = {
+    perPage: MAX_TRACKER_PER_PAGE,
+    ...options,
+  };
+  return trackerSearchRequest(
+    token,
+    { filter, order: "-updated" },
+    mergedOptions
+  ).then((result) => result.issues);
+};
+
+const searchTrackerByText = (token, text, queue, options) => {
   const queryParts = [];
   if (queue) {
     queryParts.push(`queue:${queue}`);
   }
   queryParts.push(text);
   const body = { query: queryParts.join(" ").trim(), order: "-updated" };
-  return trackerSearchRequest(token, body);
+  return trackerSearchRequest(token, body, options);
 };
 
 const fetchIssueComments = async (token, issueId) => {
   if (!issueId) return "";
   try {
-    const { data } = await axios.get(
-      `https://api.tracker.yandex.net/v2/issues/${issueId}/comments`,
-      headers(token)
+    const { data } = await withRetries(
+      () =>
+        axios.get(
+          `https://api.tracker.yandex.net/v2/issues/${issueId}/comments`,
+          headers(token)
+        ),
+      { retries: 4, baseDelay: 600 }
     );
     if (!Array.isArray(data)) return "";
     return data
       .map((comment) => comment.text ?? comment.textHtml ?? "")
       .join("\n");
   } catch (error) {
-    console.error(
-      "[fetchIssueComments] error:",
-      error.response?.status,
-      error.message
-    );
+    console.error("[fetchIssueComments] error:", error.response, error.message);
     return "";
   }
 };
@@ -331,7 +440,14 @@ app.get("/api/queues", async (req, res) => {
 });
 
 app.get("/api/search_issues", async (req, res) => {
-  const { token, search_str: searchStrRaw, queue: queueRaw } = req.query;
+  const {
+    token,
+    search_str: searchStrRaw,
+    queue: queueRaw,
+    page: pageRaw,
+    per_page: perPageRaw,
+    perPage: perPageAltRaw,
+  } = req.query;
 
   if (!token) {
     return res.status(400).json({ error: "token not passed" });
@@ -351,11 +467,34 @@ app.get("/api/search_issues", async (req, res) => {
   const queue =
     queueValue && queueValue.toLowerCase() !== "all" ? queueValue : undefined;
 
-  try {
-    const issues = await searchTrackerByText(token, searchStr, queue);
+  const pickPositiveInt = (value, fallback) => {
+    const source = Array.isArray(value) ? value[0] : value;
+    if (typeof source !== "string" && typeof source !== "number") {
+      return fallback;
+    }
+    const parsed = Number(source);
+    return Number.isFinite(parsed) && parsed > 0
+      ? Math.floor(parsed)
+      : fallback;
+  };
 
-    const normalized = await Promise.all(
-      issues.map(async (issue) => ({
+  const page = pickPositiveInt(pageRaw, 1);
+  const perPageCandidate = perPageRaw ?? perPageAltRaw;
+  const requestedPerPage = pickPositiveInt(
+    perPageCandidate,
+    SEARCH_DEFAULT_PER_PAGE
+  );
+  const perPage = Math.min(SEARCH_MAX_PER_PAGE, requestedPerPage);
+
+  try {
+    const searchResult = await searchTrackerByText(token, searchStr, queue, {
+      page,
+      perPage,
+    });
+
+    const normalized = await mapWithConcurrency(
+      searchResult.issues,
+      async (issue) => ({
         key: issue.key,
         summary: issue.summary,
         status: issue.status?.display,
@@ -363,10 +502,18 @@ app.get("/api/search_issues", async (req, res) => {
         assignee: issue.assignee?.display,
         description: issue.description ?? issue?.descriptionHtml ?? "",
         commentsText: await fetchIssueComments(token, issue.id),
-      }))
+      })
     );
 
-    res.json({ issues: normalized });
+    res.json({
+      issues: normalized,
+      total: searchResult.total,
+      page: searchResult.page,
+      perPage: searchResult.perPage,
+      hasMore:
+        searchResult.hasMore ||
+        (normalized.length === searchResult.perPage && normalized.length > 0),
+    });
   } catch (error) {
     console.error("[Ошибка в методе /api/search_issues]:", error.message);
     res.status(error.response?.status || 500).json({ error: error.message });

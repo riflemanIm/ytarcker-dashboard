@@ -11,6 +11,7 @@ import {
   Issue,
   IssueType,
   QueueInfo,
+  SearchIssuesResponse,
   TaskItemMenu,
 } from "@/types/global";
 import { handleLogout } from "@/components/LogInOut";
@@ -296,6 +297,8 @@ export interface SearchIssuesArgs {
   token: string | null;
   searchStr: string;
   queue?: string;
+  page?: number;
+  perPage?: number;
 }
 
 export const getQueues = async (token: string | null): Promise<QueueInfo[]> => {
@@ -324,33 +327,53 @@ export const searchIssues = async ({
   token,
   searchStr,
   queue,
-}: SearchIssuesArgs): Promise<Issue[]> => {
+  page = 1,
+  perPage = 20,
+}: SearchIssuesArgs): Promise<SearchIssuesResponse> => {
   if (!token) {
     throw new Error("token not passed");
   }
 
   const query = searchStr.trim();
   if (!query) {
-    return [];
+    return { issues: [], total: 0, page: 1, perPage, hasMore: false };
   }
 
   try {
     const params: Record<string, string> = {
       token: token!,
       search_str: query,
+      page: String(page),
+      per_page: String(perPage),
     };
 
     if (queue) {
       params.queue = queue;
     }
 
-    const res = await axios.get<{ issues: Issue[] }>(
+    const res = await axios.get<{
+      issues: Issue[];
+      total?: number;
+      page?: number;
+      perPage?: number;
+      hasMore?: boolean;
+    }>(
       `${apiUrl}/api/search_issues`,
       {
         params,
       }
     );
-    return res.data.issues;
+    const totalCount =
+      typeof res.data.total === "number"
+        ? res.data.total
+        : res.data.issues?.length ?? 0;
+    return {
+      issues: res.data.issues ?? [],
+      total: totalCount,
+      page: res.data.page ?? page,
+      perPage: res.data.perPage ?? perPage,
+      hasMore: res.data.hasMore ?? false,
+    };
   } catch (err: any) {
     console.error("[Ошибка в searchIssues]:", err.message);
     if (axios.isAxiosError(err) && err.response?.status === 401) {

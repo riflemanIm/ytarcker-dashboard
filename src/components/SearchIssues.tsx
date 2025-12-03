@@ -1,10 +1,4 @@
-import {
-  useState,
-  useEffect,
-  Fragment,
-  ReactNode,
-  ChangeEvent,
-} from "react";
+import { useState, useEffect, Fragment, ReactNode, ChangeEvent } from "react";
 import {
   Alert,
   Box,
@@ -15,6 +9,7 @@ import {
   List,
   ListItem,
   MenuItem,
+  Pagination,
   Paper,
   Stack,
   TextField,
@@ -88,7 +83,10 @@ const highlightText = (text: string, query: string): ReactNode => {
 
 const stripDescription = (input?: string) => {
   if (!input) return "";
-  return input.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  return input
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 };
 
 const buildSnippet = (text: string, query: string, length = 360) => {
@@ -114,6 +112,8 @@ interface SearchIssuesProps {
 }
 
 const ALL_QUEUES_VALUE = "all";
+const DEFAULT_PER_PAGE = 20;
+const PER_PAGE_OPTIONS = [10, 20, 50];
 
 const SearchIssues = ({ token }: SearchIssuesProps) => {
   const [query, setQuery] = useState("");
@@ -125,6 +125,10 @@ const SearchIssues = ({ token }: SearchIssuesProps) => {
   const [queues, setQueues] = useState<QueueInfo[]>([]);
   const [queuesLoading, setQueuesLoading] = useState(false);
   const [selectedQueue, setSelectedQueue] = useState(ALL_QUEUES_VALUE);
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(DEFAULT_PER_PAGE);
+  const [total, setTotal] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -159,6 +163,47 @@ const SearchIssues = ({ token }: SearchIssuesProps) => {
     };
   }, [token]);
 
+  const executeSearch = async (
+    searchText: string,
+    pageToRequest = 1,
+    perPageToRequest = perPage
+  ) => {
+    if (!token) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const queue =
+        selectedQueue === ALL_QUEUES_VALUE ? undefined : selectedQueue;
+
+      const response = await searchIssues({
+        token,
+        searchStr: searchText,
+        queue,
+        page: pageToRequest,
+        perPage: perPageToRequest,
+      });
+      setResults(response.issues);
+      setHasSearched(true);
+      setAppliedQuery(searchText);
+      setPage(response.page ?? pageToRequest);
+      setPerPage(response.perPage ?? perPageToRequest);
+      setTotal(response.total ?? response.issues.length);
+      setHasMore(response.hasMore ?? false);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Не удалось выполнить поиск задач";
+      setError(message);
+      setResults([]);
+      setHasSearched(false);
+      setAppliedQuery("");
+      setTotal(0);
+      setPage(1);
+      setHasMore(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSearch = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!token) {
@@ -171,35 +216,13 @@ const SearchIssues = ({ token }: SearchIssuesProps) => {
       setError("Введите текст запроса");
       setResults([]);
       setHasSearched(false);
+      setTotal(0);
+      setPage(1);
+      setHasMore(false);
       return;
     }
 
-    setLoading(true);
-    setError(null);
-    try {
-      const queue =
-        selectedQueue === ALL_QUEUES_VALUE ? undefined : selectedQueue;
-
-      const issues = await searchIssues({
-        token,
-        searchStr: trimmedQuery,
-        queue,
-      });
-      setResults(issues);
-      setHasSearched(true);
-      setAppliedQuery(trimmedQuery);
-    } catch (err) {
-      const message =
-        err instanceof Error
-          ? err.message
-          : "Не удалось выполнить поиск задач";
-      setError(message);
-      setResults([]);
-      setHasSearched(false);
-      setAppliedQuery("");
-    } finally {
-      setLoading(false);
-    }
+    await executeSearch(trimmedQuery, 1, perPage);
   };
 
   const handleQueueChange = (
@@ -207,6 +230,38 @@ const SearchIssues = ({ token }: SearchIssuesProps) => {
   ) => {
     setSelectedQueue(event.target.value);
   };
+
+  const handlePageChange = (_event: ChangeEvent<unknown>, newPage: number) => {
+    if (!appliedQuery || !token) return;
+    executeSearch(appliedQuery, newPage, perPage);
+  };
+
+  const handlePerPageChange = (
+    event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const parsed = Number(event.target.value);
+    const nextPerPage = Number.isFinite(parsed) ? parsed : DEFAULT_PER_PAGE;
+    setPerPage(nextPerPage);
+    setPage(1);
+    if (!appliedQuery || !token) {
+      return;
+    }
+    executeSearch(appliedQuery, 1, nextPerPage);
+  };
+
+  const knownTotalPages = total > 0 ? Math.ceil(total / perPage) : null;
+  let paginationCount = knownTotalPages ?? page;
+  if (hasMore) {
+    paginationCount = Math.max(paginationCount, page + 1);
+  }
+  paginationCount = Math.max(1, paginationCount);
+  const currentPage = Math.min(page, paginationCount);
+  const totalLabel =
+    total > 0 && !hasMore
+      ? total
+      : hasMore
+        ? `${(page - 1) * perPage + results.length}+`
+        : (page - 1) * perPage + results.length;
 
   return (
     <Paper
@@ -266,94 +321,138 @@ const SearchIssues = ({ token }: SearchIssuesProps) => {
 
       {loading && <LinearProgress />}
 
-      <Stack sx={{ flex: 1, overflowY: "auto" }} spacing={2}>
-        {hasSearched && !loading && results.length === 0 && (
-          <Alert severity="warning">
-            По запросу ничего не найдено, попробуйте изменить текст поиска.
-          </Alert>
-        )}
+      <Box sx={{ flex: 1, minHeight: 0 }}>
+        <Stack
+          sx={{ height: "100%", overflowY: "auto", overflowX: "hidden" }}
+          spacing={2}
+        >
+          {hasSearched && !loading && results.length === 0 && (
+            <Alert severity="warning">
+              По запросу ничего не найдено, попробуйте изменить текст поиска.
+            </Alert>
+          )}
 
-        {results.length > 0 && (
-          <List disablePadding>
-            {results.map((issue, index) => {
-              const displayText = issue.summary
-                ? `${issue.key} — ${issue.summary}`
-                : issue.key;
-              const descriptionSnippet = buildSnippet(
-                issue.description ?? "",
-                appliedQuery
-              );
-              const commentSnippet = buildSnippet(
-                issue.commentsText ?? "",
-                appliedQuery
-              );
-              return (
-                <Fragment key={issue.key}>
-                  <ListItem alignItems="flex-start">
-                    <Stack spacing={1} sx={{ width: "100%" }}>
-                      <IssueDisplay
-                        display={
-                          appliedQuery
-                            ? highlightText(displayText, appliedQuery)
-                            : displayText
-                        }
-                        href={`https://tracker.yandex.ru/${issue.key}`}
-                        fio={
-                          issue.assignee
-                            ? `Исполнитель: ${issue.assignee}`
-                            : undefined
-                        }
-                      />
-                      <Stack direction="row" spacing={1} flexWrap="wrap">
-                        {issue.status && (
-                          <Chip size="small" label={issue.status} />
-                        )}
-                        {issue.queue && (
+          {results.length > 0 && (
+            <List disablePadding>
+              {results.map((issue, index) => {
+                const displayText = issue.summary
+                  ? `${issue.key} — ${issue.summary}`
+                  : issue.key;
+                const descriptionSnippet = buildSnippet(
+                  issue.description ?? "",
+                  appliedQuery
+                );
+                const commentSnippet = buildSnippet(
+                  issue.commentsText ?? "",
+                  appliedQuery
+                );
+                return (
+                  <Fragment key={issue.key}>
+                    <ListItem alignItems="flex-start">
+                      <Stack spacing={1} sx={{ width: "100%" }}>
+                        <IssueDisplay
+                          display={
+                            appliedQuery
+                              ? highlightText(displayText, appliedQuery)
+                              : displayText
+                          }
+                          href={`https://tracker.yandex.ru/${issue.key}`}
+                          fio={
+                            issue.assignee
+                              ? `Исполнитель: ${issue.assignee}`
+                              : undefined
+                          }
+                        />
+                        <Stack direction="row" spacing={1} flexWrap="wrap">
+                          {issue.status && (
+                            <Chip size="small" label={issue.status} />
+                          )}
+                          {issue.queue && (
+                            <Chip
+                              size="small"
+                              variant="outlined"
+                              label={issue.queue}
+                            />
+                          )}
                           <Chip
                             size="small"
                             variant="outlined"
-                            label={issue.queue}
+                            label={issue.key}
                           />
+                        </Stack>
+                        {descriptionSnippet && (
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{ whiteSpace: "pre-wrap" }}
+                          >
+                            <Box component="span" sx={{ fontWeight: 600 }}>
+                              Описание:{" "}
+                            </Box>
+                            {appliedQuery
+                              ? highlightText(descriptionSnippet, appliedQuery)
+                              : descriptionSnippet}
+                          </Typography>
                         )}
-                        <Chip size="small" variant="outlined" label={issue.key} />
+                        {commentSnippet && (
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{ whiteSpace: "pre-wrap" }}
+                          >
+                            <Box component="span" sx={{ fontWeight: 600 }}>
+                              Комментарии:{" "}
+                            </Box>
+                            {appliedQuery
+                              ? highlightText(commentSnippet, appliedQuery)
+                              : commentSnippet}
+                          </Typography>
+                        )}
                       </Stack>
-                      {descriptionSnippet && (
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                          sx={{ whiteSpace: "pre-wrap" }}
-                        >
-                          <Box component="span" sx={{ fontWeight: 600 }}>
-                            Описание:{" "}
-                          </Box>
-                          {appliedQuery
-                            ? highlightText(descriptionSnippet, appliedQuery)
-                            : descriptionSnippet}
-                        </Typography>
-                      )}
-                      {commentSnippet && (
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                          sx={{ whiteSpace: "pre-wrap" }}
-                        >
-                          <Box component="span" sx={{ fontWeight: 600 }}>
-                            Комментарии:{" "}
-                          </Box>
-                          {appliedQuery
-                            ? highlightText(commentSnippet, appliedQuery)
-                            : commentSnippet}
-                        </Typography>
-                      )}
-                    </Stack>
-                  </ListItem>
-                  {index < results.length - 1 && <Divider component="li" />}
-                </Fragment>
-              );
-            })}
-          </List>
-        )}
-      </Stack>
+                    </ListItem>
+                    {index < results.length - 1 && <Divider component="li" />}
+                  </Fragment>
+                );
+              })}
+            </List>
+          )}
+        </Stack>
+      </Box>
+      {results.length > 0 && (
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={2}
+          alignItems={{ xs: "flex-start", sm: "center" }}
+        >
+          <Pagination
+            count={paginationCount}
+            page={currentPage}
+            onChange={handlePageChange}
+            color="primary"
+            //showFirstButton
+            //showLastButton
+            disabled={loading}
+          />
+          <TextField
+            select
+            label="На странице"
+            value={String(perPage)}
+            onChange={handlePerPageChange}
+            size="small"
+            sx={{ width: 100 }}
+            disabled={loading}
+          >
+            {PER_PAGE_OPTIONS.map((option) => (
+              <MenuItem key={option} value={option}>
+                {option}
+              </MenuItem>
+            ))}
+          </TextField>
+          <Typography variant="body2" color="text.secondary">
+            Найдено задач: {totalLabel}
+          </Typography>
+        </Stack>
+      )}
     </Paper>
   );
 };

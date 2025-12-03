@@ -10,6 +10,14 @@ export interface Issue {
   commentsText?: string;
   [key: string]: any;
 }
+
+export interface SearchIssuesResponse {
+  issues: Issue[];
+  total: number;
+  page: number;
+  perPage: number;
+  hasMore?: boolean;
+}
 export interface IssueType {
   label: string;
   hint: string;
