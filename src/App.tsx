@@ -14,6 +14,7 @@ import AppHeader from "./components/AppHeader";
 import DurationAlert from "./components/DurationAlert";
 import SearchIssues from "./components/SearchIssues";
 import TaskTable from "./components/TaskTable";
+import TableTimePlan from "./components/TableTimePlan";
 import WorklogWeeklyReport from "./components/WorklogWeeklyReport";
 import isEmpty, {
   aggregateDurations,
@@ -67,7 +68,7 @@ const YandexTracker: FC = () => {
   };
 
   // Переключатель представлений
-  const [viewMode, setViewMode] = useState<ViewMode>("table");
+  const [viewMode, setViewMode] = useState<ViewMode>("table_time_spend");
 
   // НЕДЕЛЬНЫЙ РЕЖИМ (TaskTable)
   const [weekOffset, setWeekOffset] = useState<number>(0);
@@ -126,7 +127,7 @@ const YandexTracker: FC = () => {
     viewMode,
   ]);
   useEffect(() => {
-    if (viewMode === "table") {
+    if (viewMode === "table_time_spend") {
       getUserIssues({ setState, token, userId: state.userId, login });
     }
   }, [viewMode]);
@@ -212,15 +213,18 @@ const YandexTracker: FC = () => {
               my={2}
             >
               <Typography variant="h5">
-                {viewMode === "table" && (
+                {viewMode === "table_time_spend" && (
                   <>
                     Затраченное время{" "}
                     {state.fetchByLogin ? "по задачам" : "по сотрудникам"}
                   </>
                 )}
+                {viewMode === "table_time_plan" && (
+                  <>Планируемое время по задачам</>
+                )}
                 {viewMode === "search" && <>Поиск по задачам</>}
               </Typography>
-              {state.fetchByLogin && viewMode === "table" && (
+              {state.fetchByLogin && viewMode === "table_time_spend" && (
                 <AddDurationIssueDialog
                   issues={state.issues}
                   setData={setData}
@@ -233,9 +237,11 @@ const YandexTracker: FC = () => {
 
             {viewMode === "search" ? (
               <SearchIssues token={token} />
+            ) : viewMode === "table_time_plan" ? (
+              <TableTimePlan />
             ) : !isEmpty(state.data) ? (
               <>
-                {viewMode === "table" ? (
+                {viewMode === "table_time_spend" ? (
                   <TaskTable
                     data={aggregateDurations(state.data as DataItem[])}
                     start={start}

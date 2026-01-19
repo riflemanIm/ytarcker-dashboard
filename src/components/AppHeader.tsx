@@ -136,7 +136,8 @@ const AppHeader: FC<AppHeaderProps> = ({
                 minWidth: { xs: "100%", sm: 260 },
               }}
             >
-              {viewMode === "table" ? (
+              {viewMode === "table_time_spend" ||
+              viewMode === "table_time_plan" ? (
                 <WeekNavigator
                   start={weekNavigation.start}
                   end={weekNavigation.end}

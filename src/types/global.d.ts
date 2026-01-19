@@ -23,6 +23,27 @@ export interface IssueType {
   hint: string;
 }
 
+export interface TlSprint {
+  yt_tl_sprints_id: number;
+  sprint: string;
+  current_sprint: boolean;
+  archive: boolean;
+  sort_by: number;
+}
+
+export interface TlGroup {
+  yt_tl_group_id: number;
+  label: string;
+  sort_by: number;
+}
+
+export interface TlGroupPatient {
+  patients_fio: string;
+  color_str: string;
+  trackerUid: string;
+  sort_by: number;
+}
+
 export interface DataItem {
   id: string;
   duration: string;
@@ -64,7 +85,11 @@ export interface AppState {
   issues: Issue[];
 }
 
-export type ViewMode = "table" | "report" | "search";
+export type ViewMode =
+  | "table_time_spend"
+  | "table_time_plan"
+  | "report"
+  | "search";
 
 export interface GetDataArgs {
   userId: string | null;

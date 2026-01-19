@@ -1,4 +1,5 @@
 import DateRangeIcon from "@mui/icons-material/DateRange";
+import EventNoteIcon from "@mui/icons-material/EventNote";
 import SearchIcon from "@mui/icons-material/Search";
 import TodayIcon from "@mui/icons-material/Today";
 import {
@@ -22,10 +23,15 @@ const VIEW_MODE_OPTIONS: Record<
   ViewMode,
   { icon: IconComponent; tooltip: string; menuLabel: string }
 > = {
-  table: {
+  table_time_spend: {
     icon: TodayIcon,
     tooltip: "Показать таблицу списания времени за неделю",
     menuLabel: "Таблица списания",
+  },
+  table_time_plan: {
+    icon: EventNoteIcon,
+    tooltip: "Показать таблицу планирования времени",
+    menuLabel: "Таблица планирования",
   },
   report: {
     icon: DateRangeIcon,
@@ -39,7 +45,12 @@ const VIEW_MODE_OPTIONS: Record<
   },
 };
 
-const VIEW_MODE_ORDER: ViewMode[] = ["table", "report", "search"];
+const VIEW_MODE_ORDER: ViewMode[] = [
+  "table_time_spend",
+  "table_time_plan",
+  "report",
+  "search",
+];
 
 /**
  * Кнопка-переключатель представления между TaskTable, WorklogWeeklyReport и SearchIssues.

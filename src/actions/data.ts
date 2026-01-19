@@ -13,6 +13,9 @@ import {
   QueueInfo,
   SearchIssuesResponse,
   TaskItemMenu,
+  TlGroup,
+  TlGroupPatient,
+  TlSprint,
 } from "@/types/global";
 import { handleLogout } from "@/components/LogInOut";
 
@@ -448,5 +451,40 @@ export const getIssueTypeList = async ({
     if (axios.isAxiosError(err) && err.response?.status === 401) {
       handleLogout();
     }
+  }
+};
+
+export const getTlSprints = async (): Promise<TlSprint[]> => {
+  try {
+    const res = await axios.post<TlSprint[]>(`${apiUrl}/api/tl_sprints`, {});
+    return Array.isArray(res.data) ? res.data : [];
+  } catch (err: any) {
+    console.error("[Ошибка в getTlSprints]:", err.message);
+    return [];
+  }
+};
+
+export const getTlGroups = async (): Promise<TlGroup[]> => {
+  try {
+    const res = await axios.post<TlGroup[]>(`${apiUrl}/api/tl_groups`, {});
+    return Array.isArray(res.data) ? res.data : [];
+  } catch (err: any) {
+    console.error("[Ошибка в getTlGroups]:", err.message);
+    return [];
+  }
+};
+
+export const getTlGroupPatients = async (
+  groupIds: number[]
+): Promise<TlGroupPatient[]> => {
+  try {
+    const res = await axios.post<TlGroupPatient[]>(
+      `${apiUrl}/api/tl_group_patients`,
+      { groupIds }
+    );
+    return Array.isArray(res.data) ? res.data : [];
+  } catch (err: any) {
+    console.error("[Ошибка в getTlGroupPatients]:", err.message);
+    return [];
   }
 };

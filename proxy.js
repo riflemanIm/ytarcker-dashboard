@@ -558,4 +558,89 @@ app.get("/api/issue_type_list", async (req, res) => {
   }
 });
 
+app.post("/api/tl_sprints", async (req, res) => {
+  try {
+    const resp = await axios.post(
+      "http://of-srv-apps-001.pmtech.ru:18005/acceptor/yandextracker/gettlsprint",
+      {},
+      {
+        timeout: 15000,
+      }
+    );
+
+    res.json(resp.data);
+  } catch (error) {
+    const status = error.response?.status || 500;
+    const payload = {
+      error: error.message,
+      code: error.code,
+      cause: error.cause,
+      upstreamStatus: error.response?.status,
+      upstreamData: error.response?.data,
+    };
+    console.error("[api/tl_sprints] upstream error:", payload);
+    res.status(status).json(payload);
+  }
+});
+
+app.post("/api/tl_groups", async (req, res) => {
+  try {
+    const resp = await axios.post(
+      "http://of-srv-apps-001.pmtech.ru:18005/acceptor/yandextracker/gettlgroup",
+      {},
+      {
+        timeout: 15000,
+      }
+    );
+
+    res.json(resp.data);
+  } catch (error) {
+    const status = error.response?.status || 500;
+    const payload = {
+      error: error.message,
+      code: error.code,
+      cause: error.cause,
+      upstreamStatus: error.response?.status,
+      upstreamData: error.response?.data,
+    };
+    console.error("[api/tl_groups] upstream error:", payload);
+    res.status(status).json(payload);
+  }
+});
+
+app.post("/api/tl_group_patients", async (req, res) => {
+  try {
+    const { groupIds } = req.body ?? {};
+    const isValidGroupIds =
+      Array.isArray(groupIds) && groupIds.every((id) => Number.isInteger(id));
+
+    if (!isValidGroupIds) {
+      return res.status(400).json({
+        message: "Missing or invalid field 'groupIds'. It must be an array of integers.",
+      });
+    }
+
+    const resp = await axios.post(
+      "http://of-srv-apps-001.pmtech.ru:18005/acceptor/yandextracker/gettlgrouppatients",
+      { groupIds },
+      {
+        timeout: 15000,
+      }
+    );
+
+    res.json(resp.data);
+  } catch (error) {
+    const status = error.response?.status || 500;
+    const payload = {
+      error: error.message,
+      code: error.code,
+      cause: error.cause,
+      upstreamStatus: error.response?.status,
+      upstreamData: error.response?.data,
+    };
+    console.error("[api/tl_group_patients] upstream error:", payload);
+    res.status(status).json(payload);
+  }
+});
+
 app.listen(4000, () => console.log("Proxy server running on port 4000"));
