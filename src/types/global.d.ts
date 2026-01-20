@@ -37,11 +37,35 @@ export interface TlGroup {
   sort_by: number;
 }
 
+export interface TlRole {
+  yt_dict_roles_id: number;
+  label: string;
+  sort_by: number;
+}
+
+export interface TlProject {
+  projectId: number;
+  ProjectName: string;
+  sort_by: number;
+}
+
 export interface TlGroupPatient {
   patients_fio: string;
   color_str: string;
   trackerUid: string;
   sort_by: number;
+}
+
+export interface TaskListItem {
+  checklistItemId: string;
+  TaskKey: string;
+  TaskName: string;
+  WorkName: string;
+  CheckListAssignee: string;
+  trackerUid: string;
+  WorkDays: number;
+  Deadline: string | null;
+  WorkNameDict: string;
 }
 
 export interface DataItem {

@@ -15,7 +15,10 @@ import {
   TaskItemMenu,
   TlGroup,
   TlGroupPatient,
+  TlProject,
+  TlRole,
   TlSprint,
+  TaskListItem,
 } from "@/types/global";
 import { handleLogout } from "@/components/LogInOut";
 
@@ -474,6 +477,26 @@ export const getTlGroups = async (): Promise<TlGroup[]> => {
   }
 };
 
+export const getTlRoles = async (): Promise<TlRole[]> => {
+  try {
+    const res = await axios.post<TlRole[]>(`${apiUrl}/api/tl_roles`, {});
+    return Array.isArray(res.data) ? res.data : [];
+  } catch (err: any) {
+    console.error("[Ошибка в getTlRoles]:", err.message);
+    return [];
+  }
+};
+
+export const getTlProjects = async (): Promise<TlProject[]> => {
+  try {
+    const res = await axios.post<TlProject[]>(`${apiUrl}/api/tl_projects`, {});
+    return Array.isArray(res.data) ? res.data : [];
+  } catch (err: any) {
+    console.error("[Ошибка в getTlProjects]:", err.message);
+    return [];
+  }
+};
+
 export const getTlGroupPatients = async (
   groupIds: number[]
 ): Promise<TlGroupPatient[]> => {
@@ -485,6 +508,28 @@ export const getTlGroupPatients = async (
     return Array.isArray(res.data) ? res.data : [];
   } catch (err: any) {
     console.error("[Ошибка в getTlGroupPatients]:", err.message);
+    return [];
+  }
+};
+
+export interface TaskListFilters {
+  trackerUids: string[];
+  projectIds: number[];
+  roleIds: number[];
+  groupIds: number[];
+}
+
+export const getTaskList = async (
+  filters: TaskListFilters
+): Promise<TaskListItem[]> => {
+  try {
+    const res = await axios.post<TaskListItem[]>(
+      `${apiUrl}/api/tl_tasklist`,
+      filters
+    );
+    return Array.isArray(res.data) ? res.data : [];
+  } catch (err: any) {
+    console.error("[Ошибка в getTaskList]:", err.message);
     return [];
   }
 };

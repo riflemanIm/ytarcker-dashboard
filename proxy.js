@@ -608,6 +608,56 @@ app.post("/api/tl_groups", async (req, res) => {
   }
 });
 
+app.post("/api/tl_roles", async (req, res) => {
+  try {
+    const resp = await axios.post(
+      "http://of-srv-apps-001.pmtech.ru:18005/acceptor/yandextracker/gettldictroles",
+      {},
+      {
+        timeout: 15000,
+      }
+    );
+
+    res.json(resp.data);
+  } catch (error) {
+    const status = error.response?.status || 500;
+    const payload = {
+      error: error.message,
+      code: error.code,
+      cause: error.cause,
+      upstreamStatus: error.response?.status,
+      upstreamData: error.response?.data,
+    };
+    console.error("[api/tl_roles] upstream error:", payload);
+    res.status(status).json(payload);
+  }
+});
+
+app.post("/api/tl_projects", async (req, res) => {
+  try {
+    const resp = await axios.post(
+      "http://of-srv-apps-001.pmtech.ru:18005/acceptor/yandextracker/gettlprojects",
+      {},
+      {
+        timeout: 15000,
+      }
+    );
+
+    res.json(resp.data);
+  } catch (error) {
+    const status = error.response?.status || 500;
+    const payload = {
+      error: error.message,
+      code: error.code,
+      cause: error.cause,
+      upstreamStatus: error.response?.status,
+      upstreamData: error.response?.data,
+    };
+    console.error("[api/tl_projects] upstream error:", payload);
+    res.status(status).json(payload);
+  }
+});
+
 app.post("/api/tl_group_patients", async (req, res) => {
   try {
     const { groupIds } = req.body ?? {};
@@ -639,6 +689,70 @@ app.post("/api/tl_group_patients", async (req, res) => {
       upstreamData: error.response?.data,
     };
     console.error("[api/tl_group_patients] upstream error:", payload);
+    res.status(status).json(payload);
+  }
+});
+
+app.post("/api/tl_tasklist", async (req, res) => {
+  try {
+    const {
+      trackerUids = [],
+      projectIds = [],
+      roleIds = [],
+      groupIds = [],
+    } = req.body ?? {};
+
+    const isValidStringArray =
+      Array.isArray(trackerUids) &&
+      trackerUids.every((id) => typeof id === "string");
+    const isValidProjectIds =
+      Array.isArray(projectIds) &&
+      projectIds.every((id) => Number.isInteger(id));
+    const isValidRoleIds =
+      Array.isArray(roleIds) && roleIds.every((id) => Number.isInteger(id));
+    const isValidGroupIds =
+      Array.isArray(groupIds) && groupIds.every((id) => Number.isInteger(id));
+
+    if (!isValidStringArray) {
+      return res.status(400).json({
+        message: "Field 'trackerUids' must be an array of strings.",
+      });
+    }
+    if (!isValidProjectIds) {
+      return res.status(400).json({
+        message: "Field 'projectIds' must be an array of integers.",
+      });
+    }
+    if (!isValidRoleIds) {
+      return res.status(400).json({
+        message: "Field 'roleIds' must be an array of integers.",
+      });
+    }
+    if (!isValidGroupIds) {
+      return res.status(400).json({
+        message: "Field 'groupIds' must be an array of integers.",
+      });
+    }
+
+    const resp = await axios.post(
+      "http://of-srv-apps-001.pmtech.ru:18005/acceptor/yandextracker/gettasklist",
+      { trackerUids, projectIds, roleIds, groupIds },
+      {
+        timeout: 15000,
+      }
+    );
+
+    res.json(resp.data);
+  } catch (error) {
+    const status = error.response?.status || 500;
+    const payload = {
+      error: error.message,
+      code: error.code,
+      cause: error.cause,
+      upstreamStatus: error.response?.status,
+      upstreamData: error.response?.data,
+    };
+    console.error("[api/tl_tasklist] upstream error:", payload);
     res.status(status).json(payload);
   }
 });
