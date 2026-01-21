@@ -14,7 +14,7 @@ import {
 } from "@/helpers";
 import { parseFirstIssueTypeLabel } from "@/helpers/issueTypeComment";
 import AddIcon from "@mui/icons-material/Add";
-import { Box, Chip, IconButton, Typography } from "@mui/material";
+import { Box, Chip, IconButton, Stack, Typography } from "@mui/material";
 import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import dayjs, { Dayjs } from "dayjs";
 import utc from "dayjs/plugin/utc";
@@ -27,14 +27,14 @@ import React, {
   useState,
 } from "react";
 import {
-  AlertState,
-  AppState,
   DayOfWeek,
   MenuState,
   TaskItem,
   TaskItemIssue,
   TransformedTaskRow,
 } from "../types/global";
+import { useAppContext } from "@/context/AppContext";
+import AddDurationIssueDialog from "./AddDurationIssueDialog";
 import IssueDisplay from "./IssueDisplay";
 import TableCellMenu from "./TableCellMenu";
 import TableCellInfoPopover from "./TableCellInfoPopover";
@@ -57,11 +57,8 @@ export const durationComparator = (a: string, b: string): number =>
 interface TaskTableProps {
   data: TaskItem[];
   start: Dayjs; // первый день недели (понедельник)
-  setState: React.Dispatch<React.SetStateAction<AppState>>;
-  token: string | null;
   setData: (args: SetDataArgs) => Promise<void>;
   deleteData: (args: DeleteDataArgs) => void;
-  setAlert: React.Dispatch<React.SetStateAction<AlertState>>;
   isEditable: boolean;
 }
 
@@ -156,13 +153,12 @@ const transformData = (data: TaskItem[]): TransformedTaskRow[] => {
 const TaskTable: FC<TaskTableProps> = ({
   data,
   start,
-  setState,
-  token,
   setData,
   deleteData,
-  setAlert,
   isEditable = false,
 }) => {
+  const { auth, setAlert, setState, state } = useAppContext();
+  const { token } = auth;
   // --- 0) Выравниваем «шапку недели» под данные / выбранную неделю ---
   const viewStart = useMemo(() => {
     const s = toTarget(start).startOf("isoWeek");
@@ -610,6 +606,24 @@ const TaskTable: FC<TaskTableProps> = ({
 
   return (
     <>
+      <Stack
+        spacing={2}
+        direction="row"
+        alignItems="center"
+        justifyContent="center"
+        my={2}
+      >
+        <Typography variant="h5">
+          Затраченное время{" "}
+          {state.fetchByLogin ? "по задачам" : "по сотрудникам"}
+        </Typography>
+        {state.fetchByLogin && (
+          <AddDurationIssueDialog
+            issues={state.issues}
+            setData={setData}
+          />
+        )}
+      </Stack>
       <DataGrid
         rows={[...tableRows, totalRow]}
         columns={columns}
@@ -661,10 +675,7 @@ const TaskTable: FC<TaskTableProps> = ({
         onClose={handleMenuClose}
         menuState={menuState}
         deleteData={deleteData}
-        token={token}
         setData={setData}
-        setState={setState}
-        setAlert={setAlert}
       />
       <TableCellInfoPopover
         open={infoOpen}

@@ -1,7 +1,8 @@
 import RefreshIcon from "@mui/icons-material/Refresh";
 import { Box, IconButton, Paper, Stack, useMediaQuery, useTheme } from "@mui/material";
 import { FC } from "react";
-import { AuthState, User, ViewMode } from "@/types/global";
+import { useAppContext } from "@/context/AppContext";
+import { User, ViewMode } from "@/types/global";
 import HeaderFilters, {
   ReportRangeProps,
   WeekNavigationProps,
@@ -9,8 +10,6 @@ import HeaderFilters, {
 import LogInOut from "./LogInOut";
 
 interface AppHeaderProps {
-  token: string | null;
-  login: string | null | undefined;
   isSuperUser: boolean;
   loaded: boolean;
   viewMode: ViewMode;
@@ -25,12 +24,9 @@ interface AppHeaderProps {
   handleSelectedUsersChange: (userId: string | null) => void;
   onRefresh: () => void;
   showRefresh: boolean;
-  setAuth: React.Dispatch<React.SetStateAction<AuthState>>;
 }
 
 const AppHeader: FC<AppHeaderProps> = ({
-  token,
-  login,
   isSuperUser,
   loaded,
   viewMode,
@@ -45,8 +41,9 @@ const AppHeader: FC<AppHeaderProps> = ({
   handleSelectedUsersChange,
   onRefresh,
   showRefresh,
-  setAuth,
 }) => {
+  const { auth } = useAppContext();
+  const { token, login } = auth;
   const showControls = !!token && loaded;
   const showAdminControls = showControls && !!isSuperUser;
   const showRange = showControls && showRangeControls;
@@ -112,7 +109,7 @@ const AppHeader: FC<AppHeaderProps> = ({
           }}
         >
           <Box sx={{ display: "flex", justifyContent: "flex-end", flex: 1 }}>
-            <LogInOut token={token} setAuth={setAuth} />
+            <LogInOut />
           </Box>
           {showRefresh && showControls && (
             <IconButton

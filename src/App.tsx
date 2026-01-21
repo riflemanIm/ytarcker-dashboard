@@ -3,59 +3,44 @@ import {
   AlertColor,
   Grid2 as Grid,
   LinearProgress,
-  Stack,
-  Typography,
 } from "@mui/material";
 import dayjs from "dayjs";
-import { FC, useCallback, useEffect, useState } from "react";
+import { FC, useCallback, useEffect } from "react";
 import { deleteData, getData, getUserIssues, setData } from "./actions/data";
-import AddDurationIssueDialog from "./components/AddDurationIssueDialog";
 import AppHeader from "./components/AppHeader";
 import DurationAlert from "./components/DurationAlert";
 import SearchIssues from "./components/SearchIssues";
 import TaskTable from "./components/TaskTable";
 import TableTimePlan from "./components/TableTimePlan";
 import WorklogWeeklyReport from "./components/WorklogWeeklyReport";
+import { useAppContext } from "./context/AppContext";
 import isEmpty, {
   aggregateDurations,
   getWeekRange,
   isSuperLogin,
 } from "./helpers";
-import {
-  AlertState,
-  AppState,
-  AuthState,
-  DataItem,
-  ViewMode,
-} from "./types/global";
+import { DataItem } from "./types/global";
 
 const YandexTracker: FC = () => {
-  const yandex_login = localStorage.getItem("yandex_login") ?? "";
-
-  const [auth, setAuth] = useState<AuthState>({
-    token: localStorage.getItem("yandex_token"),
-    login: yandex_login.includes("@") ? yandex_login.split("@")[0] : null,
-  });
-
+  const {
+    auth,
+    state,
+    alert,
+    setAlert,
+    setState,
+    viewMode,
+    setViewMode,
+    weekOffset,
+    setWeekOffset,
+    reportFrom,
+    setReportFrom,
+    reportTo,
+    setReportTo,
+  } = useAppContext();
   const { token, login } = auth;
-
-  const [state, setState] = useState<AppState>({
-    loaded: true,
-    userId: null,
-    users: null,
-    data: [],
-    fetchByLogin: true,
-    issues: [],
-  });
-
-  const [alert, setAlert] = useState<AlertState>({
-    open: false,
-    severity: "",
-    message: "",
-  });
   const handleCloseAlert = useCallback(
     () => setAlert({ open: false, severity: "", message: "" }),
-    []
+    [],
   );
 
   const toggleFetchMode = () => {
@@ -67,23 +52,12 @@ const YandexTracker: FC = () => {
     }));
   };
 
-  // Переключатель представлений
-  const [viewMode, setViewMode] = useState<ViewMode>("table_time_spend");
-
   // НЕДЕЛЬНЫЙ РЕЖИМ (TaskTable)
-  const [weekOffset, setWeekOffset] = useState<number>(0);
   const handlePrevious = () => setWeekOffset((prev) => prev + 1);
   const handleNext = () => setWeekOffset((prev) => prev - 1);
   const { start, end } = getWeekRange(weekOffset);
 
   // РЕЖИМ ОТЧЁТА: произвольный диапазон дат (по умолчанию текущий месяц)
-  const [reportFrom, setReportFrom] = useState<dayjs.Dayjs>(() =>
-    dayjs().startOf("month")
-  );
-  const [reportTo, setReportTo] = useState<dayjs.Dayjs>(() =>
-    dayjs().endOf("month")
-  );
-
   const handlePrevReportMonth = () => {
     setReportFrom((prev) => prev.add(-1, "month").startOf("month"));
     setReportTo((prev) => prev.add(-1, "month").endOf("month"));
@@ -169,8 +143,6 @@ const YandexTracker: FC = () => {
       >
         <Grid size={12}>
           <AppHeader
-            token={token}
-            login={login}
             isSuperUser={!!(login && isSuperLogin(login))}
             loaded={state.loaded}
             viewMode={viewMode}
@@ -197,7 +169,6 @@ const YandexTracker: FC = () => {
             handleSelectedUsersChange={handleSelectedUsersChange}
             onRefresh={handleRefresh}
             showRefresh={viewMode !== "search"}
-            setAuth={setAuth}
           />
         </Grid>
         {token && state.loaded && (
@@ -205,36 +176,6 @@ const YandexTracker: FC = () => {
             size={12}
             sx={{ height: "80vh", background: "white", mx: "auto" }}
           >
-            <Stack
-              spacing={2}
-              direction="row"
-              alignItems="center"
-              justifyContent="center"
-              my={2}
-            >
-              <Typography variant="h5">
-                {viewMode === "table_time_spend" && (
-                  <>
-                    Затраченное время{" "}
-                    {state.fetchByLogin ? "по задачам" : "по сотрудникам"}
-                  </>
-                )}
-                {viewMode === "table_time_plan" && (
-                  <>Планируемое время по задачам</>
-                )}
-                {viewMode === "search" && <>Поиск по задачам</>}
-              </Typography>
-              {state.fetchByLogin && viewMode === "table_time_spend" && (
-                <AddDurationIssueDialog
-                  issues={state.issues}
-                  setData={setData}
-                  setAlert={setAlert}
-                  setState={setState}
-                  token={token}
-                />
-              )}
-            </Stack>
-
             {viewMode === "search" ? (
               <SearchIssues token={token} />
             ) : viewMode === "table_time_plan" ? (
@@ -245,11 +186,8 @@ const YandexTracker: FC = () => {
                   <TaskTable
                     data={aggregateDurations(state.data as DataItem[])}
                     start={start}
-                    setState={setState}
-                    token={token}
                     setData={setData}
                     deleteData={deleteData}
-                    setAlert={setAlert}
                     isEditable={state.fetchByLogin}
                   />
                 ) : (

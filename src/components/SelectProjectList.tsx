@@ -1,4 +1,5 @@
-import { TlProject } from "@/types/global";
+import { getTlProjects } from "@/actions/data";
+import { useAppContext } from "@/context/AppContext";
 import {
   Checkbox,
   CircularProgress,
@@ -11,37 +12,68 @@ import {
   SelectChangeEvent,
   Stack,
 } from "@mui/material";
-import React from "react";
+import React, { useEffect, useRef } from "react";
 
 interface SelectProjectListProps {
-  projects: TlProject[];
-  handleProjectChange: (projectIds: string[]) => void;
-  selectedProjectIds?: string[];
   variant?: "standard" | "outlined" | "filled";
   margin?: "none" | "dense" | "normal";
   required?: boolean;
   error?: boolean;
   helperText?: string;
-  loading?: boolean;
 }
 
 const SelectProjectList: React.FC<SelectProjectListProps> = ({
-  projects,
-  handleProjectChange,
-  selectedProjectIds = [],
   variant = "outlined",
   margin = "normal",
   required = false,
   error = false,
   helperText,
-  loading = false,
 }) => {
+  const { tableTimePlanState, setTableTimePlanState } = useAppContext();
+  const { projects, loadingProjects, selectedProjectIds } = tableTimePlanState;
+  const hasFetchedRef = useRef(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (projects.length > 0) return;
+    if (hasFetchedRef.current) return;
+    hasFetchedRef.current = true;
+    setTableTimePlanState((prev) => ({ ...prev, loadingProjects: true }));
+    getTlProjects()
+      .then((data) => {
+        if (!isMounted) return;
+        const sorted = [...data].sort(
+          (a, b) => (a.sort_by ?? 0) - (b.sort_by ?? 0),
+        );
+        setTableTimePlanState((prev) => ({
+          ...prev,
+          projects: sorted,
+          loadingProjects: false,
+        }));
+      })
+      .catch((error) => {
+        console.error("[SelectProjectList] getTlProjects error:", error.message);
+        if (!isMounted) return;
+        hasFetchedRef.current = false;
+      })
+      .finally(() => {
+        setTableTimePlanState((prev) => ({ ...prev, loadingProjects: false }));
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [setTableTimePlanState, projects.length]);
+
   const handleChange = (e: SelectChangeEvent<string[]>) => {
     const value = e.target.value;
-    handleProjectChange(Array.isArray(value) ? value : []);
+    setTableTimePlanState((prev) => ({
+      ...prev,
+      selectedProjectIds: Array.isArray(value) ? value : [],
+    }));
   };
 
-  const disabled = loading || !projects || projects.length === 0;
+  const disabled = loadingProjects || !projects || projects.length === 0;
 
   return (
     <FormControl
@@ -79,7 +111,7 @@ const SelectProjectList: React.FC<SelectProjectListProps> = ({
         })}
       </Select>
 
-      {loading ? (
+      {loadingProjects ? (
         <FormHelperText>
           <Stack direction="row" spacing={1} alignItems="center">
             <CircularProgress size={16} />

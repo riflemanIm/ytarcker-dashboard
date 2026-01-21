@@ -12,13 +12,17 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  IconButton,
   MenuItem,
   Stack,
   TextField,
+  Typography,
 } from "@mui/material";
 import dayjs, { Dayjs } from "dayjs";
 import { FC, useEffect, useMemo, useState } from "react";
 import MuiUIPicker from "./MUIDatePicker";
+import CloseIcon from "@mui/icons-material/Close";
+import { useAppContext } from "@/context/AppContext";
 
 interface SetIssuePlanTableProps {
   open: boolean;
@@ -44,6 +48,7 @@ const SetIssuePlanTable: FC<SetIssuePlanTableProps> = ({
   issue,
   sprintId,
 }) => {
+  const { tableTimePlanState } = useAppContext();
   const [form, setForm] = useState<FormState>({
     sprintId,
     taskKey: issue?.TaskKey ?? "",
@@ -106,6 +111,15 @@ const SetIssuePlanTable: FC<SetIssuePlanTableProps> = ({
     () => !!form.sprintId && form.taskKey && form.trackerUid && !saving,
     [form.sprintId, form.taskKey, form.trackerUid, saving]
   );
+  const sprintName = useMemo(() => {
+    const targetId = form.sprintId ?? Number(tableTimePlanState.selectedSprintId);
+    if (!Number.isFinite(targetId)) return "-";
+    return (
+      tableTimePlanState.sprins.find(
+        (item) => item.yt_tl_sprints_id === targetId
+      )?.sprint ?? "-"
+    );
+  }, [form.sprintId, tableTimePlanState.selectedSprintId, tableTimePlanState.sprins]);
 
   const updateForm = (next: FormState) => {
     setForm(next);
@@ -164,25 +178,34 @@ const SetIssuePlanTable: FC<SetIssuePlanTableProps> = ({
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Добавить в план</DialogTitle>
+      <DialogTitle>
+        <Stack direction="row" alignItems="center" justifyContent="space-between">
+          <Stack spacing={0.5}>
+            <Typography variant="subtitle1">Добавить в план</Typography>
+            <Typography variant="subtitle1">
+              Спринт: {sprintName} • Key: {form.taskKey || "-"}
+            </Typography>
+          </Stack>
+          <IconButton
+            onClick={onClose}
+            sx={(theme) => ({
+              borderRadius: "50%",
+              p: 2,
+              ml: 2,
+              color: theme.palette.background.default,
+              background: theme.palette.primary.light,
+              "&:hover": {
+                color: theme.palette.background.default,
+                background: theme.palette.primary.main,
+              },
+            })}
+          >
+            <CloseIcon />
+          </IconButton>
+        </Stack>
+      </DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 1 }}>
-          <TextField
-            label="Спринт"
-            value={form.sprintId ?? ""}
-            error={Boolean(errors.sprintId)}
-            helperText={errors.sprintId}
-            fullWidth
-            InputProps={{ readOnly: true }}
-          />
-          <TextField
-            label="Key"
-            value={form.taskKey}
-            error={Boolean(errors.taskKey)}
-            helperText={errors.taskKey}
-            fullWidth
-            InputProps={{ readOnly: true }}
-          />
           <TextField
             label="Tracker UID"
             value={form.trackerUid}

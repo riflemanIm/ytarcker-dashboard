@@ -2,12 +2,7 @@ import React, { useEffect } from "react";
 import { Box, Button, Typography } from "@mui/material";
 import axios from "axios";
 
-import { AuthState } from "../types/global";
-
-interface LogInOutProps {
-  token: string | null;
-  setAuth: React.Dispatch<React.SetStateAction<AuthState>>;
-}
+import { useAppContext } from "@/context/AppContext";
 
 const CLIENT_ID = "bbdf8a5464ba4d7f8a29e947a1a3d913";
 const REDIRECT_URI = import.meta.env.VITE_APP_REDIRECT_URI as string;
@@ -24,7 +19,9 @@ export const handleLogout = (): void => {
   window.location.href = "";
 };
 
-const LogInOut: React.FC<LogInOutProps> = ({ token, setAuth }) => {
+const LogInOut: React.FC = () => {
+  const { auth, setAuth } = useAppContext();
+  const { token } = auth;
   useEffect(() => {
     const hash = window.location.hash;
     if (hash.includes("access_token")) {

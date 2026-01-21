@@ -1,4 +1,5 @@
-import { TlRole } from "@/types/global";
+import { getTlRoles } from "@/actions/data";
+import { useAppContext } from "@/context/AppContext";
 import {
   Checkbox,
   CircularProgress,
@@ -11,37 +12,68 @@ import {
   SelectChangeEvent,
   Stack,
 } from "@mui/material";
-import React from "react";
+import React, { useEffect, useRef } from "react";
 
 interface SelectRoleListProps {
-  roles: TlRole[];
-  handleRoleChange: (roleIds: string[]) => void;
-  selectedRoleIds?: string[];
   variant?: "standard" | "outlined" | "filled";
   margin?: "none" | "dense" | "normal";
   required?: boolean;
   error?: boolean;
   helperText?: string;
-  loading?: boolean;
 }
 
 const SelectRoleList: React.FC<SelectRoleListProps> = ({
-  roles,
-  handleRoleChange,
-  selectedRoleIds = [],
   variant = "outlined",
   margin = "normal",
   required = false,
   error = false,
   helperText,
-  loading = false,
 }) => {
+  const { tableTimePlanState, setTableTimePlanState } = useAppContext();
+  const { roles, loadingRoles, selectedRoleIds } = tableTimePlanState;
+  const hasFetchedRef = useRef(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (roles.length > 0) return;
+    if (hasFetchedRef.current) return;
+    hasFetchedRef.current = true;
+    setTableTimePlanState((prev) => ({ ...prev, loadingRoles: true }));
+    getTlRoles()
+      .then((data) => {
+        if (!isMounted) return;
+        const sorted = [...data].sort(
+          (a, b) => (a.sort_by ?? 0) - (b.sort_by ?? 0),
+        );
+        setTableTimePlanState((prev) => ({
+          ...prev,
+          roles: sorted,
+          loadingRoles: false,
+        }));
+      })
+      .catch((error) => {
+        console.error("[SelectRoleList] getTlRoles error:", error.message);
+        if (!isMounted) return;
+        hasFetchedRef.current = false;
+      })
+      .finally(() => {
+        setTableTimePlanState((prev) => ({ ...prev, loadingRoles: false }));
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [setTableTimePlanState, roles.length]);
+
   const handleChange = (e: SelectChangeEvent<string[]>) => {
     const value = e.target.value;
-    handleRoleChange(Array.isArray(value) ? value : []);
+    setTableTimePlanState((prev) => ({
+      ...prev,
+      selectedRoleIds: Array.isArray(value) ? value : [],
+    }));
   };
 
-  const disabled = loading || !roles || roles.length === 0;
+  const disabled = loadingRoles || !roles || roles.length === 0;
 
   return (
     <FormControl
@@ -79,7 +111,7 @@ const SelectRoleList: React.FC<SelectRoleListProps> = ({
         })}
       </Select>
 
-      {loading ? (
+      {loadingRoles ? (
         <FormHelperText>
           <Stack direction="row" spacing={1} alignItems="center">
             <CircularProgress size={16} />

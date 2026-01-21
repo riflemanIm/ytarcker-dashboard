@@ -31,6 +31,7 @@ import React, {
 } from "react";
 
 import { getIssueTypeList } from "@/actions/data";
+import { useAppContext } from "@/context/AppContext";
 import isEmpty, {
   displayDuration,
   displayStartTime,
@@ -60,12 +61,11 @@ const TableCellMenu: FC<EditableCellMenuProps> = ({
   open,
   onClose,
   menuState,
-  setState,
   deleteData,
-  token,
   setData,
-  setAlert,
 }) => {
+  const { auth, setAlert, setState } = useAppContext();
+  const { token } = auth;
   // --- данные из бэка
   const [localState, setLocalState] = useState<TaskItemMenu>({
     issue_type_list: [],

@@ -129,6 +129,23 @@ export interface AppState {
   issues: Issue[];
 }
 
+export interface TableTimePlanState {
+  sprins: TlSprint[];
+  groups: TlGroup[];
+  roles: TlRole[];
+  projects: TlProject[];
+  groupPatients: TlGroupPatient[];
+  loadingGroups: boolean;
+  loadingRoles: boolean;
+  loadingProjects: boolean;
+  loadingPatients: boolean;
+  selectedSprintId: string;
+  selectedGroupIds: string[];
+  selectedRoleIds: string[];
+  selectedProjectIds: string[];
+  selectedPatientUid: string;
+}
+
 export type ViewMode =
   | "table_time_spend"
   | "table_time_plan"

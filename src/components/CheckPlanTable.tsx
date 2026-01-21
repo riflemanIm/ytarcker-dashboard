@@ -6,22 +6,16 @@ import dayjs from "dayjs";
 import { FC, useEffect, useMemo, useState } from "react";
 import IssueDisplay from "./IssueDisplay";
 import SetIssuePlanTable from "./SetIssuePlanTable";
+import { useTableTimePlanSelectors } from "@/hooks/useTableTimePlanSelectors";
 
-interface CheckPlanTableProps {
-  sprintId: number | null;
-  trackerUids: string[];
-  projectIds: number[];
-  roleIds: number[];
-  groupIds: number[];
-}
-
-const CheckPlanTable: FC<CheckPlanTableProps> = ({
-  sprintId,
-  trackerUids,
-  projectIds,
-  roleIds,
-  groupIds,
-}) => {
+const CheckPlanTable: FC = () => {
+  const {
+    sprintId,
+    trackerUids,
+    projectIds,
+    roleIds,
+    groupIds,
+  } = useTableTimePlanSelectors();
   const [rows, setRows] = useState<TaskListItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -127,7 +121,7 @@ const CheckPlanTable: FC<CheckPlanTableProps> = ({
             : "-",
       },
     ],
-    [],
+    [sprintId],
   );
 
   return (

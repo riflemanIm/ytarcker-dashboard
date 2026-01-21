@@ -1,4 +1,5 @@
-import { TlSprint } from "@/types/global";
+import { getTlSprints } from "@/actions/data";
+import { useAppContext } from "@/context/AppContext";
 import {
   Box,
   CircularProgress,
@@ -11,33 +12,71 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import React from "react";
+import React, { useEffect, useRef } from "react";
 
 interface SelectSprintListProps {
-  sprins: TlSprint[];
-  handleSprintChange: (sprintId: string) => void;
-  selectedSprintId?: string | null;
   variant?: "standard" | "outlined" | "filled";
   margin?: "none" | "dense" | "normal";
   required?: boolean;
   error?: boolean;
   helperText?: string;
-  loading?: boolean;
 }
 
 const SelectSprintList: React.FC<SelectSprintListProps> = ({
-  sprins,
-  handleSprintChange,
-  selectedSprintId = "",
   variant = "outlined",
   margin = "normal",
   required = false,
   error = false,
   helperText,
-  loading = false,
 }) => {
+  const { tableTimePlanState, setTableTimePlanState, state, setState } =
+    useAppContext();
+  const { sprins, selectedSprintId } = tableTimePlanState;
+  const loading = !state.loaded;
+  const hasFetchedRef = useRef(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (sprins.length > 0) return;
+    if (hasFetchedRef.current) return;
+    hasFetchedRef.current = true;
+    setState((prev) => ({ ...prev, loaded: false }));
+    getTlSprints()
+      .then((data) => {
+        if (!isMounted) return;
+        const sorted = [...data].sort(
+          (a, b) => (a.sort_by ?? 0) - (b.sort_by ?? 0),
+        );
+        const defaultSprintId =
+          sorted.find((item) => item.current_sprint)?.yt_tl_sprints_id ?? "";
+        setTableTimePlanState((prev) => ({
+          ...prev,
+          sprins: sorted,
+          selectedSprintId:
+            prev.selectedSprintId ||
+            (defaultSprintId ? String(defaultSprintId) : ""),
+        }));
+      })
+      .catch((error) => {
+        console.error("[SelectSprintList] getTlSprints error:", error.message);
+        if (!isMounted) return;
+        hasFetchedRef.current = false;
+      })
+      .finally(() => {
+        setState((prev) => ({ ...prev, loaded: true }));
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [setState, setTableTimePlanState, sprins.length]);
+
   const handleChange = (e: SelectChangeEvent<string>) => {
-    handleSprintChange(e.target.value);
+    const sprintId = e.target.value;
+    setTableTimePlanState((prev) => ({
+      ...prev,
+      selectedSprintId: sprintId,
+    }));
   };
 
   const disabled = loading || !sprins || sprins.length === 0;

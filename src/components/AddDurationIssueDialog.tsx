@@ -18,17 +18,15 @@ import {
 import Autocomplete from "@mui/material/Autocomplete";
 import dayjs, { Dayjs } from "dayjs";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useAppContext } from "@/context/AppContext";
 import useForm from "@/hooks/useForm";
-import type { AlertState, AppState, Issue } from "../types/global";
+import type { Issue } from "../types/global";
 import MuiUIPicker from "./MUIDatePicker";
 import SelectIssueTypeList from "./SelectIssueTypeList";
 
 interface AddDurationIssueDialogProps {
   issues: Issue[];
   setData: (args: SetDataArgs) => void;
-  setAlert: (alert: AlertState) => void;
-  setState: React.Dispatch<React.SetStateAction<AppState>>;
-  token: string | null;
 }
 
 type IssueType = { label: string; hint: string };
@@ -38,10 +36,9 @@ const MAX_COMMENT_LENGTH = 200;
 export default function AddDurationIssueDialog({
   issues,
   setData,
-  setAlert,
-  setState,
-  token,
 }: AddDurationIssueDialogProps) {
+  const { auth, setAlert, setState } = useAppContext();
+  const { token } = auth;
   const [open, setOpen] = useState(false);
 
   // список типов по выбранной задаче

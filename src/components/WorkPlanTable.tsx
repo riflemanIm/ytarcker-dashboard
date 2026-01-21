@@ -5,22 +5,16 @@ import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import dayjs from "dayjs";
 import { FC, useEffect, useMemo, useState } from "react";
 import IssueDisplay from "./IssueDisplay";
+import { useTableTimePlanSelectors } from "@/hooks/useTableTimePlanSelectors";
 
-interface WorkPlanTableProps {
-  sprintId: number | null;
-  trackerUids: string[];
-  projectIds: number[];
-  roleIds: number[];
-  groupIds: number[];
-}
-
-const WorkPlanTable: FC<WorkPlanTableProps> = ({
-  sprintId,
-  trackerUids,
-  projectIds,
-  roleIds,
-  groupIds,
-}) => {
+const WorkPlanTable: FC = () => {
+  const {
+    sprintId,
+    trackerUids,
+    projectIds,
+    roleIds,
+    groupIds,
+  } = useTableTimePlanSelectors();
   const [rows, setRows] = useState<WorkPlanItem[]>([]);
   const [loading, setLoading] = useState(false);
   const isSprintReady = sprintId != null;

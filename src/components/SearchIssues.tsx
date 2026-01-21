@@ -274,6 +274,7 @@ const SearchIssues = ({ token }: SearchIssuesProps) => {
         gap: 2,
       }}
     >
+      <Typography variant="h5">Поиск по задачам</Typography>
       <Stack
         component="form"
         direction={{ xs: "column", md: "row" }}

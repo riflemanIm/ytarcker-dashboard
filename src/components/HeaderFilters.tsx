@@ -8,6 +8,11 @@ import FetchModeSwitch from "./FetchModeSwitch";
 import ReportDateRange from "./ReportDateRange";
 import ToggleViewButton from "./ToggleViewButton";
 import WeekNavigator from "./WeekNavigator";
+import SelectGroupList from "./SelectGroupList";
+import SelectGroupPatientsList from "./SelectGroupPatientsList";
+import SelectProjectList from "./SelectProjectList";
+import SelectRoleList from "./SelectRoleList";
+import SelectSprintList from "./SelectSprintList";
 
 export interface WeekNavigationProps {
   start: dayjs.Dayjs;
@@ -75,6 +80,30 @@ const HeaderFilters: FC<HeaderFiltersProps> = ({
         onThisMonth={reportRange.onThisMonth}
         onNextMonth={reportRange.onNextMonth}
       />
+    ) : viewMode === "table_time_plan" ? (
+      <Stack
+        direction="row"
+        spacing={1}
+        alignItems="center"
+        flexWrap="wrap"
+        sx={{ overflowX: "auto", width: "100%" }}
+      >
+        <Box sx={{ minWidth: 160, flex: "0 0 auto" }}>
+          <SelectSprintList />
+        </Box>
+        <Box sx={{ minWidth: 160, flex: "0 0 auto" }}>
+          <SelectGroupList />
+        </Box>
+        <Box sx={{ minWidth: 160, flex: "0 0 auto" }}>
+          <SelectGroupPatientsList />
+        </Box>
+        <Box sx={{ minWidth: 160, flex: "0 0 auto" }}>
+          <SelectRoleList />
+        </Box>
+        <Box sx={{ minWidth: 160, flex: "0 0 auto" }}>
+          <SelectProjectList />
+        </Box>
+      </Stack>
     ) : null;
 
   return (
@@ -83,7 +112,8 @@ const HeaderFilters: FC<HeaderFiltersProps> = ({
       spacing={2}
       alignItems="center"
       justifyContent="flex-start"
-      flexWrap={{ xs: "nowrap", sm: "wrap" }}
+      flexWrap="nowrap"
+      sx={{ overflowX: "auto", width: "100%" }}
     >
       {showAdminControls && (
         <Stack direction="row" spacing={2} alignItems="center">
@@ -91,7 +121,7 @@ const HeaderFilters: FC<HeaderFiltersProps> = ({
             <ToggleViewButton viewMode={viewMode} onChange={onViewModeChange} />
           </Box>
 
-          {showUserSelection && (
+          {showUserSelection && viewMode !== "table_time_plan" && (
             <>
               <Box>
                 <FetchModeSwitch
@@ -101,12 +131,13 @@ const HeaderFilters: FC<HeaderFiltersProps> = ({
                   disabled={!loaded}
                 />
               </Box>
+              {}
               {isEmpty(users) && !fetchByLogin ? (
-                <Alert severity="info" sx={{ flex: 1, minWidth: 160 }}>
+                <Alert severity="info" sx={{ flex: 1, minWidth: 260 }}>
                   Нет сотрудников за этот период
                 </Alert>
               ) : (
-                <Box sx={{ flex: 1, minWidth: 160 }}>
+                <Box sx={{ flex: 1, minWidth: 260 }}>
                   <AutocompleteUsers
                     userId={userId}
                     handleSelectedUsersChange={handleSelectedUsersChange}
@@ -123,9 +154,9 @@ const HeaderFilters: FC<HeaderFiltersProps> = ({
       {showRange && rangeFilters && (
         <Box
           sx={{
-            flex: 1,
-            width: { xs: "100%", sm: "auto" },
-            minWidth: { xs: "100%", sm: 260 },
+            flex: "0 1 auto",
+            width: "auto",
+            minWidth: 0,
           }}
         >
           {rangeFilters}

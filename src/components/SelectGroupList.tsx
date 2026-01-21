@@ -1,4 +1,5 @@
-import { TlGroup } from "@/types/global";
+import { getTlGroups } from "@/actions/data";
+import { useAppContext } from "@/context/AppContext";
 import {
   Checkbox,
   FormControl,
@@ -11,37 +12,68 @@ import {
   Stack,
   CircularProgress,
 } from "@mui/material";
-import React from "react";
+import React, { useEffect, useRef } from "react";
 
 interface SelectGroupListProps {
-  groups: TlGroup[];
-  handleGroupChange: (groupIds: string[]) => void;
-  selectedGroupIds?: string[];
   variant?: "standard" | "outlined" | "filled";
   margin?: "none" | "dense" | "normal";
   required?: boolean;
   error?: boolean;
   helperText?: string;
-  loading?: boolean;
 }
 
 const SelectGroupList: React.FC<SelectGroupListProps> = ({
-  groups,
-  handleGroupChange,
-  selectedGroupIds = [],
   variant = "outlined",
   margin = "normal",
   required = false,
   error = false,
   helperText,
-  loading = false,
 }) => {
+  const { tableTimePlanState, setTableTimePlanState } = useAppContext();
+  const { groups, loadingGroups, selectedGroupIds } = tableTimePlanState;
+  const hasFetchedRef = useRef(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (groups.length > 0) return;
+    if (hasFetchedRef.current) return;
+    hasFetchedRef.current = true;
+    setTableTimePlanState((prev) => ({ ...prev, loadingGroups: true }));
+    getTlGroups()
+      .then((data) => {
+        if (!isMounted) return;
+        const sorted = [...data].sort(
+          (a, b) => (a.sort_by ?? 0) - (b.sort_by ?? 0),
+        );
+        setTableTimePlanState((prev) => ({
+          ...prev,
+          groups: sorted,
+          loadingGroups: false,
+        }));
+      })
+      .catch((error) => {
+        console.error("[SelectGroupList] getTlGroups error:", error.message);
+        if (!isMounted) return;
+        hasFetchedRef.current = false;
+      })
+      .finally(() => {
+        setTableTimePlanState((prev) => ({ ...prev, loadingGroups: false }));
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [setTableTimePlanState, groups.length]);
+
   const handleChange = (e: SelectChangeEvent<string[]>) => {
     const value = e.target.value;
-    handleGroupChange(Array.isArray(value) ? value : []);
+    setTableTimePlanState((prev) => ({
+      ...prev,
+      selectedGroupIds: Array.isArray(value) ? value : [],
+    }));
   };
 
-  const disabled = loading || !groups || groups.length === 0;
+  const disabled = loadingGroups || !groups || groups.length === 0;
 
   return (
     <FormControl
@@ -79,7 +111,7 @@ const SelectGroupList: React.FC<SelectGroupListProps> = ({
         })}
       </Select>
 
-      {loading ? (
+      {loadingGroups ? (
         <FormHelperText>
           <Stack direction="row" spacing={1} alignItems="center">
             <CircularProgress size={16} />

@@ -1,4 +1,5 @@
-import { TlGroupPatient } from "@/types/global";
+import { getTlGroupPatients } from "@/actions/data";
+import { useAppContext } from "@/context/AppContext";
 import {
   Box,
   CircularProgress,
@@ -11,36 +12,105 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import React from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 
 interface SelectGroupPatientsListProps {
-  patients: TlGroupPatient[];
-  handlePatientChange: (patientUid: string) => void;
-  selectedPatientUid?: string | null;
   variant?: "standard" | "outlined" | "filled";
   margin?: "none" | "dense" | "normal";
   required?: boolean;
   error?: boolean;
   helperText?: string;
-  loading?: boolean;
 }
 
 const SelectGroupPatientsList: React.FC<SelectGroupPatientsListProps> = ({
-  patients,
-  handlePatientChange,
-  selectedPatientUid = "",
   variant = "outlined",
   margin = "normal",
   required = false,
   error = false,
   helperText,
-  loading = false,
 }) => {
+  const { tableTimePlanState, setTableTimePlanState } = useAppContext();
+  const {
+    groupPatients,
+    loadingPatients,
+    selectedGroupIds,
+    selectedPatientUid,
+  } = tableTimePlanState;
+  const lastGroupKeyRef = useRef<string>("");
+
+  const groupIds = useMemo(
+    () =>
+      selectedGroupIds
+        .map((id) => Number(id))
+        .filter((id) => Number.isFinite(id)),
+    [selectedGroupIds]
+  );
+
+  useEffect(() => {
+    let isMounted = true;
+
+    if (groupIds.length === 0) {
+      lastGroupKeyRef.current = "";
+      setTableTimePlanState((prev) => ({
+        ...prev,
+        groupPatients: [],
+        loadingPatients: false,
+        selectedPatientUid: "",
+      }));
+      return;
+    }
+
+    const groupKey = groupIds.join(",");
+    if (groupKey === lastGroupKeyRef.current) return;
+    lastGroupKeyRef.current = groupKey;
+    setTableTimePlanState((prev) => ({ ...prev, loadingPatients: true }));
+    getTlGroupPatients(groupIds)
+      .then((data) => {
+        if (!isMounted) return;
+        const sorted = [...data].sort(
+          (a, b) => (a.sort_by ?? 0) - (b.sort_by ?? 0),
+        );
+        setTableTimePlanState((prev) => {
+          const nextSelected = sorted.some(
+            (item) => item.trackerUid === prev.selectedPatientUid,
+          )
+            ? prev.selectedPatientUid
+            : "";
+          return {
+            ...prev,
+            groupPatients: sorted,
+            loadingPatients: false,
+            selectedPatientUid: nextSelected,
+          };
+        });
+      })
+      .catch((error) => {
+        console.error(
+          "[SelectGroupPatientsList] getTlGroupPatients error:",
+          error.message,
+        );
+        if (!isMounted) return;
+        lastGroupKeyRef.current = "";
+      })
+      .finally(() => {
+        setTableTimePlanState((prev) => ({ ...prev, loadingPatients: false }));
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [groupIds, setTableTimePlanState]);
+
   const handleChange = (e: SelectChangeEvent<string>) => {
-    handlePatientChange(e.target.value);
+    const patientUid = e.target.value;
+    setTableTimePlanState((prev) => ({
+      ...prev,
+      selectedPatientUid: patientUid,
+    }));
   };
 
-  const disabled = loading || !patients || patients.length === 0;
+  const disabled =
+    loadingPatients || !groupPatients || groupPatients.length === 0;
 
   return (
     <FormControl
@@ -61,7 +131,7 @@ const SelectGroupPatientsList: React.FC<SelectGroupPatientsListProps> = ({
         onChange={handleChange}
         sx={{ width: "auto" }}
       >
-        {(patients ?? []).map((item) => (
+        {(groupPatients ?? []).map((item) => (
           <MenuItem key={item.trackerUid} value={item.trackerUid}>
             <Box
               sx={{
@@ -87,7 +157,7 @@ const SelectGroupPatientsList: React.FC<SelectGroupPatientsListProps> = ({
         ))}
       </Select>
 
-      {loading ? (
+      {loadingPatients ? (
         <FormHelperText>
           <Stack direction="row" spacing={1} alignItems="center">
             <CircularProgress size={16} />
