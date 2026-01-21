@@ -31,13 +31,13 @@ const SelectSprintList: React.FC<SelectSprintListProps> = ({
 }) => {
   const { state: appState, dispatch } = useAppContext();
   const { tableTimePlanState } = appState;
-  const { sprins, selectedSprintId } = tableTimePlanState;
+  const { sprins, sprinsLoaded, selectedSprintId } = tableTimePlanState;
   const loading = !appState.state.loaded;
   const hasFetchedRef = useRef(false);
 
   useEffect(() => {
     let isMounted = true;
-    if (sprins.length > 0) return;
+    if (sprinsLoaded || sprins.length > 0) return;
     if (hasFetchedRef.current) return;
     hasFetchedRef.current = true;
     dispatch({
@@ -57,6 +57,7 @@ const SelectSprintList: React.FC<SelectSprintListProps> = ({
           payload: (prev) => ({
             ...prev,
             sprins: sorted,
+            sprinsLoaded: true,
             selectedSprintId:
               prev.selectedSprintId ||
               (defaultSprintId ? String(defaultSprintId) : ""),
@@ -67,6 +68,10 @@ const SelectSprintList: React.FC<SelectSprintListProps> = ({
         console.error("[SelectSprintList] getTlSprints error:", error.message);
         if (!isMounted) return;
         hasFetchedRef.current = false;
+        dispatch({
+          type: "setTableTimePlanState",
+          payload: (prev) => ({ ...prev, sprinsLoaded: false }),
+        });
       })
       .finally(() => {
         dispatch({
@@ -78,7 +83,7 @@ const SelectSprintList: React.FC<SelectSprintListProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [dispatch, sprins.length]);
+  }, [dispatch, sprins.length, sprinsLoaded]);
 
   const handleChange = (e: SelectChangeEvent<string>) => {
     const sprintId = e.target.value;

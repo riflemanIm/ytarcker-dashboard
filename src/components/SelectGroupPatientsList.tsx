@@ -35,6 +35,7 @@ const SelectGroupPatientsList: React.FC<SelectGroupPatientsListProps> = ({
     loadingPatients,
     selectedGroupIds,
     selectedPatientUid,
+    groupPatientsKey,
   } = appState.tableTimePlanState;
   const lastGroupKeyRef = useRef<string>("");
 
@@ -57,6 +58,7 @@ const SelectGroupPatientsList: React.FC<SelectGroupPatientsListProps> = ({
           ...prev,
           groupPatients: [],
           loadingPatients: false,
+          groupPatientsKey: "",
           selectedPatientUid: "",
         }),
       });
@@ -64,7 +66,9 @@ const SelectGroupPatientsList: React.FC<SelectGroupPatientsListProps> = ({
     }
 
     const groupKey = groupIds.join(",");
-    if (groupKey === lastGroupKeyRef.current) return;
+    if (groupKey === lastGroupKeyRef.current || groupKey === groupPatientsKey) {
+      return;
+    }
     lastGroupKeyRef.current = groupKey;
     dispatch({
       type: "setTableTimePlanState",
@@ -88,6 +92,7 @@ const SelectGroupPatientsList: React.FC<SelectGroupPatientsListProps> = ({
               ...prev,
               groupPatients: sorted,
               loadingPatients: false,
+              groupPatientsKey: groupKey,
               selectedPatientUid: nextSelected,
             };
           },
@@ -100,6 +105,10 @@ const SelectGroupPatientsList: React.FC<SelectGroupPatientsListProps> = ({
         );
         if (!isMounted) return;
         lastGroupKeyRef.current = "";
+        dispatch({
+          type: "setTableTimePlanState",
+          payload: (prev) => ({ ...prev, groupPatientsKey: "" }),
+        });
       })
       .finally(() => {
         dispatch({
@@ -111,7 +120,7 @@ const SelectGroupPatientsList: React.FC<SelectGroupPatientsListProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [dispatch, groupIds]);
+  }, [dispatch, groupIds, groupPatientsKey]);
 
   const handleChange = (e: SelectChangeEvent<string>) => {
     const patientUid = e.target.value;

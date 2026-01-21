@@ -30,13 +30,13 @@ const SelectProjectList: React.FC<SelectProjectListProps> = ({
   helperText,
 }) => {
   const { state: appState, dispatch } = useAppContext();
-  const { projects, loadingProjects, selectedProjectIds } =
+  const { projects, projectsLoaded, loadingProjects, selectedProjectIds } =
     appState.tableTimePlanState;
   const hasFetchedRef = useRef(false);
 
   useEffect(() => {
     let isMounted = true;
-    if (projects.length > 0) return;
+    if (projectsLoaded || projects.length > 0) return;
     if (hasFetchedRef.current) return;
     hasFetchedRef.current = true;
     dispatch({
@@ -54,6 +54,7 @@ const SelectProjectList: React.FC<SelectProjectListProps> = ({
           payload: (prev) => ({
             ...prev,
             projects: sorted,
+            projectsLoaded: true,
             loadingProjects: false,
           }),
         });
@@ -62,6 +63,10 @@ const SelectProjectList: React.FC<SelectProjectListProps> = ({
         console.error("[SelectProjectList] getTlProjects error:", error.message);
         if (!isMounted) return;
         hasFetchedRef.current = false;
+        dispatch({
+          type: "setTableTimePlanState",
+          payload: (prev) => ({ ...prev, projectsLoaded: false }),
+        });
       })
       .finally(() => {
         dispatch({
@@ -73,7 +78,7 @@ const SelectProjectList: React.FC<SelectProjectListProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [dispatch, projects.length]);
+  }, [dispatch, projects.length, projectsLoaded]);
 
   const handleChange = (e: SelectChangeEvent<string[]>) => {
     const value = e.target.value;

@@ -6,7 +6,6 @@ import { User, ViewMode } from "@/types/global";
 import AutocompleteUsers from "./AutocompleteUsers";
 import FetchModeSwitch from "./FetchModeSwitch";
 import ReportDateRange from "./ReportDateRange";
-import ToggleViewButton from "./ToggleViewButton";
 import WeekNavigator from "./WeekNavigator";
 import SelectGroupList from "./SelectGroupList";
 import SelectGroupPatientsList from "./SelectGroupPatientsList";
@@ -37,7 +36,6 @@ interface HeaderFiltersProps {
   viewMode: ViewMode;
   weekNavigation: WeekNavigationProps;
   reportRange: ReportRangeProps;
-  onViewModeChange: (mode: ViewMode) => void;
   fetchByLogin: boolean;
   login: string | null | undefined;
   onToggleFetchMode: () => void;
@@ -54,7 +52,6 @@ const HeaderFilters: FC<HeaderFiltersProps> = ({
   viewMode,
   weekNavigation,
   reportRange,
-  onViewModeChange,
   fetchByLogin,
   login,
   onToggleFetchMode,
@@ -117,10 +114,6 @@ const HeaderFilters: FC<HeaderFiltersProps> = ({
     >
       {showAdminControls && (
         <Stack direction="row" spacing={2} alignItems="center">
-          <Box>
-            <ToggleViewButton viewMode={viewMode} onChange={onViewModeChange} />
-          </Box>
-
           {showUserSelection && viewMode !== "table_time_plan" && (
             <>
               <Box>

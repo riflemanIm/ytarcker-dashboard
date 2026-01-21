@@ -8,6 +8,7 @@ import HeaderFilters, {
   WeekNavigationProps,
 } from "./HeaderFilters";
 import LogInOut from "./LogInOut";
+import ToggleViewButton from "./ToggleViewButton";
 
 interface AppHeaderProps {
   isSuperUser: boolean;
@@ -80,6 +81,10 @@ const AppHeader: FC<AppHeaderProps> = ({
           alignItems: "center",
         })}
       >
+        {" "}
+        <Box sx={{ display: "flex", justifyContent: "flex-start" }}>
+          <ToggleViewButton viewMode={viewMode} onChange={onViewModeChange} />
+        </Box>
         <HeaderFilters
           showAdminControls={showAdminControls}
           showRange={showRange}
@@ -87,7 +92,6 @@ const AppHeader: FC<AppHeaderProps> = ({
           viewMode={viewMode}
           weekNavigation={weekNavigation}
           reportRange={reportRange}
-          onViewModeChange={onViewModeChange}
           fetchByLogin={fetchByLogin}
           login={login}
           onToggleFetchMode={onToggleFetchMode}
@@ -96,7 +100,6 @@ const AppHeader: FC<AppHeaderProps> = ({
           userId={userId}
           handleSelectedUsersChange={handleSelectedUsersChange}
         />
-
         <Stack
           direction={{ xs: "row-reverse", md: "row" }}
           spacing={2}

@@ -30,13 +30,13 @@ const SelectRoleList: React.FC<SelectRoleListProps> = ({
   helperText,
 }) => {
   const { state: appState, dispatch } = useAppContext();
-  const { roles, loadingRoles, selectedRoleIds } =
+  const { roles, rolesLoaded, loadingRoles, selectedRoleIds } =
     appState.tableTimePlanState;
   const hasFetchedRef = useRef(false);
 
   useEffect(() => {
     let isMounted = true;
-    if (roles.length > 0) return;
+    if (rolesLoaded || roles.length > 0) return;
     if (hasFetchedRef.current) return;
     hasFetchedRef.current = true;
     dispatch({
@@ -54,6 +54,7 @@ const SelectRoleList: React.FC<SelectRoleListProps> = ({
           payload: (prev) => ({
             ...prev,
             roles: sorted,
+            rolesLoaded: true,
             loadingRoles: false,
           }),
         });
@@ -62,6 +63,10 @@ const SelectRoleList: React.FC<SelectRoleListProps> = ({
         console.error("[SelectRoleList] getTlRoles error:", error.message);
         if (!isMounted) return;
         hasFetchedRef.current = false;
+        dispatch({
+          type: "setTableTimePlanState",
+          payload: (prev) => ({ ...prev, rolesLoaded: false }),
+        });
       })
       .finally(() => {
         dispatch({
@@ -73,7 +78,7 @@ const SelectRoleList: React.FC<SelectRoleListProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [dispatch, roles.length]);
+  }, [dispatch, roles.length, rolesLoaded]);
 
   const handleChange = (e: SelectChangeEvent<string[]>) => {
     const value = e.target.value;

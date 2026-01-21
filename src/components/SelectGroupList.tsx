@@ -30,13 +30,13 @@ const SelectGroupList: React.FC<SelectGroupListProps> = ({
   helperText,
 }) => {
   const { state: appState, dispatch } = useAppContext();
-  const { groups, loadingGroups, selectedGroupIds } =
+  const { groups, groupsLoaded, loadingGroups, selectedGroupIds } =
     appState.tableTimePlanState;
   const hasFetchedRef = useRef(false);
 
   useEffect(() => {
     let isMounted = true;
-    if (groups.length > 0) return;
+    if (groupsLoaded || groups.length > 0) return;
     if (hasFetchedRef.current) return;
     hasFetchedRef.current = true;
     dispatch({
@@ -54,6 +54,7 @@ const SelectGroupList: React.FC<SelectGroupListProps> = ({
           payload: (prev) => ({
             ...prev,
             groups: sorted,
+            groupsLoaded: true,
             loadingGroups: false,
           }),
         });
@@ -62,6 +63,10 @@ const SelectGroupList: React.FC<SelectGroupListProps> = ({
         console.error("[SelectGroupList] getTlGroups error:", error.message);
         if (!isMounted) return;
         hasFetchedRef.current = false;
+        dispatch({
+          type: "setTableTimePlanState",
+          payload: (prev) => ({ ...prev, groupsLoaded: false }),
+        });
       })
       .finally(() => {
         dispatch({
@@ -73,7 +78,7 @@ const SelectGroupList: React.FC<SelectGroupListProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [dispatch, groups.length]);
+  }, [dispatch, groups.length, groupsLoaded]);
 
   const handleChange = (e: SelectChangeEvent<string[]>) => {
     const value = e.target.value;

@@ -131,10 +131,15 @@ export interface AppState {
 
 export interface TableTimePlanState {
   sprins: TlSprint[];
+  sprinsLoaded: boolean;
   groups: TlGroup[];
+  groupsLoaded: boolean;
   roles: TlRole[];
+  rolesLoaded: boolean;
   projects: TlProject[];
+  projectsLoaded: boolean;
   groupPatients: TlGroupPatient[];
+  groupPatientsKey: string;
   loadingGroups: boolean;
   loadingRoles: boolean;
   loadingProjects: boolean;

@@ -84,10 +84,15 @@ const initialReportFrom = dayjs().startOf("month");
 const initialReportTo = dayjs().endOf("month");
 const initialTableTimePlanState: TableTimePlanState = {
   sprins: [],
+  sprinsLoaded: false,
   groups: [],
+  groupsLoaded: false,
   roles: [],
+  rolesLoaded: false,
   projects: [],
+  projectsLoaded: false,
   groupPatients: [],
+  groupPatientsKey: "",
   loadingGroups: false,
   loadingRoles: false,
   loadingProjects: false,
