@@ -68,6 +68,26 @@ export interface TaskListItem {
   WorkNameDict: string;
 }
 
+export interface WorkPlanItem {
+  YT_TL_WORKPLAN_ID: number;
+  IsPlan: string;
+  Deadline: string | null;
+  Priority: string;
+  TaskKey: string;
+  TaskName: string;
+  WorkName: string;
+  WorkDone: boolean;
+  EstimateTimeDays: number;
+  SpentTimeDays: number;
+  RemainTimeDays: number;
+  ProjectName: string;
+  checklistItemId?: string | null;
+  ProjectId: number;
+  CheckListAssignee: string;
+  trackerUid: string;
+  WorkNameDict: string;
+}
+
 export interface DataItem {
   id: string;
   duration: string;

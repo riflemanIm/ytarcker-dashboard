@@ -1,39 +1,12 @@
 import RefreshIcon from "@mui/icons-material/Refresh";
-import {
-  Alert,
-  Box,
-  IconButton,
-  Paper,
-  Stack,
-  useMediaQuery,
-  useTheme,
-} from "@mui/material";
-import dayjs from "dayjs";
+import { Box, IconButton, Paper, Stack, useMediaQuery, useTheme } from "@mui/material";
 import { FC } from "react";
-import isEmpty from "@/helpers";
 import { AuthState, User, ViewMode } from "@/types/global";
-import AutocompleteUsers from "./AutocompleteUsers";
-import FetchModeSwitch from "./FetchModeSwitch";
+import HeaderFilters, {
+  ReportRangeProps,
+  WeekNavigationProps,
+} from "./HeaderFilters";
 import LogInOut from "./LogInOut";
-import ReportDateRange from "./ReportDateRange";
-import ToggleViewButton from "./ToggleViewButton";
-import WeekNavigator from "./WeekNavigator";
-
-interface WeekNavigationProps {
-  start: dayjs.Dayjs;
-  end: dayjs.Dayjs;
-  onPrevious: () => void;
-  onNext: () => void;
-  disableNext: boolean;
-}
-
-interface ReportRangeProps {
-  from: dayjs.Dayjs;
-  to: dayjs.Dayjs;
-  onPrevMonth: () => void;
-  onThisMonth: () => void;
-  onNextMonth: () => void;
-}
 
 interface AppHeaderProps {
   token: string | null;
@@ -111,94 +84,22 @@ const AppHeader: FC<AppHeaderProps> = ({
           alignItems: "center",
         })}
       >
-        <Stack
-          direction={{ xs: "column", sm: "row" }}
-          spacing={2}
-          alignItems={{ xs: "flex-start", sm: "center" }}
-          justifyContent="flex-start"
-          flexWrap="wrap"
-          sx={{ minWidth: 220 }}
-        >
-          {showAdminControls && (
-            <Box sx={{ alignSelf: { xs: "flex-start", sm: "center" } }}>
-              <ToggleViewButton
-                viewMode={viewMode}
-                onChange={onViewModeChange}
-              />
-            </Box>
-          )}
-
-          {showRange && (
-            <Box
-              sx={{
-                flex: 1,
-                width: { xs: "100%", sm: "auto" },
-                minWidth: { xs: "100%", sm: 260 },
-              }}
-            >
-              {viewMode === "table_time_spend" ||
-              viewMode === "table_time_plan" ? (
-                <WeekNavigator
-                  start={weekNavigation.start}
-                  end={weekNavigation.end}
-                  onPrevious={weekNavigation.onPrevious}
-                  onNext={weekNavigation.onNext}
-                  disableNext={weekNavigation.disableNext}
-                />
-              ) : (
-                <ReportDateRange
-                  from={reportRange.from}
-                  to={reportRange.to}
-                  onPrevMonth={reportRange.onPrevMonth}
-                  onThisMonth={reportRange.onThisMonth}
-                  onNextMonth={reportRange.onNextMonth}
-                />
-              )}
-            </Box>
-          )}
-        </Stack>
-
-        {showUserSelection && (
-          <Stack
-            direction="row"
-            spacing={2}
-            alignItems="center"
-            flexWrap="nowrap"
-            sx={{
-              width: "100%",
-              minWidth: fetchByLogin ? 220 : undefined,
-              overflow: "auto",
-            }}
-          >
-            <Box sx={{ flexShrink: 0 }}>
-              <FetchModeSwitch
-                fetchByLogin={fetchByLogin}
-                login={login ?? ""}
-                onToggle={onToggleFetchMode}
-                disabled={!loaded}
-              />
-            </Box>
-            {isEmpty(users) && !fetchByLogin ? (
-              <Alert severity="info" sx={{ flex: 1, minWidth: 160 }}>
-                Нет сотрудников за этот период
-              </Alert>
-            ) : (
-              <Box
-                sx={{
-                  flex: 1,
-                  minWidth: 160,
-                }}
-              >
-                <AutocompleteUsers
-                  userId={userId}
-                  handleSelectedUsersChange={handleSelectedUsersChange}
-                  users={users}
-                  disabled={!loaded || fetchByLogin}
-                />
-              </Box>
-            )}
-          </Stack>
-        )}
+        <HeaderFilters
+          showAdminControls={showAdminControls}
+          showRange={showRange}
+          showUserSelection={showUserSelection}
+          viewMode={viewMode}
+          weekNavigation={weekNavigation}
+          reportRange={reportRange}
+          onViewModeChange={onViewModeChange}
+          fetchByLogin={fetchByLogin}
+          login={login}
+          onToggleFetchMode={onToggleFetchMode}
+          loaded={loaded}
+          users={users}
+          userId={userId}
+          handleSelectedUsersChange={handleSelectedUsersChange}
+        />
 
         <Stack
           direction={{ xs: "row-reverse", md: "row" }}

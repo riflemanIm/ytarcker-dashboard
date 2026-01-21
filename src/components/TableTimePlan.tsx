@@ -1,5 +1,4 @@
 import {
-  getTaskList,
   getTlGroupPatients,
   getTlGroups,
   getTlProjects,
@@ -7,7 +6,6 @@ import {
   getTlSprints,
 } from "@/actions/data";
 import {
-  TaskListItem,
   TlGroup,
   TlGroupPatient,
   TlProject,
@@ -15,14 +13,14 @@ import {
   TlSprint,
 } from "@/types/global";
 import { Box, Stack } from "@mui/material";
-import { DataGrid, GridColDef } from "@mui/x-data-grid";
-import dayjs from "dayjs";
 import { FC, useEffect, useMemo, useState } from "react";
 import SelectGroupList from "./SelectGroupList";
 import SelectGroupPatientsList from "./SelectGroupPatientsList";
 import SelectProjectList from "./SelectProjectList";
 import SelectRoleList from "./SelectRoleList";
 import SelectSprintList from "./SelectSprintList";
+import CheckPlanTable from "./CheckPlanTable";
+import WorkPlanTable from "./WorkPlanTable";
 
 interface TableTimePlanState {
   sprins: TlSprint[];
@@ -30,13 +28,11 @@ interface TableTimePlanState {
   roles: TlRole[];
   projects: TlProject[];
   groupPatients: TlGroupPatient[];
-  taskList: TaskListItem[];
   loading: boolean;
   loadingGroups: boolean;
   loadingRoles: boolean;
   loadingProjects: boolean;
   loadingPatients: boolean;
-  loadingTaskList: boolean;
   selectedSprintId: string;
   selectedGroupIds: string[];
   selectedRoleIds: string[];
@@ -51,13 +47,11 @@ const TableTimePlan: FC = () => {
     roles: [],
     projects: [],
     groupPatients: [],
-    taskList: [],
     loading: false,
     loadingGroups: false,
     loadingRoles: false,
     loadingProjects: false,
     loadingPatients: false,
-    loadingTaskList: false,
     selectedSprintId: "",
     selectedGroupIds: [],
     selectedRoleIds: [],
@@ -225,47 +219,6 @@ const TableTimePlan: FC = () => {
     };
   }, [localState.selectedGroupIds]);
 
-  useEffect(() => {
-    let isMounted = true;
-    const trackerUids = localState.selectedPatientUid
-      ? [localState.selectedPatientUid]
-      : [];
-    const projectIds = localState.selectedProjectIds
-      .map((id) => Number(id))
-      .filter((id) => Number.isFinite(id));
-    const roleIds = localState.selectedRoleIds
-      .map((id) => Number(id))
-      .filter((id) => Number.isFinite(id));
-    const groupIds = localState.selectedGroupIds
-      .map((id) => Number(id))
-      .filter((id) => Number.isFinite(id));
-
-    setLocalState((prev) => ({ ...prev, loadingTaskList: true }));
-    getTaskList({ trackerUids, projectIds, roleIds, groupIds })
-      .then((data) => {
-        if (!isMounted) return;
-        setLocalState((prev) => ({
-          ...prev,
-          taskList: data,
-          loadingTaskList: false,
-        }));
-      })
-      .catch((error) => {
-        console.error("[TableTimePlan] getTaskList error:", error.message);
-        if (!isMounted) return;
-        setLocalState((prev) => ({ ...prev, loadingTaskList: false }));
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [
-    localState.selectedPatientUid,
-    localState.selectedProjectIds,
-    localState.selectedRoleIds,
-    localState.selectedGroupIds,
-  ]);
-
   const handleSprintChange = (sprintId: string) => {
     setLocalState((prev) => ({ ...prev, selectedSprintId: sprintId }));
   };
@@ -286,47 +239,36 @@ const TableTimePlan: FC = () => {
     setLocalState((prev) => ({ ...prev, selectedPatientUid: patientUid }));
   };
 
-  const taskListColumns = useMemo<GridColDef<TaskListItem>[]>(
-    () => [
-      { field: "TaskKey", headerName: "Ключ", flex: 1, minWidth: 120 },
-      { field: "TaskName", headerName: "Задача", flex: 2.5, minWidth: 220 },
-      { field: "WorkName", headerName: "Работа", flex: 1.5, minWidth: 160 },
-      {
-        field: "WorkNameDict",
-        headerName: "Тип работы",
-        flex: 1.5,
-        minWidth: 180,
-      },
-      {
-        field: "CheckListAssignee",
-        headerName: "Сотрудник",
-        flex: 1.5,
-        minWidth: 160,
-      },
-      {
-        field: "trackerUid",
-        headerName: "UID",
-        flex: 1,
-        minWidth: 140,
-      },
-      {
-        field: "WorkDays",
-        headerName: "Трудозатраты, дн.",
-        flex: 1,
-        minWidth: 140,
-      },
-      {
-        field: "Deadline",
-        headerName: "Дедлайн",
-        flex: 1,
-        minWidth: 120,
-        valueFormatter: (value: TaskListItem["Deadline"]) =>
-          value && dayjs(value).isValid()
-            ? dayjs(value).format("DD.MM.YYYY")
-            : "-",
-      },
-    ],
-    [],
+  const sprintId = useMemo(() => {
+    const parsed = Number(localState.selectedSprintId);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  }, [localState.selectedSprintId]);
+
+  const trackerUids = useMemo(
+    () =>
+      localState.selectedPatientUid ? [localState.selectedPatientUid] : [],
+    [localState.selectedPatientUid],
+  );
+  const projectIds = useMemo(
+    () =>
+      localState.selectedProjectIds
+        .map((id) => Number(id))
+        .filter((id) => Number.isFinite(id)),
+    [localState.selectedProjectIds],
+  );
+  const roleIds = useMemo(
+    () =>
+      localState.selectedRoleIds
+        .map((id) => Number(id))
+        .filter((id) => Number.isFinite(id)),
+    [localState.selectedRoleIds],
+  );
+  const groupIds = useMemo(
+    () =>
+      localState.selectedGroupIds
+        .map((id) => Number(id))
+        .filter((id) => Number.isFinite(id)),
+    [localState.selectedGroupIds],
   );
 
   return (
@@ -344,6 +286,12 @@ const TableTimePlan: FC = () => {
           selectedGroupIds={localState.selectedGroupIds}
           loading={localState.loadingGroups}
         />
+        <SelectGroupPatientsList
+          patients={localState.groupPatients}
+          handlePatientChange={handlePatientChange}
+          selectedPatientUid={localState.selectedPatientUid}
+          loading={localState.loadingPatients}
+        />
         <SelectRoleList
           roles={localState.roles}
           handleRoleChange={handleRoleChange}
@@ -356,25 +304,21 @@ const TableTimePlan: FC = () => {
           selectedProjectIds={localState.selectedProjectIds}
           loading={localState.loadingProjects}
         />
-        <SelectGroupPatientsList
-          patients={localState.groupPatients}
-          handlePatientChange={handlePatientChange}
-          selectedPatientUid={localState.selectedPatientUid}
-          loading={localState.loadingPatients}
-        />
       </Stack>
-      <Box sx={{ mt: 2, height: 600 }}>
-        <DataGrid
-          rows={localState.taskList.map((item) => ({
-            ...item,
-            id: item.checklistItemId,
-          }))}
-          columns={taskListColumns}
-          loading={localState.loadingTaskList}
-          pageSizeOptions={[20, 50, 100]}
-          disableColumnMenu
-        />
-      </Box>
+      <CheckPlanTable
+        sprintId={sprintId}
+        trackerUids={trackerUids}
+        projectIds={projectIds}
+        roleIds={roleIds}
+        groupIds={groupIds}
+      />
+      <WorkPlanTable
+        sprintId={sprintId}
+        trackerUids={trackerUids}
+        projectIds={projectIds}
+        roleIds={roleIds}
+        groupIds={groupIds}
+      />
     </Box>
   );
 };

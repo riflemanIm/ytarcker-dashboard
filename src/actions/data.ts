@@ -19,6 +19,7 @@ import {
   TlRole,
   TlSprint,
   TaskListItem,
+  WorkPlanItem,
 } from "@/types/global";
 import { handleLogout } from "@/components/LogInOut";
 
@@ -531,5 +532,54 @@ export const getTaskList = async (
   } catch (err: any) {
     console.error("[Ошибка в getTaskList]:", err.message);
     return [];
+  }
+};
+
+export interface WorkPlanFilters {
+  sprintId: number;
+  trackerUids?: string[];
+  projectIds?: number[];
+  roleIds?: number[];
+  groupIds?: number[];
+}
+
+export const getWorkPlan = async (
+  filters: WorkPlanFilters
+): Promise<WorkPlanItem[]> => {
+  try {
+    const res = await axios.post<WorkPlanItem[]>(
+      `${apiUrl}/api/tl_workplan`,
+      filters
+    );
+    return Array.isArray(res.data) ? res.data : [];
+  } catch (err: any) {
+    console.error("[Ошибка в getWorkPlan]:", err.message);
+    return [];
+  }
+};
+
+export interface SetWorkPlanArgs {
+  sprintId: number;
+  taskKey: string;
+  trackerUid: string;
+  checklistItemId?: string;
+  workName?: string;
+  deadline?: string | null;
+  estimateTimeDays?: number;
+  priority?: "Red" | "Orange" | "Green";
+}
+
+export const setWorkPlan = async (
+  payload: SetWorkPlanArgs
+): Promise<{ YT_TL_WORKPLAN_ID: number } | null> => {
+  try {
+    const res = await axios.post<{ YT_TL_WORKPLAN_ID: number }>(
+      `${apiUrl}/api/tl_workplan_add`,
+      payload
+    );
+    return res.data ?? null;
+  } catch (err: any) {
+    console.error("[Ошибка в setWorkPlan]:", err.message);
+    return null;
   }
 };

@@ -757,4 +757,136 @@ app.post("/api/tl_tasklist", async (req, res) => {
   }
 });
 
+app.post("/api/tl_workplan", async (req, res) => {
+  try {
+    const {
+      sprintId,
+      trackerUids = [],
+      projectIds = [],
+      roleIds = [],
+      groupIds = [],
+    } = req.body ?? {};
+
+    if (!Number.isInteger(sprintId)) {
+      return res.status(400).json({
+        message: "Missing or invalid field 'sprintId'. It must be an integer.",
+      });
+    }
+
+    const isValidTrackerUids =
+      Array.isArray(trackerUids) &&
+      trackerUids.every((id) => typeof id === "string");
+    const isValidProjectIds =
+      Array.isArray(projectIds) &&
+      projectIds.every((id) => Number.isInteger(id));
+    const isValidRoleIds =
+      Array.isArray(roleIds) && roleIds.every((id) => Number.isInteger(id));
+    const isValidGroupIds =
+      Array.isArray(groupIds) && groupIds.every((id) => Number.isInteger(id));
+
+    if (!isValidTrackerUids) {
+      return res.status(400).json({
+        message: "Field 'trackerUids' must be an array of strings.",
+      });
+    }
+    if (!isValidProjectIds) {
+      return res.status(400).json({
+        message: "Field 'projectIds' must be an array of integers.",
+      });
+    }
+    if (!isValidRoleIds) {
+      return res.status(400).json({
+        message: "Field 'roleIds' must be an array of integers.",
+      });
+    }
+    if (!isValidGroupIds) {
+      return res.status(400).json({
+        message: "Field 'groupIds' must be an array of integers.",
+      });
+    }
+
+    const resp = await axios.post(
+      "http://of-srv-apps-001.pmtech.ru:18005/acceptor/yandextracker/getworkplan",
+      { sprintId, trackerUids, projectIds, roleIds, groupIds },
+      {
+        timeout: 15000,
+      }
+    );
+
+    res.json(resp.data);
+  } catch (error) {
+    const status = error.response?.status || 500;
+    const payload = {
+      error: error.message,
+      code: error.code,
+      cause: error.cause,
+      upstreamStatus: error.response?.status,
+      upstreamData: error.response?.data,
+    };
+    console.error("[api/tl_workplan] upstream error:", payload);
+    res.status(status).json(payload);
+  }
+});
+
+app.post("/api/tl_workplan_add", async (req, res) => {
+  try {
+    const {
+      sprintId,
+      taskKey,
+      trackerUid,
+      checklistItemId,
+      workName,
+      deadline,
+      estimateTimeDays,
+      priority,
+    } = req.body ?? {};
+
+    if (!Number.isInteger(sprintId)) {
+      return res.status(400).json({
+        message: "Missing or invalid field 'sprintId'. It must be an integer.",
+      });
+    }
+    if (typeof taskKey !== "string" || taskKey.length === 0) {
+      return res.status(400).json({
+        message: "Missing or invalid field 'taskKey'. It must be a string.",
+      });
+    }
+    if (typeof trackerUid !== "string" || trackerUid.length === 0) {
+      return res.status(400).json({
+        message: "Missing or invalid field 'trackerUid'. It must be a string.",
+      });
+    }
+
+    const resp = await axios.post(
+      "http://of-srv-apps-001.pmtech.ru:18005/acceptor/yandextracker/setworkplan",
+      {
+        sprintId,
+        taskKey,
+        trackerUid,
+        checklistItemId,
+        workName,
+        deadline,
+        estimateTimeDays,
+        priority,
+      },
+      {
+        timeout: 15000,
+      }
+    );
+
+    res.json(resp.data);
+  } catch (error) {
+    const status = error.response?.status || 500;
+    const payload = {
+      error: error.message,
+      code: error.code,
+      cause: error.cause,
+      upstreamStatus: error.response?.status,
+      upstreamData: error.response?.data,
+    };
+    console.error("[api/tl_workplan_add] upstream error:", payload);
+    res.status(status).json(payload);
+  }
+});
+
 app.listen(4000, () => console.log("Proxy server running on port 4000"));
