@@ -2,7 +2,7 @@ import {
   createContext,
   useContext,
   useMemo,
-  useState,
+  useReducer,
   type Dispatch,
   type FC,
   type PropsWithChildren,
@@ -18,25 +18,38 @@ import type {
 } from "@/types/global";
 
 type AppContextValue = {
-  auth: AuthState;
-  setAuth: Dispatch<SetStateAction<AuthState>>;
-  state: AppState;
-  setState: Dispatch<SetStateAction<AppState>>;
-  alert: AlertState;
-  setAlert: Dispatch<SetStateAction<AlertState>>;
-  viewMode: ViewMode;
-  setViewMode: Dispatch<SetStateAction<ViewMode>>;
-  weekOffset: number;
-  setWeekOffset: Dispatch<SetStateAction<number>>;
-  reportFrom: dayjs.Dayjs;
-  setReportFrom: Dispatch<SetStateAction<dayjs.Dayjs>>;
-  reportTo: dayjs.Dayjs;
-  setReportTo: Dispatch<SetStateAction<dayjs.Dayjs>>;
-  tableTimePlanState: TableTimePlanState;
-  setTableTimePlanState: Dispatch<SetStateAction<TableTimePlanState>>;
+  state: AppContextState;
+  dispatch: Dispatch<AppAction>;
 };
 
+export type AppContextState = {
+  auth: AuthState;
+  state: AppState;
+  alert: AlertState;
+  viewMode: ViewMode;
+  weekOffset: number;
+  reportFrom: dayjs.Dayjs;
+  reportTo: dayjs.Dayjs;
+  tableTimePlanState: TableTimePlanState;
+};
+
+export type AppAction =
+  | { type: "setAuth"; payload: SetStateAction<AuthState> }
+  | { type: "setState"; payload: SetStateAction<AppState> }
+  | { type: "setAlert"; payload: SetStateAction<AlertState> }
+  | { type: "setViewMode"; payload: SetStateAction<ViewMode> }
+  | { type: "setWeekOffset"; payload: SetStateAction<number> }
+  | { type: "setReportFrom"; payload: SetStateAction<dayjs.Dayjs> }
+  | { type: "setReportTo"; payload: SetStateAction<dayjs.Dayjs> }
+  | {
+      type: "setTableTimePlanState";
+      payload: SetStateAction<TableTimePlanState>;
+    };
+
 const AppContext = createContext<AppContextValue | undefined>(undefined);
+
+const applySetState = <T,>(current: T, next: SetStateAction<T>): T =>
+  typeof next === "function" ? (next as (prev: T) => T)(current) : next;
 
 const getInitialAuth = (): AuthState => {
   const token = localStorage.getItem("yandex_token");
@@ -86,47 +99,66 @@ const initialTableTimePlanState: TableTimePlanState = {
   selectedPatientUid: "",
 };
 
-export const AppProvider: FC<PropsWithChildren> = ({ children }) => {
-  const [auth, setAuth] = useState<AuthState>(getInitialAuth);
-  const [state, setState] = useState<AppState>(initialState);
-  const [alert, setAlert] = useState<AlertState>(initialAlert);
-  const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode);
-  const [weekOffset, setWeekOffset] = useState<number>(initialWeekOffset);
-  const [reportFrom, setReportFrom] = useState<dayjs.Dayjs>(initialReportFrom);
-  const [reportTo, setReportTo] = useState<dayjs.Dayjs>(initialReportTo);
-  const [tableTimePlanState, setTableTimePlanState] =
-    useState<TableTimePlanState>(initialTableTimePlanState);
+const initAppContextState = (): AppContextState => ({
+  auth: getInitialAuth(),
+  state: initialState,
+  alert: initialAlert,
+  viewMode: initialViewMode,
+  weekOffset: initialWeekOffset,
+  reportFrom: initialReportFrom,
+  reportTo: initialReportTo,
+  tableTimePlanState: initialTableTimePlanState,
+});
 
-  const value = useMemo(
-    () => ({
-      auth,
-      setAuth,
-      state,
-      setState,
-      alert,
-      setAlert,
-      viewMode,
-      setViewMode,
-      weekOffset,
-      setWeekOffset,
-      reportFrom,
-      setReportFrom,
-      reportTo,
-      setReportTo,
-      tableTimePlanState,
-      setTableTimePlanState,
-    }),
-    [
-      auth,
-      state,
-      alert,
-      viewMode,
-      weekOffset,
-      reportFrom,
-      reportTo,
-      tableTimePlanState,
-    ]
+function appReducer(state: AppContextState, action: AppAction): AppContextState {
+  switch (action.type) {
+    case "setAuth":
+      return { ...state, auth: applySetState(state.auth, action.payload) };
+    case "setState":
+      return { ...state, state: applySetState(state.state, action.payload) };
+    case "setAlert":
+      return { ...state, alert: applySetState(state.alert, action.payload) };
+    case "setViewMode":
+      return {
+        ...state,
+        viewMode: applySetState(state.viewMode, action.payload),
+      };
+    case "setWeekOffset":
+      return {
+        ...state,
+        weekOffset: applySetState(state.weekOffset, action.payload),
+      };
+    case "setReportFrom":
+      return {
+        ...state,
+        reportFrom: applySetState(state.reportFrom, action.payload),
+      };
+    case "setReportTo":
+      return {
+        ...state,
+        reportTo: applySetState(state.reportTo, action.payload),
+      };
+    case "setTableTimePlanState":
+      return {
+        ...state,
+        tableTimePlanState: applySetState(
+          state.tableTimePlanState,
+          action.payload
+        ),
+      };
+    default:
+      return state;
+  }
+}
+
+export const AppProvider: FC<PropsWithChildren> = ({ children }) => {
+  const [appState, dispatch] = useReducer(
+    appReducer,
+    undefined,
+    initAppContextState
   );
+
+  const value = useMemo(() => ({ state: appState, dispatch }), [appState]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 };

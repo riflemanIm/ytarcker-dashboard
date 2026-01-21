@@ -22,55 +22,66 @@ import isEmpty, {
 import { DataItem } from "./types/global";
 
 const YandexTracker: FC = () => {
-  const {
-    auth,
-    state,
-    alert,
-    setAlert,
-    setState,
-    viewMode,
-    setViewMode,
-    weekOffset,
-    setWeekOffset,
-    reportFrom,
-    setReportFrom,
-    reportTo,
-    setReportTo,
-  } = useAppContext();
+  const { state: appState, dispatch } = useAppContext();
+  const { auth, state, alert, viewMode, weekOffset, reportFrom, reportTo } =
+    appState;
   const { token, login } = auth;
   const handleCloseAlert = useCallback(
-    () => setAlert({ open: false, severity: "", message: "" }),
-    [],
+    () =>
+      dispatch({
+        type: "setAlert",
+        payload: { open: false, severity: "", message: "" },
+      }),
+    [dispatch],
   );
 
   const toggleFetchMode = () => {
-    setState((prev) => ({
-      ...prev,
-      fetchByLogin: !prev.fetchByLogin,
-      userId: null,
-      data: [],
-    }));
+    dispatch({
+      type: "setState",
+      payload: (prev) => ({
+        ...prev,
+        fetchByLogin: !prev.fetchByLogin,
+        userId: null,
+        data: [],
+      }),
+    });
   };
 
   // НЕДЕЛЬНЫЙ РЕЖИМ (TaskTable)
-  const handlePrevious = () => setWeekOffset((prev) => prev + 1);
-  const handleNext = () => setWeekOffset((prev) => prev - 1);
   const { start, end } = getWeekRange(weekOffset);
 
   // РЕЖИМ ОТЧЁТА: произвольный диапазон дат (по умолчанию текущий месяц)
   const handlePrevReportMonth = () => {
-    setReportFrom((prev) => prev.add(-1, "month").startOf("month"));
-    setReportTo((prev) => prev.add(-1, "month").endOf("month"));
+    dispatch({
+      type: "setReportFrom",
+      payload: (prev) => prev.add(-1, "month").startOf("month"),
+    });
+    dispatch({
+      type: "setReportTo",
+      payload: (prev) => prev.add(-1, "month").endOf("month"),
+    });
   };
 
   const handleThisReportMonth = () => {
-    setReportFrom(dayjs().startOf("month"));
-    setReportTo(dayjs().endOf("month"));
+    dispatch({
+      type: "setReportFrom",
+      payload: dayjs().startOf("month"),
+    });
+    dispatch({
+      type: "setReportTo",
+      payload: dayjs().endOf("month"),
+    });
   };
 
   const handleNextReportMonth = () => {
-    setReportFrom((prev) => prev.add(1, "month").startOf("month"));
-    setReportTo((prev) => prev.add(1, "month").endOf("month"));
+    dispatch({
+      type: "setReportFrom",
+      payload: (prev) => prev.add(1, "month").startOf("month"),
+    });
+    dispatch({
+      type: "setReportTo",
+      payload: (prev) => prev.add(1, "month").endOf("month"),
+    });
   };
 
   const fetchForActiveRange = useCallback(() => {
@@ -80,16 +91,20 @@ const YandexTracker: FC = () => {
     const rangeStart = viewMode === "report" ? reportFrom : start;
     const rangeEnd = viewMode === "report" ? reportTo : end;
 
-    setState((prev) => ({ ...prev, data: [] }));
+    dispatch({
+      type: "setState",
+      payload: (prev) => ({ ...prev, data: [] }),
+    });
     getData({
       userId: state.fetchByLogin ? null : state.userId,
-      setState,
+      dispatch,
       token,
       start: rangeStart.format("YYYY-MM-DD"),
       end: rangeEnd.format("YYYY-MM-DD"),
       login: state.fetchByLogin && login ? login : undefined,
     });
   }, [
+    dispatch,
     login,
     state.userId,
     token,
@@ -102,9 +117,9 @@ const YandexTracker: FC = () => {
   ]);
   useEffect(() => {
     if (viewMode === "table_time_spend") {
-      getUserIssues({ setState, token, userId: state.userId, login });
+      getUserIssues({ dispatch, token, userId: state.userId, login });
     }
-  }, [viewMode]);
+  }, [dispatch, login, state.userId, token, viewMode]);
 
   useEffect(() => {
     fetchForActiveRange();
@@ -119,7 +134,10 @@ const YandexTracker: FC = () => {
   ]);
 
   const handleSelectedUsersChange = (userId: string | null) => {
-    setState((prev) => ({ ...prev, userId }));
+    dispatch({
+      type: "setState",
+      payload: (prev) => ({ ...prev, userId }),
+    });
   };
 
   const handleRefresh = () => {
@@ -146,12 +164,22 @@ const YandexTracker: FC = () => {
             isSuperUser={!!(login && isSuperLogin(login))}
             loaded={state.loaded}
             viewMode={viewMode}
-            onViewModeChange={setViewMode}
+            onViewModeChange={(mode) =>
+              dispatch({ type: "setViewMode", payload: mode })
+            }
             weekNavigation={{
               start,
               end,
-              onPrevious: handlePrevious,
-              onNext: handleNext,
+              onPrevious: () =>
+                dispatch({
+                  type: "setWeekOffset",
+                  payload: (prev) => prev + 1,
+                }),
+              onNext: () =>
+                dispatch({
+                  type: "setWeekOffset",
+                  payload: (prev) => prev - 1,
+                }),
               disableNext: weekOffset === -6,
             }}
             reportRange={{

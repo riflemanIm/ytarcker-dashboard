@@ -26,12 +26,12 @@ const VIEW_MODE_OPTIONS: Record<
   table_time_spend: {
     icon: TodayIcon,
     tooltip: "Показать таблицу списания времени за неделю",
-    menuLabel: "Таблица списания",
+    menuLabel: "Списания",
   },
   table_time_plan: {
     icon: EventNoteIcon,
-    tooltip: "Показать таблицу планирования времени",
-    menuLabel: "Таблица планирования",
+    tooltip: "Показать планирования времени",
+    menuLabel: "Планирование",
   },
   report: {
     icon: DateRangeIcon,

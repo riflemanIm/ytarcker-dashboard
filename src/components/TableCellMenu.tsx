@@ -64,8 +64,8 @@ const TableCellMenu: FC<EditableCellMenuProps> = ({
   deleteData,
   setData,
 }) => {
-  const { auth, setAlert, setState } = useAppContext();
-  const { token } = auth;
+  const { state, dispatch } = useAppContext();
+  const { token } = state.auth;
   // --- данные из бэка
   const [localState, setLocalState] = useState<TaskItemMenu>({
     issue_type_list: [],
@@ -345,8 +345,7 @@ const TableCellMenu: FC<EditableCellMenuProps> = ({
       );
 
       setData({
-        setState,
-        setAlert,
+        dispatch,
         token,
         issueId: menuState.issueId,
         duration: normalizeDuration(row.durationRaw ?? ""),
@@ -362,8 +361,7 @@ const TableCellMenu: FC<EditableCellMenuProps> = ({
     rows,
     issueTypes,
     setData,
-    setState,
-    setAlert,
+    dispatch,
     token,
     menuState.issueId,
     onClose,
@@ -445,8 +443,7 @@ const TableCellMenu: FC<EditableCellMenuProps> = ({
 
     setData({
       dateCell: menuState.dateField || undefined,
-      setState,
-      setAlert,
+      dispatch,
       token,
       issueId: menuState.issueId,
       duration: normalizeDuration(newEntry.duration ?? ""),
@@ -463,8 +460,7 @@ const TableCellMenu: FC<EditableCellMenuProps> = ({
     setData,
     menuState.dateField,
     menuState.issueId,
-    setState,
-    setAlert,
+    dispatch,
     token,
     onClose,
   ]);
@@ -475,29 +471,27 @@ const TableCellMenu: FC<EditableCellMenuProps> = ({
     if (ids.length) {
       deleteData({
         token,
-        setState,
-        setAlert,
+        dispatch,
         issueId: menuState.issueId,
         ids,
       });
     }
     setOpenConfirm(false);
     onClose();
-  }, [menuState, token, deleteData, setState, setAlert, onClose]);
+  }, [menuState, token, deleteData, dispatch, onClose]);
 
   const handleCancelDeleteAll = useCallback(() => setOpenConfirm(false), []);
   const handleDeleteItem = useCallback(
     (item: DurationItem) => {
       deleteData({
         token,
-        setState,
-        setAlert,
+        dispatch,
         issueId: menuState.issueId,
         ids: [item.id],
       });
       onClose();
     },
-    [menuState.issueId, token, deleteData, setState, setAlert, onClose]
+    [menuState.issueId, token, deleteData, dispatch, onClose]
   );
 
   return (

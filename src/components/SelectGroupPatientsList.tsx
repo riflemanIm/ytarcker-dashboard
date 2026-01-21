@@ -29,13 +29,13 @@ const SelectGroupPatientsList: React.FC<SelectGroupPatientsListProps> = ({
   error = false,
   helperText,
 }) => {
-  const { tableTimePlanState, setTableTimePlanState } = useAppContext();
+  const { state: appState, dispatch } = useAppContext();
   const {
     groupPatients,
     loadingPatients,
     selectedGroupIds,
     selectedPatientUid,
-  } = tableTimePlanState;
+  } = appState.tableTimePlanState;
   const lastGroupKeyRef = useRef<string>("");
 
   const groupIds = useMemo(
@@ -51,37 +51,46 @@ const SelectGroupPatientsList: React.FC<SelectGroupPatientsListProps> = ({
 
     if (groupIds.length === 0) {
       lastGroupKeyRef.current = "";
-      setTableTimePlanState((prev) => ({
-        ...prev,
-        groupPatients: [],
-        loadingPatients: false,
-        selectedPatientUid: "",
-      }));
+      dispatch({
+        type: "setTableTimePlanState",
+        payload: (prev) => ({
+          ...prev,
+          groupPatients: [],
+          loadingPatients: false,
+          selectedPatientUid: "",
+        }),
+      });
       return;
     }
 
     const groupKey = groupIds.join(",");
     if (groupKey === lastGroupKeyRef.current) return;
     lastGroupKeyRef.current = groupKey;
-    setTableTimePlanState((prev) => ({ ...prev, loadingPatients: true }));
+    dispatch({
+      type: "setTableTimePlanState",
+      payload: (prev) => ({ ...prev, loadingPatients: true }),
+    });
     getTlGroupPatients(groupIds)
       .then((data) => {
         if (!isMounted) return;
         const sorted = [...data].sort(
           (a, b) => (a.sort_by ?? 0) - (b.sort_by ?? 0),
         );
-        setTableTimePlanState((prev) => {
-          const nextSelected = sorted.some(
-            (item) => item.trackerUid === prev.selectedPatientUid,
-          )
-            ? prev.selectedPatientUid
-            : "";
-          return {
-            ...prev,
-            groupPatients: sorted,
-            loadingPatients: false,
-            selectedPatientUid: nextSelected,
-          };
+        dispatch({
+          type: "setTableTimePlanState",
+          payload: (prev) => {
+            const nextSelected = sorted.some(
+              (item) => item.trackerUid === prev.selectedPatientUid,
+            )
+              ? prev.selectedPatientUid
+              : "";
+            return {
+              ...prev,
+              groupPatients: sorted,
+              loadingPatients: false,
+              selectedPatientUid: nextSelected,
+            };
+          },
         });
       })
       .catch((error) => {
@@ -93,20 +102,26 @@ const SelectGroupPatientsList: React.FC<SelectGroupPatientsListProps> = ({
         lastGroupKeyRef.current = "";
       })
       .finally(() => {
-        setTableTimePlanState((prev) => ({ ...prev, loadingPatients: false }));
+        dispatch({
+          type: "setTableTimePlanState",
+          payload: (prev) => ({ ...prev, loadingPatients: false }),
+        });
       });
 
     return () => {
       isMounted = false;
     };
-  }, [groupIds, setTableTimePlanState]);
+  }, [dispatch, groupIds]);
 
   const handleChange = (e: SelectChangeEvent<string>) => {
     const patientUid = e.target.value;
-    setTableTimePlanState((prev) => ({
-      ...prev,
-      selectedPatientUid: patientUid,
-    }));
+    dispatch({
+      type: "setTableTimePlanState",
+      payload: (prev) => ({
+        ...prev,
+        selectedPatientUid: patientUid,
+      }),
+    });
   };
 
   const disabled =

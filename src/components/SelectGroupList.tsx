@@ -29,8 +29,9 @@ const SelectGroupList: React.FC<SelectGroupListProps> = ({
   error = false,
   helperText,
 }) => {
-  const { tableTimePlanState, setTableTimePlanState } = useAppContext();
-  const { groups, loadingGroups, selectedGroupIds } = tableTimePlanState;
+  const { state: appState, dispatch } = useAppContext();
+  const { groups, loadingGroups, selectedGroupIds } =
+    appState.tableTimePlanState;
   const hasFetchedRef = useRef(false);
 
   useEffect(() => {
@@ -38,18 +39,24 @@ const SelectGroupList: React.FC<SelectGroupListProps> = ({
     if (groups.length > 0) return;
     if (hasFetchedRef.current) return;
     hasFetchedRef.current = true;
-    setTableTimePlanState((prev) => ({ ...prev, loadingGroups: true }));
+    dispatch({
+      type: "setTableTimePlanState",
+      payload: (prev) => ({ ...prev, loadingGroups: true }),
+    });
     getTlGroups()
       .then((data) => {
         if (!isMounted) return;
         const sorted = [...data].sort(
           (a, b) => (a.sort_by ?? 0) - (b.sort_by ?? 0),
         );
-        setTableTimePlanState((prev) => ({
-          ...prev,
-          groups: sorted,
-          loadingGroups: false,
-        }));
+        dispatch({
+          type: "setTableTimePlanState",
+          payload: (prev) => ({
+            ...prev,
+            groups: sorted,
+            loadingGroups: false,
+          }),
+        });
       })
       .catch((error) => {
         console.error("[SelectGroupList] getTlGroups error:", error.message);
@@ -57,20 +64,26 @@ const SelectGroupList: React.FC<SelectGroupListProps> = ({
         hasFetchedRef.current = false;
       })
       .finally(() => {
-        setTableTimePlanState((prev) => ({ ...prev, loadingGroups: false }));
+        dispatch({
+          type: "setTableTimePlanState",
+          payload: (prev) => ({ ...prev, loadingGroups: false }),
+        });
       });
 
     return () => {
       isMounted = false;
     };
-  }, [setTableTimePlanState, groups.length]);
+  }, [dispatch, groups.length]);
 
   const handleChange = (e: SelectChangeEvent<string[]>) => {
     const value = e.target.value;
-    setTableTimePlanState((prev) => ({
-      ...prev,
-      selectedGroupIds: Array.isArray(value) ? value : [],
-    }));
+    dispatch({
+      type: "setTableTimePlanState",
+      payload: (prev) => ({
+        ...prev,
+        selectedGroupIds: Array.isArray(value) ? value : [],
+      }),
+    });
   };
 
   const disabled = loadingGroups || !groups || groups.length === 0;

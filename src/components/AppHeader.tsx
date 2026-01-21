@@ -1,5 +1,5 @@
 import RefreshIcon from "@mui/icons-material/Refresh";
-import { Box, IconButton, Paper, Stack, useMediaQuery, useTheme } from "@mui/material";
+import { Box, IconButton, Paper, Stack, useTheme } from "@mui/material";
 import { FC } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { User, ViewMode } from "@/types/global";
@@ -42,14 +42,13 @@ const AppHeader: FC<AppHeaderProps> = ({
   onRefresh,
   showRefresh,
 }) => {
-  const { auth } = useAppContext();
-  const { token, login } = auth;
+  const { state } = useAppContext();
+  const { token, login } = state.auth;
   const showControls = !!token && loaded;
   const showAdminControls = showControls && !!isSuperUser;
   const showRange = showControls && showRangeControls;
   const showUserSelection = showAdminControls && showRangeControls;
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   return (
     <Paper
@@ -71,7 +70,7 @@ const AppHeader: FC<AppHeaderProps> = ({
       <Box
         sx={(theme) => ({
           display: "grid",
-          gap: theme.spacing(isMobile ? 2 : 3),
+          gap: theme.spacing(3),
           gridTemplateColumns: {
             xs: "1fr",
             md: showUserSelection

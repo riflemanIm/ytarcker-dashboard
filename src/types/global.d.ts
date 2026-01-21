@@ -152,15 +152,6 @@ export type ViewMode =
   | "report"
   | "search";
 
-export interface GetDataArgs {
-  userId: string | null;
-  setState: React.Dispatch<React.SetStateAction<AppState>>;
-  token: string | null;
-  start: string;
-  end: string;
-  login?: string;
-}
-
 export type DayOfWeek =
   | "monday"
   | "tuesday"

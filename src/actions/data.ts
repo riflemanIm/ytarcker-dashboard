@@ -4,10 +4,8 @@ import timezone from "dayjs/plugin/timezone";
 import axios from "axios";
 import isEmpty from "@/helpers";
 import {
-  AlertState,
   AppState,
   DataItem,
-  GetDataArgs,
   Issue,
   IssueType,
   QueueInfo,
@@ -22,21 +20,34 @@ import {
   WorkPlanItem,
 } from "@/types/global";
 import { handleLogout } from "@/components/LogInOut";
+import type { AppAction } from "@/context/AppContext";
+import type { Dispatch } from "react";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
 const apiUrl: string = import.meta.env.VITE_APP_API_URL;
 
+type AppDispatch = Dispatch<AppAction>;
+
+type GetDataArgs = {
+  userId: string | null;
+  dispatch: AppDispatch;
+  token: string | null;
+  start: string;
+  end: string;
+  login?: string;
+};
+
 export const getData = async ({
   userId,
-  setState,
+  dispatch,
   token,
   start,
   end,
   login,
 }: GetDataArgs): Promise<void> => {
-  setState((prev) => ({ ...prev, loaded: false }));
+  dispatch({ type: "setState", payload: (prev) => ({ ...prev, loaded: false }) });
 
   try {
     // Проверяем обязательный токен
@@ -51,7 +62,10 @@ export const getData = async ({
     if (res.status !== 200) {
       throw new Error("Api get data error");
     }
-    setState((prev) => ({ ...prev, loaded: true, ...res.data }));
+    dispatch({
+      type: "setState",
+      payload: (prev) => ({ ...prev, loaded: true, ...res.data }),
+    });
   } catch (err: unknown) {
     if (axios.isAxiosError(err) && err.response?.status === 422) {
       //handleLogout();
@@ -59,14 +73,16 @@ export const getData = async ({
 
     const errorMessage = err instanceof Error ? err.message : String(err);
     console.error("getData error:", errorMessage);
-    setState((prev) => ({ ...prev, loaded: true }));
+    dispatch({
+      type: "setState",
+      payload: (prev) => ({ ...prev, loaded: true }),
+    });
   }
 };
 
 export interface SetDataArgs {
   dateCell?: Dayjs;
-  setState: React.Dispatch<React.SetStateAction<AppState>>;
-  setAlert: (args: AlertState) => void;
+  dispatch: AppDispatch;
   token: string | null;
   issueId: string | null;
   duration: string;
@@ -77,8 +93,7 @@ export interface SetDataArgs {
 
 export const setData = async ({
   dateCell,
-  setState,
-  setAlert,
+  dispatch,
   token,
   issueId,
   duration,
@@ -169,23 +184,29 @@ export const setData = async ({
     }
 
     if (!isEmpty(res.data)) {
-      setState((prev: AppState) => ({
-        ...prev,
-        loaded: true,
-        data: worklogId
-          ? prev.data.map((item: DataItem) =>
-              item.id === (res.data as DataItem).id
-                ? (res.data as DataItem)
-                : item
-            )
-          : [...prev.data, { ...(res.data as DataItem) }],
-      }));
-      setAlert({
-        open: true,
-        severity: "success",
-        message: worklogId
-          ? "Запись успешно изменена"
-          : "Данные успешно добавлены",
+      dispatch({
+        type: "setState",
+        payload: (prev: AppState) => ({
+          ...prev,
+          loaded: true,
+          data: worklogId
+            ? prev.data.map((item: DataItem) =>
+                item.id === (res.data as DataItem).id
+                  ? (res.data as DataItem)
+                  : item
+              )
+            : [...prev.data, { ...(res.data as DataItem) }],
+        }),
+      });
+      dispatch({
+        type: "setAlert",
+        payload: {
+          open: true,
+          severity: "success",
+          message: worklogId
+            ? "Запись успешно изменена"
+            : "Данные успешно добавлены",
+        },
       });
     } else {
       throw new Error(
@@ -194,27 +215,27 @@ export const setData = async ({
     }
   } catch (err: any) {
     console.error("ERROR", err.message);
-    setState((prev: AppState) => ({ ...prev, loaded: true }));
-    setAlert({ open: true, severity: "error", message: err.message });
+    dispatch({
+      type: "setState",
+      payload: (prev: AppState) => ({ ...prev, loaded: true }),
+    });
+    dispatch({
+      type: "setAlert",
+      payload: { open: true, severity: "error", message: err.message },
+    });
   }
 };
 
 export interface DeleteDataArgs {
   token: string | null;
-  setState: React.Dispatch<React.SetStateAction<AppState>>;
-  setAlert: (args: {
-    open: boolean;
-    severity: string;
-    message: string;
-  }) => void;
+  dispatch: AppDispatch;
   issueId: string | null;
   ids: string[];
 }
 
 export const deleteData = async ({
   token,
-  setState,
-  setAlert,
+  dispatch,
   issueId,
   ids,
 }: DeleteDataArgs): Promise<void> => {
@@ -233,38 +254,52 @@ export const deleteData = async ({
       throw new Error("Ошибка удаления данных");
     }
     if (res.data === true) {
-      setState((prev: AppState) => ({
-        ...prev,
-        loaded: true,
-        data: [...prev.data.filter((item: DataItem) => !ids.includes(item.id))],
-      }));
-      setAlert({
-        open: true,
-        severity: "success",
-        message: "Данные успешно удалены",
+      dispatch({
+        type: "setState",
+        payload: (prev: AppState) => ({
+          ...prev,
+          loaded: true,
+          data: [
+            ...prev.data.filter((item: DataItem) => !ids.includes(item.id)),
+          ],
+        }),
+      });
+      dispatch({
+        type: "setAlert",
+        payload: {
+          open: true,
+          severity: "success",
+          message: "Данные успешно удалены",
+        },
       });
     } else {
       throw new Error("Ошибка удаления данных");
     }
   } catch (err: any) {
     console.error("ERROR", err.message);
-    setState((prev: AppState) => ({ ...prev, loaded: true }));
-    setAlert({ open: true, severity: "error", message: err.message });
+    dispatch({
+      type: "setState",
+      payload: (prev: AppState) => ({ ...prev, loaded: true }),
+    });
+    dispatch({
+      type: "setAlert",
+      payload: { open: true, severity: "error", message: err.message },
+    });
   }
 };
 
 export const getUserIssues = async ({
-  setState,
+  dispatch,
   token,
   userId,
   login,
 }: {
-  setState: React.Dispatch<React.SetStateAction<AppState>>;
+  dispatch: AppDispatch;
   token: string | null;
   userId?: string | null;
   login?: string | null;
 }): Promise<void> => {
-  setState((prev) => ({ ...prev, loaded: false }));
+  dispatch({ type: "setState", payload: (prev) => ({ ...prev, loaded: false }) });
   try {
     // Проверяем обязательный токен
     if (!token) {
@@ -285,15 +320,21 @@ export const getUserIssues = async ({
         params: { token, userId, login },
       }
     );
-    setState((prev: AppState) => ({
-      ...prev,
-      loaded: true,
-      issues: res.data.issues,
-    }));
+    dispatch({
+      type: "setState",
+      payload: (prev: AppState) => ({
+        ...prev,
+        loaded: true,
+        issues: res.data.issues,
+      }),
+    });
   } catch (err: any) {
     console.error("[Ошибка в getUserIssues]:", err.message);
     // Если токен протух — разлогиниваем
-    setState((prev) => ({ ...prev, loaded: true }));
+    dispatch({
+      type: "setState",
+      payload: (prev) => ({ ...prev, loaded: true }),
+    });
     if (axios.isAxiosError(err) && err.response?.status === 401) {
       handleLogout();
     }

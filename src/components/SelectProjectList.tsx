@@ -29,8 +29,9 @@ const SelectProjectList: React.FC<SelectProjectListProps> = ({
   error = false,
   helperText,
 }) => {
-  const { tableTimePlanState, setTableTimePlanState } = useAppContext();
-  const { projects, loadingProjects, selectedProjectIds } = tableTimePlanState;
+  const { state: appState, dispatch } = useAppContext();
+  const { projects, loadingProjects, selectedProjectIds } =
+    appState.tableTimePlanState;
   const hasFetchedRef = useRef(false);
 
   useEffect(() => {
@@ -38,18 +39,24 @@ const SelectProjectList: React.FC<SelectProjectListProps> = ({
     if (projects.length > 0) return;
     if (hasFetchedRef.current) return;
     hasFetchedRef.current = true;
-    setTableTimePlanState((prev) => ({ ...prev, loadingProjects: true }));
+    dispatch({
+      type: "setTableTimePlanState",
+      payload: (prev) => ({ ...prev, loadingProjects: true }),
+    });
     getTlProjects()
       .then((data) => {
         if (!isMounted) return;
         const sorted = [...data].sort(
           (a, b) => (a.sort_by ?? 0) - (b.sort_by ?? 0),
         );
-        setTableTimePlanState((prev) => ({
-          ...prev,
-          projects: sorted,
-          loadingProjects: false,
-        }));
+        dispatch({
+          type: "setTableTimePlanState",
+          payload: (prev) => ({
+            ...prev,
+            projects: sorted,
+            loadingProjects: false,
+          }),
+        });
       })
       .catch((error) => {
         console.error("[SelectProjectList] getTlProjects error:", error.message);
@@ -57,20 +64,26 @@ const SelectProjectList: React.FC<SelectProjectListProps> = ({
         hasFetchedRef.current = false;
       })
       .finally(() => {
-        setTableTimePlanState((prev) => ({ ...prev, loadingProjects: false }));
+        dispatch({
+          type: "setTableTimePlanState",
+          payload: (prev) => ({ ...prev, loadingProjects: false }),
+        });
       });
 
     return () => {
       isMounted = false;
     };
-  }, [setTableTimePlanState, projects.length]);
+  }, [dispatch, projects.length]);
 
   const handleChange = (e: SelectChangeEvent<string[]>) => {
     const value = e.target.value;
-    setTableTimePlanState((prev) => ({
-      ...prev,
-      selectedProjectIds: Array.isArray(value) ? value : [],
-    }));
+    dispatch({
+      type: "setTableTimePlanState",
+      payload: (prev) => ({
+        ...prev,
+        selectedProjectIds: Array.isArray(value) ? value : [],
+      }),
+    });
   };
 
   const disabled = loadingProjects || !projects || projects.length === 0;

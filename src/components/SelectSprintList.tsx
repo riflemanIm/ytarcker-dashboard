@@ -29,10 +29,10 @@ const SelectSprintList: React.FC<SelectSprintListProps> = ({
   error = false,
   helperText,
 }) => {
-  const { tableTimePlanState, setTableTimePlanState, state, setState } =
-    useAppContext();
+  const { state: appState, dispatch } = useAppContext();
+  const { tableTimePlanState } = appState;
   const { sprins, selectedSprintId } = tableTimePlanState;
-  const loading = !state.loaded;
+  const loading = !appState.state.loaded;
   const hasFetchedRef = useRef(false);
 
   useEffect(() => {
@@ -40,7 +40,10 @@ const SelectSprintList: React.FC<SelectSprintListProps> = ({
     if (sprins.length > 0) return;
     if (hasFetchedRef.current) return;
     hasFetchedRef.current = true;
-    setState((prev) => ({ ...prev, loaded: false }));
+    dispatch({
+      type: "setState",
+      payload: (prev) => ({ ...prev, loaded: false }),
+    });
     getTlSprints()
       .then((data) => {
         if (!isMounted) return;
@@ -49,13 +52,16 @@ const SelectSprintList: React.FC<SelectSprintListProps> = ({
         );
         const defaultSprintId =
           sorted.find((item) => item.current_sprint)?.yt_tl_sprints_id ?? "";
-        setTableTimePlanState((prev) => ({
-          ...prev,
-          sprins: sorted,
-          selectedSprintId:
-            prev.selectedSprintId ||
-            (defaultSprintId ? String(defaultSprintId) : ""),
-        }));
+        dispatch({
+          type: "setTableTimePlanState",
+          payload: (prev) => ({
+            ...prev,
+            sprins: sorted,
+            selectedSprintId:
+              prev.selectedSprintId ||
+              (defaultSprintId ? String(defaultSprintId) : ""),
+          }),
+        });
       })
       .catch((error) => {
         console.error("[SelectSprintList] getTlSprints error:", error.message);
@@ -63,20 +69,23 @@ const SelectSprintList: React.FC<SelectSprintListProps> = ({
         hasFetchedRef.current = false;
       })
       .finally(() => {
-        setState((prev) => ({ ...prev, loaded: true }));
+        dispatch({
+          type: "setState",
+          payload: (prev) => ({ ...prev, loaded: true }),
+        });
       });
 
     return () => {
       isMounted = false;
     };
-  }, [setState, setTableTimePlanState, sprins.length]);
+  }, [dispatch, sprins.length]);
 
   const handleChange = (e: SelectChangeEvent<string>) => {
     const sprintId = e.target.value;
-    setTableTimePlanState((prev) => ({
-      ...prev,
-      selectedSprintId: sprintId,
-    }));
+    dispatch({
+      type: "setTableTimePlanState",
+      payload: (prev) => ({ ...prev, selectedSprintId: sprintId }),
+    });
   };
 
   const disabled = loading || !sprins || sprins.length === 0;

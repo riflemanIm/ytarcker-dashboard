@@ -20,15 +20,15 @@ export const handleLogout = (): void => {
 };
 
 const LogInOut: React.FC = () => {
-  const { auth, setAuth } = useAppContext();
-  const { token } = auth;
+  const { state, dispatch } = useAppContext();
+  const { token } = state.auth;
   useEffect(() => {
     const hash = window.location.hash;
     if (hash.includes("access_token")) {
       const params = new URLSearchParams(hash.replace("#", "?"));
       const tokenFromHash = params.get("access_token");
       if (tokenFromHash) {
-        setAuth({ token: tokenFromHash });
+        dispatch({ type: "setAuth", payload: { token: tokenFromHash } });
         localStorage.setItem("yandex_token", tokenFromHash);
 
         // Получаем логин пользователя
@@ -48,10 +48,13 @@ const LogInOut: React.FC = () => {
             if (login) {
               localStorage.setItem("yandex_login", login);
 
-              setAuth((prev) => ({
-                ...prev,
-                login: login.includes("@") ? login.split("@")[0] : login,
-              }));
+              dispatch({
+                type: "setAuth",
+                payload: (prev) => ({
+                  ...prev,
+                  login: login.includes("@") ? login.split("@")[0] : login,
+                }),
+              });
               window.location.href = "/";
 
               // setAuth((prev) => ({

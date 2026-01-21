@@ -48,7 +48,8 @@ const SetIssuePlanTable: FC<SetIssuePlanTableProps> = ({
   issue,
   sprintId,
 }) => {
-  const { tableTimePlanState } = useAppContext();
+  const { state } = useAppContext();
+  const { tableTimePlanState } = state;
   const [form, setForm] = useState<FormState>({
     sprintId,
     taskKey: issue?.TaskKey ?? "",

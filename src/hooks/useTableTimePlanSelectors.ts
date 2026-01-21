@@ -2,7 +2,8 @@ import { useMemo } from "react";
 import { useAppContext } from "@/context/AppContext";
 
 export const useTableTimePlanSelectors = () => {
-  const { tableTimePlanState } = useAppContext();
+  const { state } = useAppContext();
+  const { tableTimePlanState } = state;
 
   const sprintId = useMemo(() => {
     const parsed = Number(tableTimePlanState.selectedSprintId);

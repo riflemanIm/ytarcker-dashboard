@@ -37,8 +37,8 @@ export default function AddDurationIssueDialog({
   issues,
   setData,
 }: AddDurationIssueDialogProps) {
-  const { auth, setAlert, setState } = useAppContext();
-  const { token } = auth;
+  const { state, dispatch } = useAppContext();
+  const { token } = state.auth;
   const [open, setOpen] = useState(false);
 
   // список типов по выбранной задаче
@@ -105,8 +105,7 @@ export default function AddDurationIssueDialog({
 
     setData({
       dateCell,
-      setState,
-      setAlert,
+      dispatch,
       token,
       issueId: values.issue!.key,
       duration: normalizeDuration(values.duration ?? ""),
@@ -114,10 +113,13 @@ export default function AddDurationIssueDialog({
       addEndWorkDayTime: false,
     } as SetDataArgs);
 
-    setAlert({
-      open: true,
-      severity: "success",
-      message: "Отметка задачи сохранена",
+    dispatch({
+      type: "setAlert",
+      payload: {
+        open: true,
+        severity: "success",
+        message: "Отметка задачи сохранена",
+      },
     });
 
     setOpen(false);

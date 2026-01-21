@@ -157,8 +157,8 @@ const TaskTable: FC<TaskTableProps> = ({
   deleteData,
   isEditable = false,
 }) => {
-  const { auth, setAlert, setState, state } = useAppContext();
-  const { token } = auth;
+  const { state: appState, dispatch } = useAppContext();
+  const { token } = appState.auth;
   // --- 0) Выравниваем «шапку недели» под данные / выбранную неделю ---
   const viewStart = useMemo(() => {
     const s = toTarget(start).startOf("isoWeek");
@@ -405,10 +405,13 @@ const TaskTable: FC<TaskTableProps> = ({
         return false;
       }
       if (!isValidDuration(normalizedValue)) {
-        setAlert({
-          open: true,
-          severity: "error",
-          message: `Значение "${newValue}" не является корректным форматом времени.`,
+        dispatch({
+          type: "setAlert",
+          payload: {
+            open: true,
+            severity: "error",
+            message: `Значение "${newValue}" не является корректным форматом времени.`,
+          },
         });
         return false;
       }
@@ -416,8 +419,7 @@ const TaskTable: FC<TaskTableProps> = ({
         const dateCell = getDateOfWeekday(viewStart, dayToNumber(field)); // ⬅️ viewStart
         setData({
           dateCell,
-          setState,
-          setAlert,
+          dispatch,
           token,
           issueId,
           duration: normalizedValue,
@@ -425,11 +427,14 @@ const TaskTable: FC<TaskTableProps> = ({
         return true;
       } catch (err: any) {
         console.error("handleCellEdit error:", err.message);
-        setAlert({ open: true, severity: "error", message: err.message });
+        dispatch({
+          type: "setAlert",
+          payload: { open: true, severity: "error", message: err.message },
+        });
         return false;
       }
     },
-    [viewStart, setData, setState, setAlert, token]
+    [dispatch, viewStart, setData, token]
   );
 
   // --- 7) Колонки (шапка дат строится от viewStart) ---
@@ -615,11 +620,11 @@ const TaskTable: FC<TaskTableProps> = ({
       >
         <Typography variant="h5">
           Затраченное время{" "}
-          {state.fetchByLogin ? "по задачам" : "по сотрудникам"}
+          {appState.state.fetchByLogin ? "по задачам" : "по сотрудникам"}
         </Typography>
-        {state.fetchByLogin && (
+        {appState.state.fetchByLogin && (
           <AddDurationIssueDialog
-            issues={state.issues}
+            issues={appState.state.issues}
             setData={setData}
           />
         )}

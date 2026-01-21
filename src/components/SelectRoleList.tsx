@@ -29,8 +29,9 @@ const SelectRoleList: React.FC<SelectRoleListProps> = ({
   error = false,
   helperText,
 }) => {
-  const { tableTimePlanState, setTableTimePlanState } = useAppContext();
-  const { roles, loadingRoles, selectedRoleIds } = tableTimePlanState;
+  const { state: appState, dispatch } = useAppContext();
+  const { roles, loadingRoles, selectedRoleIds } =
+    appState.tableTimePlanState;
   const hasFetchedRef = useRef(false);
 
   useEffect(() => {
@@ -38,18 +39,24 @@ const SelectRoleList: React.FC<SelectRoleListProps> = ({
     if (roles.length > 0) return;
     if (hasFetchedRef.current) return;
     hasFetchedRef.current = true;
-    setTableTimePlanState((prev) => ({ ...prev, loadingRoles: true }));
+    dispatch({
+      type: "setTableTimePlanState",
+      payload: (prev) => ({ ...prev, loadingRoles: true }),
+    });
     getTlRoles()
       .then((data) => {
         if (!isMounted) return;
         const sorted = [...data].sort(
           (a, b) => (a.sort_by ?? 0) - (b.sort_by ?? 0),
         );
-        setTableTimePlanState((prev) => ({
-          ...prev,
-          roles: sorted,
-          loadingRoles: false,
-        }));
+        dispatch({
+          type: "setTableTimePlanState",
+          payload: (prev) => ({
+            ...prev,
+            roles: sorted,
+            loadingRoles: false,
+          }),
+        });
       })
       .catch((error) => {
         console.error("[SelectRoleList] getTlRoles error:", error.message);
@@ -57,20 +64,26 @@ const SelectRoleList: React.FC<SelectRoleListProps> = ({
         hasFetchedRef.current = false;
       })
       .finally(() => {
-        setTableTimePlanState((prev) => ({ ...prev, loadingRoles: false }));
+        dispatch({
+          type: "setTableTimePlanState",
+          payload: (prev) => ({ ...prev, loadingRoles: false }),
+        });
       });
 
     return () => {
       isMounted = false;
     };
-  }, [setTableTimePlanState, roles.length]);
+  }, [dispatch, roles.length]);
 
   const handleChange = (e: SelectChangeEvent<string[]>) => {
     const value = e.target.value;
-    setTableTimePlanState((prev) => ({
-      ...prev,
-      selectedRoleIds: Array.isArray(value) ? value : [],
-    }));
+    dispatch({
+      type: "setTableTimePlanState",
+      payload: (prev) => ({
+        ...prev,
+        selectedRoleIds: Array.isArray(value) ? value : [],
+      }),
+    });
   };
 
   const disabled = loadingRoles || !roles || roles.length === 0;
