@@ -447,6 +447,7 @@ export const daysMap: DayOfWeek[] = [
 ];
 
 const WORK_DAYS_PER_WEEK = 5;
+const WORK_HOURS_PER_DAY = 8;
 
 export const displayDuration = (duration: string): string => {
   if (typeof duration !== "string") return "";
@@ -491,11 +492,11 @@ export const displayDuration = (duration: string): string => {
   const displayMinutes = totalMinutes % 60;
 
   // 6) Переносим “дни” в “часы” с коэффициентом 8 часов на 1 день
-  totalHours += totalDays * 8;
+  totalHours += totalDays * WORK_HOURS_PER_DAY;
 
   // 7) Теперь разбиваем общее число часов на “дни” (по 8 часов) и “остаточные” часы
-  const displayDays = Math.floor(totalHours / 8);
-  const displayHours = totalHours % 8;
+  const displayDays = Math.floor(totalHours / WORK_HOURS_PER_DAY);
+  const displayHours = totalHours % WORK_HOURS_PER_DAY;
 
   // 8) Собираем итоговую строку: d/h/m, но пропускаем нулевые значения
   const parts: string[] = [];
@@ -514,6 +515,43 @@ export const displayStartTime = (start?: string | null): string => {
   const value = toTarget(start);
   if (!value.isValid()) return "";
   return value.format("HH:mm");
+};
+
+export const workDaysToDurationInput = (days?: number | null): string => {
+  if (days == null || Number.isNaN(days)) return "";
+  const totalMinutes = Math.round(days * WORK_HOURS_PER_DAY * 60);
+  const minutesInDay = WORK_HOURS_PER_DAY * 60;
+  const fullDays = Math.floor(totalMinutes / minutesInDay);
+  const remainingMinutes = totalMinutes % minutesInDay;
+  const hours = Math.floor(remainingMinutes / 60);
+  const minutes = remainingMinutes % 60;
+
+  const parts: string[] = [];
+  if (fullDays) parts.push(`${fullDays}d`);
+  if (hours) parts.push(`${hours}h`);
+  if (minutes) parts.push(`${minutes}m`);
+
+  return parts.length > 0 ? parts.join(" ") : "0m";
+};
+
+export const durationToWorkDays = (isoDuration: string): number => {
+  if (!isoDuration) return 0;
+  const match = isoDuration.match(
+    /^P(?:(\d+)W)?(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?$/i
+  );
+  if (!match) return 0;
+
+  const [, weeks = "0", days = "0", hours = "0", minutes = "0", seconds = "0"] =
+    match;
+  const totalMinutes =
+    (Number(weeks) * WORK_DAYS_PER_WEEK + Number(days)) *
+      WORK_HOURS_PER_DAY *
+      60 +
+    Number(hours) * 60 +
+    Number(minutes) +
+    Number(seconds) / 60;
+  const totalDays = totalMinutes / (WORK_HOURS_PER_DAY * 60);
+  return Math.round(totalDays * 100) / 100;
 };
 
 // ==== MSK helpers (UTC+3) ====
@@ -535,7 +573,7 @@ export const toMSKISO = (utcStr: string): string =>
     .format("YYYY-MM-DDTHH:mm:ss.SSSZ");
 
 export function sumDurations(durations: string[]): string {
-  const minutesInWorkDay = 8 * 60; // 8 часов = 1 «рабочий» день
+  const minutesInWorkDay = WORK_HOURS_PER_DAY * 60; // 8 часов = 1 «рабочий» день
   const isoRegex =
     /^P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)W)?(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?$/i;
 

@@ -26,7 +26,7 @@ const CheckPlanTable: FC<CheckPlanTableProps> = ({
   const [loading, setLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedIssue, setSelectedIssue] = useState<TaskListItem | null>(null);
-
+  const isSprintReady = sprintId != null;
   useEffect(() => {
     let isMounted = true;
     setLoading(true);
@@ -78,7 +78,7 @@ const CheckPlanTable: FC<CheckPlanTableProps> = ({
             <span>{params.value}</span>
             <Button
               size="small"
-              variant="text"
+              variant="outlined"
               onClick={(event) => {
                 event.stopPropagation();
                 setSelectedIssue(params.row);
@@ -86,7 +86,7 @@ const CheckPlanTable: FC<CheckPlanTableProps> = ({
               }}
               disabled={!sprintId}
             >
-              Добавить в план
+              в план
             </Button>
           </Stack>
         ),
@@ -127,7 +127,7 @@ const CheckPlanTable: FC<CheckPlanTableProps> = ({
             : "-",
       },
     ],
-    []
+    [],
   );
 
   return (
@@ -138,7 +138,7 @@ const CheckPlanTable: FC<CheckPlanTableProps> = ({
           id: item.checklistItemId,
         }))}
         columns={columns}
-        loading={loading}
+        loading={loading || !isSprintReady}
         pageSizeOptions={[20, 50, 100]}
         disableColumnMenu
       />

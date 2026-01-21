@@ -23,6 +23,7 @@ const WorkPlanTable: FC<WorkPlanTableProps> = ({
 }) => {
   const [rows, setRows] = useState<WorkPlanItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const isSprintReady = sprintId != null;
 
   useEffect(() => {
     let isMounted = true;
@@ -133,7 +134,7 @@ const WorkPlanTable: FC<WorkPlanTableProps> = ({
       <DataGrid
         rows={rows}
         columns={columns}
-        loading={loading}
+        loading={loading || !isSprintReady}
         pageSizeOptions={[20, 50, 100]}
         disableColumnMenu
         getRowId={(row) => row.YT_TL_WORKPLAN_ID}
