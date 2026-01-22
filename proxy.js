@@ -828,6 +828,83 @@ app.post("/api/tl_workplan", async (req, res) => {
   }
 });
 
+app.post("/api/tl_workplan_capacity", async (req, res) => {
+  try {
+    const {
+      dateStart,
+      dateEnd,
+      trackerUids = [],
+      projectIds = [],
+      roleIds = [],
+      groupIds = [],
+    } = req.body ?? {};
+
+    if (typeof dateStart !== "string" || dateStart.length === 0) {
+      return res.status(400).json({
+        message: "Missing required field(s): dateStart, dateEnd",
+      });
+    }
+    if (typeof dateEnd !== "string" || dateEnd.length === 0) {
+      return res.status(400).json({
+        message: "Missing required field(s): dateStart, dateEnd",
+      });
+    }
+
+    const isValidTrackerUids =
+      Array.isArray(trackerUids) &&
+      trackerUids.every((id) => typeof id === "string");
+    const isValidProjectIds =
+      Array.isArray(projectIds) &&
+      projectIds.every((id) => Number.isInteger(id));
+    const isValidRoleIds =
+      Array.isArray(roleIds) && roleIds.every((id) => Number.isInteger(id));
+    const isValidGroupIds =
+      Array.isArray(groupIds) && groupIds.every((id) => Number.isInteger(id));
+
+    if (!isValidTrackerUids) {
+      return res.status(400).json({
+        message: "Field 'trackerUids' must be an array of strings.",
+      });
+    }
+    if (!isValidProjectIds) {
+      return res.status(400).json({
+        message: "Field 'projectIds' must be an array of integers.",
+      });
+    }
+    if (!isValidRoleIds) {
+      return res.status(400).json({
+        message: "Field 'roleIds' must be an array of integers.",
+      });
+    }
+    if (!isValidGroupIds) {
+      return res.status(400).json({
+        message: "Field 'groupIds' must be an array of integers.",
+      });
+    }
+
+    const resp = await axios.post(
+      "http://of-srv-apps-001.pmtech.ru:18005/acceptor/yandextracker/getworkplancapacity",
+      { dateStart, dateEnd, trackerUids, projectIds, roleIds, groupIds },
+      {
+        timeout: 15000,
+      }
+    );
+
+    res.json(resp.data);
+  } catch (error) {
+    const status = error.response?.status || 500;
+    const payload = {
+      error: error.message,
+      code: error.code,
+      cause: error.cause,
+      upstreamStatus: error.response?.status,
+      upstreamData: error.response?.data,
+    };
+    console.error("[api/tl_workplan_capacity] upstream error:", payload);
+    res.status(status).json(payload);
+  }
+});
+
 app.post("/api/tl_workplan_add", async (req, res) => {
   try {
     const {

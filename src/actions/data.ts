@@ -18,6 +18,7 @@ import {
   TlSprint,
   TaskListItem,
   WorkPlanItem,
+  WorkPlanCapacityItem,
 } from "@/types/global";
 import { handleLogout } from "@/components/LogInOut";
 import type { AppAction } from "@/context/AppContext";
@@ -622,5 +623,29 @@ export const setWorkPlan = async (
   } catch (err: any) {
     console.error("[Ошибка в setWorkPlan]:", err.message);
     return null;
+  }
+};
+
+export interface WorkPlanCapacityFilters {
+  dateStart: string;
+  dateEnd: string;
+  trackerUids?: string[];
+  projectIds?: number[];
+  roleIds?: number[];
+  groupIds?: number[];
+}
+
+export const getWorkPlanCapacity = async (
+  filters: WorkPlanCapacityFilters
+): Promise<WorkPlanCapacityItem[]> => {
+  try {
+    const res = await axios.post<WorkPlanCapacityItem[]>(
+      `${apiUrl}/api/tl_workplan_capacity`,
+      filters
+    );
+    return Array.isArray(res.data) ? res.data : [];
+  } catch (err: any) {
+    console.error("[Ошибка в getWorkPlanCapacity]:", err.message);
+    return [];
   }
 };

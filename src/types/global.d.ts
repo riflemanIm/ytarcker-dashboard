@@ -88,6 +88,23 @@ export interface WorkPlanItem {
   WorkNameDict: string;
 }
 
+export interface WorkPlanCapacityItem {
+  Sprint: string;
+  CheckListAssignee: string;
+  EstimateTimeDays: number;
+  SpentTimeDays: number;
+  RemainTimeDays: number;
+  RoleName: string;
+}
+
+export interface WorkPlanCapacityState {
+  rows: WorkPlanCapacityItem[];
+  loading: boolean;
+  refreshKey: number;
+  capacityFrom: Dayjs;
+  capacityTo: Dayjs;
+}
+
 export interface DataItem {
   id: string;
   duration: string;

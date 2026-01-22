@@ -135,7 +135,7 @@ const CheckPlanTable: FC = () => {
   }, [rows, filterText]);
 
   return (
-    <Box sx={{ mt: 2, height: 600 }}>
+    <Box sx={{ mt: 2, height: 400 }}>
       <TableTextFilter
         value={filterText}
         onChange={setFilterText}

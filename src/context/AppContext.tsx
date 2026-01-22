@@ -13,6 +13,7 @@ import type {
   AlertState,
   AppState,
   AuthState,
+  WorkPlanCapacityState,
   TableTimePlanState,
   ViewMode,
 } from "@/types/global";
@@ -31,6 +32,7 @@ export type AppContextState = {
   reportFrom: dayjs.Dayjs;
   reportTo: dayjs.Dayjs;
   tableTimePlanState: TableTimePlanState;
+  workPlanCapacityState: WorkPlanCapacityState;
 };
 
 export type AppAction =
@@ -44,6 +46,10 @@ export type AppAction =
   | {
       type: "setTableTimePlanState";
       payload: SetStateAction<TableTimePlanState>;
+    }
+  | {
+      type: "setWorkPlanCapacityState";
+      payload: SetStateAction<WorkPlanCapacityState>;
     };
 
 const AppContext = createContext<AppContextValue | undefined>(undefined);
@@ -105,6 +111,14 @@ const initialTableTimePlanState: TableTimePlanState = {
   workPlanRefreshKey: 0,
 };
 
+const initialWorkPlanCapacityState: WorkPlanCapacityState = {
+  rows: [],
+  loading: false,
+  refreshKey: 0,
+  capacityFrom: dayjs().startOf("month"),
+  capacityTo: dayjs().endOf("month"),
+};
+
 const initAppContextState = (): AppContextState => ({
   auth: getInitialAuth(),
   state: initialState,
@@ -114,6 +128,7 @@ const initAppContextState = (): AppContextState => ({
   reportFrom: initialReportFrom,
   reportTo: initialReportTo,
   tableTimePlanState: initialTableTimePlanState,
+  workPlanCapacityState: initialWorkPlanCapacityState,
 });
 
 function appReducer(state: AppContextState, action: AppAction): AppContextState {
@@ -149,6 +164,14 @@ function appReducer(state: AppContextState, action: AppAction): AppContextState 
         ...state,
         tableTimePlanState: applySetState(
           state.tableTimePlanState,
+          action.payload
+        ),
+      };
+    case "setWorkPlanCapacityState":
+      return {
+        ...state,
+        workPlanCapacityState: applySetState(
+          state.workPlanCapacityState,
           action.payload
         ),
       };
