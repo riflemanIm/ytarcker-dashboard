@@ -1,25 +1,22 @@
 import { getTaskList } from "@/actions/data";
 import { TaskListItem } from "@/types/global";
-import { Box, Button, Stack } from "@mui/material";
+import { Box, Button, Stack, Typography } from "@mui/material";
 import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import dayjs from "dayjs";
 import { FC, useEffect, useMemo, useState } from "react";
 import IssueDisplay from "./IssueDisplay";
 import SetIssuePlanTable from "./SetIssuePlanTable";
 import { useTableTimePlanSelectors } from "@/hooks/useTableTimePlanSelectors";
+import TableTextFilter from "./TableTextFilter";
 
 const CheckPlanTable: FC = () => {
-  const {
-    sprintId,
-    trackerUids,
-    projectIds,
-    roleIds,
-    groupIds,
-  } = useTableTimePlanSelectors();
+  const { sprintId, trackerUids, projectIds, roleIds, groupIds } =
+    useTableTimePlanSelectors();
   const [rows, setRows] = useState<TaskListItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedIssue, setSelectedIssue] = useState<TaskListItem | null>(null);
+  const [filterText, setFilterText] = useState("");
   const isSprintReady = sprintId != null;
   useEffect(() => {
     let isMounted = true;
@@ -62,8 +59,8 @@ const CheckPlanTable: FC = () => {
       {
         field: "TaskKey",
         headerName: "Key",
-        minWidth: 200,
-        flex: 0.8,
+        minWidth: 150,
+        flex: 0.2,
         sortable: false,
         filterable: false,
         disableColumnMenu: true,
@@ -85,36 +82,33 @@ const CheckPlanTable: FC = () => {
           </Stack>
         ),
       },
-      { field: "WorkName", headerName: "Работа", flex: 1.5, minWidth: 160 },
+
       {
         field: "WorkNameDict",
-        headerName: "Тип работы",
-        flex: 1.5,
-        minWidth: 180,
+        flex: 0.1,
+        minWidth: 100,
+        headerName: "Работа / Тип работы ",
+        renderCell: (params: GridRenderCellParams) => (
+          <Stack spacing={0.25}>
+            <Typography variant="body2">{params.row.WorkName}</Typography>
+            <Typography variant="body2" color="text.secondary">
+              {params.row.WorkNameDict}
+            </Typography>
+          </Stack>
+        ),
       },
-      {
-        field: "CheckListAssignee",
-        headerName: "Сотрудник",
-        flex: 1.5,
-        minWidth: 160,
-      },
-      {
-        field: "trackerUid",
-        headerName: "UID",
-        flex: 1,
-        minWidth: 140,
-      },
+
       {
         field: "WorkDays",
         headerName: "Трудозатраты, дн.",
         flex: 1,
-        minWidth: 140,
+        minWidth: 40,
       },
       {
         field: "Deadline",
         headerName: "Дедлайн",
         flex: 1,
-        minWidth: 120,
+        minWidth: 40,
         valueFormatter: (value: TaskListItem["Deadline"]) =>
           value && dayjs(value).isValid()
             ? dayjs(value).format("DD.MM.YYYY")
@@ -124,10 +118,33 @@ const CheckPlanTable: FC = () => {
     [sprintId],
   );
 
+  const filteredRows = useMemo(() => {
+    const query = filterText.trim().toLowerCase();
+    if (!query) return rows;
+    return rows.filter((item) => {
+      const values = [
+        item.TaskName,
+        item.TaskKey,
+        item.WorkName,
+        item.WorkNameDict,
+      ]
+        .filter(Boolean)
+        .map((value) => String(value).toLowerCase());
+      return values.some((value) => value.includes(query));
+    });
+  }, [rows, filterText]);
+
   return (
     <Box sx={{ mt: 2, height: 600 }}>
+      <TableTextFilter
+        value={filterText}
+        onChange={setFilterText}
+        label="Фильтр"
+        placeholder="Название, Key, Работа, Тип работы"
+        disabled={loading || rows.length === 0}
+      />
       <DataGrid
-        rows={rows.map((item) => ({
+        rows={filteredRows.map((item) => ({
           ...item,
           id: item.checklistItemId,
         }))}

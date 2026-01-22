@@ -6,6 +6,7 @@ import dayjs from "dayjs";
 import { FC, useEffect, useMemo, useState } from "react";
 import IssueDisplay from "./IssueDisplay";
 import { useTableTimePlanSelectors } from "@/hooks/useTableTimePlanSelectors";
+import { getPriorityPalette } from "@/helpers/priorityStyles";
 
 const WorkPlanTable: FC = () => {
   const {
@@ -14,6 +15,7 @@ const WorkPlanTable: FC = () => {
     projectIds,
     roleIds,
     groupIds,
+    workPlanRefreshKey,
   } = useTableTimePlanSelectors();
   const [rows, setRows] = useState<WorkPlanItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -46,7 +48,14 @@ const WorkPlanTable: FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [sprintId, trackerUids, projectIds, roleIds, groupIds]);
+  }, [
+    sprintId,
+    trackerUids,
+    projectIds,
+    roleIds,
+    groupIds,
+    workPlanRefreshKey,
+  ]);
 
   const columns = useMemo<GridColDef<WorkPlanItem>[]>(
     () => [
@@ -66,6 +75,7 @@ const WorkPlanTable: FC = () => {
           />
         ),
       },
+
       {
         field: "TaskKey",
         headerName: "Key",
@@ -75,13 +85,23 @@ const WorkPlanTable: FC = () => {
         filterable: false,
         disableColumnMenu: true,
       },
+
       { field: "WorkName", headerName: "Работа", flex: 1.5, minWidth: 160 },
+      {
+        field: "WorkDone",
+        headerName: "Сделано",
+        flex: 1,
+        minWidth: 110,
+        valueFormatter: (value: WorkPlanItem["WorkDone"]) =>
+          value ? "Да" : "Нет",
+      },
       {
         field: "WorkNameDict",
         headerName: "Тип работы",
         flex: 1.5,
         minWidth: 180,
       },
+      { field: "IsPlan", headerName: "План", flex: 1, minWidth: 100 },
       {
         field: "CheckListAssignee",
         headerName: "Сотрудник",
@@ -117,10 +137,8 @@ const WorkPlanTable: FC = () => {
             ? dayjs(value).format("DD.MM.YYYY")
             : "-",
       },
-      { field: "Priority", headerName: "Приоритет", flex: 1, minWidth: 120 },
-      { field: "IsPlan", headerName: "План", flex: 1, minWidth: 100 },
     ],
-    []
+    [],
   );
 
   return (
@@ -131,7 +149,46 @@ const WorkPlanTable: FC = () => {
         loading={loading || !isSprintReady}
         pageSizeOptions={[20, 50, 100]}
         disableColumnMenu
+        getRowClassName={(params) => {
+          const priority = params.row.Priority;
+          if (priority === "Red") return "priority-red";
+          if (priority === "Orange") return "priority-orange";
+          if (priority === "Green") return "priority-green";
+          return "";
+        }}
         getRowId={(row) => row.YT_TL_WORKPLAN_ID}
+        sx={(theme) => {
+          const palette = getPriorityPalette(theme);
+          return {
+            "& .priority-green .MuiDataGrid-cell": {
+              backgroundColor: palette.Green.main,
+              color: palette.Green.text,
+            },
+            "& .priority-green:hover .MuiDataGrid-cell": {
+              backgroundColor: palette.Green.hover,
+            },
+            "& .priority-orange .MuiDataGrid-cell": {
+              backgroundColor: palette.Orange.main,
+              color: palette.Orange.text,
+            },
+            "& .priority-orange:hover .MuiDataGrid-cell": {
+              backgroundColor: palette.Orange.hover,
+            },
+            "& .priority-red .MuiDataGrid-cell": {
+              backgroundColor: palette.Red.main,
+            },
+            "& .priority-red:hover .MuiDataGrid-cell": {
+              backgroundColor: palette.Red.hover,
+              color: palette.Red.text,
+            },
+            "& .MuiDataGrid-row.Mui-selected .MuiDataGrid-cell": {
+              backgroundColor: "inherit",
+            },
+            "& .MuiDataGrid-row.Mui-selected:hover .MuiDataGrid-cell": {
+              backgroundColor: "inherit",
+            },
+          };
+        }}
       />
     </Box>
   );

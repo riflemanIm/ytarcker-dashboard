@@ -48,5 +48,6 @@ export const useTableTimePlanSelectors = () => {
     projectIds,
     roleIds,
     groupIds,
+    workPlanRefreshKey: tableTimePlanState.workPlanRefreshKey,
   };
 };

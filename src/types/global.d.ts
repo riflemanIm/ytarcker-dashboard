@@ -149,6 +149,7 @@ export interface TableTimePlanState {
   selectedRoleIds: string[];
   selectedProjectIds: string[];
   selectedPatientUid: string;
+  workPlanRefreshKey: number;
 }
 
 export type ViewMode =

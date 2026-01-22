@@ -23,6 +23,7 @@ import { FC, useEffect, useMemo, useState } from "react";
 import MuiUIPicker from "./MUIDatePicker";
 import CloseIcon from "@mui/icons-material/Close";
 import { useAppContext } from "@/context/AppContext";
+import { getPriorityPalette } from "@/helpers/priorityStyles";
 
 interface SetIssuePlanTableProps {
   open: boolean;
@@ -48,7 +49,8 @@ const SetIssuePlanTable: FC<SetIssuePlanTableProps> = ({
   issue,
   sprintId,
 }) => {
-  const { state } = useAppContext();
+  console.log("issue", issue);
+  const { state, dispatch } = useAppContext();
   const { tableTimePlanState } = state;
   const [form, setForm] = useState<FormState>({
     sprintId,
@@ -110,28 +112,33 @@ const SetIssuePlanTable: FC<SetIssuePlanTableProps> = ({
 
   const canSubmit = useMemo(
     () => !!form.sprintId && form.taskKey && form.trackerUid && !saving,
-    [form.sprintId, form.taskKey, form.trackerUid, saving]
+    [form.sprintId, form.taskKey, form.trackerUid, saving],
   );
   const sprintName = useMemo(() => {
-    const targetId = form.sprintId ?? Number(tableTimePlanState.selectedSprintId);
+    const targetId =
+      form.sprintId ?? Number(tableTimePlanState.selectedSprintId);
     if (!Number.isFinite(targetId)) return "-";
     return (
       tableTimePlanState.sprins.find(
-        (item) => item.yt_tl_sprints_id === targetId
+        (item) => item.yt_tl_sprints_id === targetId,
       )?.sprint ?? "-"
     );
-  }, [form.sprintId, tableTimePlanState.selectedSprintId, tableTimePlanState.sprins]);
+  }, [
+    form.sprintId,
+    tableTimePlanState.selectedSprintId,
+    tableTimePlanState.sprins,
+  ]);
 
   const updateForm = (next: FormState) => {
     setForm(next);
     setErrors(validate(next));
   };
 
-  const handleChange = (field: keyof FormState) => (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    updateForm({ ...form, [field]: event.target.value });
-  };
+  const handleChange =
+    (field: keyof FormState) =>
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      updateForm({ ...form, [field]: event.target.value });
+    };
 
   const handleEstimateChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const raw = event.target.value ?? "";
@@ -160,7 +167,9 @@ const SetIssuePlanTable: FC<SetIssuePlanTableProps> = ({
       trackerUid: form.trackerUid,
       checklistItemId: form.checklistItemId || undefined,
       workName: form.workName || undefined,
-      deadline: form.deadline ? dayjs(form.deadline).format("YYYY-MM-DD") : null,
+      deadline: form.deadline
+        ? dayjs(form.deadline).format("YYYY-MM-DD")
+        : null,
       estimateTimeDays: estimateDays,
       priority: form.priority,
     };
@@ -168,6 +177,13 @@ const SetIssuePlanTable: FC<SetIssuePlanTableProps> = ({
     try {
       const res = await setWorkPlan(payload);
       if (res?.YT_TL_WORKPLAN_ID) {
+        dispatch({
+          type: "setTableTimePlanState",
+          payload: (prev) => ({
+            ...prev,
+            workPlanRefreshKey: prev.workPlanRefreshKey + 1,
+          }),
+        });
         onClose();
       }
     } catch (error: any) {
@@ -180,12 +196,17 @@ const SetIssuePlanTable: FC<SetIssuePlanTableProps> = ({
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>
-        <Stack direction="row" alignItems="center" justifyContent="space-between">
+        <Stack
+          direction="row"
+          alignItems="center"
+          justifyContent="space-between"
+        >
           <Stack spacing={0.5}>
             <Typography variant="subtitle1">Добавить в план</Typography>
-            <Typography variant="subtitle1">
-              Спринт: {sprintName} • Key: {form.taskKey || "-"}
+            <Typography variant="subtitle2">
+              {issue?.TaskName} • {form?.taskKey || "-"} • {form?.workName}
             </Typography>
+            <Typography variant="subtitle2">Спринт: {sprintName}</Typography>
           </Stack>
           <IconButton
             onClick={onClose}
@@ -207,7 +228,7 @@ const SetIssuePlanTable: FC<SetIssuePlanTableProps> = ({
       </DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 1 }}>
-          <TextField
+          {/* <TextField
             label="Tracker UID"
             value={form.trackerUid}
             error={Boolean(errors.trackerUid)}
@@ -220,7 +241,7 @@ const SetIssuePlanTable: FC<SetIssuePlanTableProps> = ({
             value={form.checklistItemId}
             fullWidth
             InputProps={{ readOnly: true }}
-          />
+          /> */}
           <TextField
             label="Название работы"
             value={form.workName}
@@ -238,7 +259,7 @@ const SetIssuePlanTable: FC<SetIssuePlanTableProps> = ({
             view="day"
           />
           <TextField
-            label="Оценка времени в днях."
+            label="Оценка времени (d h m), "
             value={form.estimateTimeDays}
             onChange={handleEstimateChange}
             margin="normal"
@@ -253,15 +274,70 @@ const SetIssuePlanTable: FC<SetIssuePlanTableProps> = ({
             onChange={handleChange("priority")}
             fullWidth
           >
-            <MenuItem value="Green">Green</MenuItem>
-            <MenuItem value="Orange">Orange</MenuItem>
-            <MenuItem value="Red">Red</MenuItem>
+            <MenuItem
+              value="Green"
+              sx={(theme) => ({
+                backgroundColor: getPriorityPalette(theme).Green.main,
+                color: getPriorityPalette(theme).Green.text,
+                "&:hover": {
+                  backgroundColor: getPriorityPalette(theme).Green.hover,
+                },
+                "&.Mui-selected": {
+                  backgroundColor: getPriorityPalette(theme).Green.main,
+                },
+                "&.Mui-selected:hover": {
+                  backgroundColor: getPriorityPalette(theme).Green.hover,
+                },
+              })}
+            >
+              Green
+            </MenuItem>
+            <MenuItem
+              value="Orange"
+              sx={(theme) => ({
+                backgroundColor: getPriorityPalette(theme).Orange.main,
+                color: getPriorityPalette(theme).Orange.text,
+                "&:hover": {
+                  backgroundColor: getPriorityPalette(theme).Orange.hover,
+                },
+                "&.Mui-selected": {
+                  backgroundColor: getPriorityPalette(theme).Orange.main,
+                },
+                "&.Mui-selected:hover": {
+                  backgroundColor: getPriorityPalette(theme).Orange.hover,
+                },
+              })}
+            >
+              Orange
+            </MenuItem>
+            <MenuItem
+              value="Red"
+              sx={(theme) => ({
+                backgroundColor: getPriorityPalette(theme).Red.main,
+                color: getPriorityPalette(theme).Red.text,
+                "&:hover": {
+                  backgroundColor: getPriorityPalette(theme).Red.hover,
+                },
+                "&.Mui-selected": {
+                  backgroundColor: getPriorityPalette(theme).Red.main,
+                },
+                "&.Mui-selected:hover": {
+                  backgroundColor: getPriorityPalette(theme).Red.hover,
+                },
+              })}
+            >
+              Red
+            </MenuItem>
           </TextField>
         </Stack>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Отмена</Button>
-        <Button onClick={handleSubmit} disabled={!canSubmit} variant="contained">
+        <Button
+          onClick={handleSubmit}
+          disabled={!canSubmit}
+          variant="contained"
+        >
           Сохранить
         </Button>
       </DialogActions>

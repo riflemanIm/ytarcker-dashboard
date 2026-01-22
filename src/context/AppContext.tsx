@@ -102,6 +102,7 @@ const initialTableTimePlanState: TableTimePlanState = {
   selectedRoleIds: [],
   selectedProjectIds: [],
   selectedPatientUid: "",
+  workPlanRefreshKey: 0,
 };
 
 const initAppContextState = (): AppContextState => ({

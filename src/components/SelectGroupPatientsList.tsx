@@ -3,16 +3,14 @@ import { useAppContext } from "@/context/AppContext";
 import {
   Box,
   CircularProgress,
-  FormControl,
-  FormHelperText,
-  InputLabel,
-  MenuItem,
-  Select,
-  SelectChangeEvent,
   Stack,
+  TextField,
   Typography,
 } from "@mui/material";
+import Autocomplete from "@mui/material/Autocomplete";
 import React, { useEffect, useMemo, useRef } from "react";
+import isEmpty from "../helpers";
+import { TlGroupPatient } from "@/types/global";
 
 interface SelectGroupPatientsListProps {
   variant?: "standard" | "outlined" | "filled";
@@ -44,30 +42,17 @@ const SelectGroupPatientsList: React.FC<SelectGroupPatientsListProps> = ({
       selectedGroupIds
         .map((id) => Number(id))
         .filter((id) => Number.isFinite(id)),
-    [selectedGroupIds]
+    [selectedGroupIds],
   );
 
   useEffect(() => {
     let isMounted = true;
 
-    if (groupIds.length === 0) {
-      lastGroupKeyRef.current = "";
-      dispatch({
-        type: "setTableTimePlanState",
-        payload: (prev) => ({
-          ...prev,
-          groupPatients: [],
-          loadingPatients: false,
-          groupPatientsKey: "",
-          selectedPatientUid: "",
-        }),
-      });
-      return;
-    }
-
     const groupKey = groupIds.join(",");
     if (groupKey === lastGroupKeyRef.current || groupKey === groupPatientsKey) {
-      return;
+      if (!(groupKey === "" && groupPatients.length === 0)) {
+        return;
+      }
     }
     lastGroupKeyRef.current = groupKey;
     dispatch({
@@ -120,15 +105,17 @@ const SelectGroupPatientsList: React.FC<SelectGroupPatientsListProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [dispatch, groupIds, groupPatientsKey]);
+  }, [dispatch, groupIds, groupPatientsKey, groupPatients.length]);
 
-  const handleChange = (e: SelectChangeEvent<string>) => {
-    const patientUid = e.target.value;
+  const handleChange = (
+    event: React.SyntheticEvent,
+    value: TlGroupPatient | null,
+  ) => {
     dispatch({
       type: "setTableTimePlanState",
       payload: (prev) => ({
         ...prev,
-        selectedPatientUid: patientUid,
+        selectedPatientUid: value?.trackerUid ?? "",
       }),
     });
   };
@@ -136,61 +123,61 @@ const SelectGroupPatientsList: React.FC<SelectGroupPatientsListProps> = ({
   const disabled =
     loadingPatients || !groupPatients || groupPatients.length === 0;
 
+  const options = (groupPatients || []).map((item) => item);
+  const value =
+    (groupPatients || []).find(
+      (item) => selectedPatientUid && item.trackerUid === selectedPatientUid,
+    ) || null;
+
   return (
-    <FormControl
-      fullWidth
-      variant={variant}
-      margin={margin}
-      required={required}
-      error={error}
-      disabled={disabled}
-    >
-      <InputLabel id="select-patient-label">Сотрудник</InputLabel>
-
-      <Select
-        labelId="select-patient-label"
-        id="select-patient"
-        value={selectedPatientUid ?? ""}
-        label="Сотрудник"
+    (loadingPatients || !isEmpty(options)) && (
+      <Autocomplete
+        blurOnSelect
+        clearOnBlur
+        autoSelect
+        disabled={disabled}
+        value={value}
+        options={options}
         onChange={handleChange}
-        sx={{ width: "auto" }}
-      >
-        {(groupPatients ?? []).map((item) => (
-          <MenuItem key={item.trackerUid} value={item.trackerUid}>
-            <Box
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                gap: 1.5,
-              }}
-            >
-              <Box
-                sx={{
-                  width: 10,
-                  height: 10,
-                  borderRadius: "50%",
-                  bgcolor: item.color_str || "transparent",
-                  border: "1px solid rgba(0,0,0,0.2)",
-                }}
-              />
-              <Typography variant="body1" whiteSpace="wrap">
-                {item.patients_fio}
-              </Typography>
-            </Box>
-          </MenuItem>
-        ))}
-      </Select>
-
-      {loadingPatients ? (
-        <FormHelperText>
-          <Stack direction="row" spacing={1} alignItems="center">
-            <CircularProgress size={16} />
-          </Stack>
-        </FormHelperText>
-      ) : helperText ? (
-        <FormHelperText>{helperText}</FormHelperText>
-      ) : null}
-    </FormControl>
+        getOptionLabel={(option: TlGroupPatient) => option?.patients_fio || ""}
+        isOptionEqualToValue={(option: TlGroupPatient, value: TlGroupPatient) =>
+          option.trackerUid === value.trackerUid
+        }
+        renderOption={(props, option: TlGroupPatient) => (
+          <Box
+            component="li"
+            {...props}
+            sx={{ display: "flex", alignItems: "center", gap: 1.5 }}
+          >
+            <Typography variant="body1" whiteSpace="wrap">
+              {option.patients_fio}
+            </Typography>
+          </Box>
+        )}
+        noOptionsText={"Введите имя сотрудника"}
+        renderInput={(params) => (
+          <TextField
+            {...params}
+            name="filter-patients"
+            margin={margin}
+            label={"Сотрудник"}
+            fullWidth
+            variant={variant}
+            required={required}
+            error={error}
+            helperText={
+              loadingPatients ? (
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <CircularProgress size={16} />
+                </Stack>
+              ) : (
+                helperText
+              )
+            }
+          />
+        )}
+      />
+    )
   );
 };
 
