@@ -3,6 +3,7 @@ import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import {
   Button,
+  Checkbox,
   CircularProgress,
   Dialog,
   DialogActions,
@@ -10,6 +11,7 @@ import {
   DialogContentText,
   DialogTitle,
   Divider,
+  FormControlLabel,
   FormHelperText,
   Grid2 as Grid,
   IconButton,
@@ -66,6 +68,17 @@ const TableCellMenu: FC<EditableCellMenuProps> = ({
 }) => {
   const { state, dispatch } = useAppContext();
   const { token } = state.auth;
+  const trackerUid =
+    state.state.userId ||
+    state.tableTimePlanState.selectedPatientUid ||
+    (Array.isArray(state.state.users) && state.state.users.length === 1
+      ? state.state.users[0]?.id ?? null
+      : null);
+  const [riskState, setRiskState] = useState({
+    deadlineOk: true,
+    needUpgradeEstimate: false,
+    makeTaskFaster: false,
+  });
   // --- данные из бэка
   const [localState, setLocalState] = useState<TaskItemMenu>({
     issue_type_list: [],
@@ -108,6 +121,64 @@ const TableCellMenu: FC<EditableCellMenuProps> = ({
         issueTypes.some((type) => type.label === label)
       ),
     [recentIssueTypes, issueTypes]
+  );
+
+  const parseRiskBlock = (comment: string) => {
+    const match = (comment ?? "").match(
+      /\[Risks:\s*\{\s*([\s\S]*?)\}\s*\]/m,
+    );
+    if (!match) {
+      return {
+        deadlineOk: true,
+        needUpgradeEstimate: false,
+        makeTaskFaster: false,
+      };
+    }
+    const body = match[1] ?? "";
+    const readFlag = (key: string, fallback: boolean) => {
+      const re = new RegExp(`${key}\\s*:\\s*(true|false)`, "i");
+      const m = body.match(re);
+      if (!m) return fallback;
+      return m[1].toLowerCase() === "true";
+    };
+    return {
+      deadlineOk: readFlag("deadlineOk", true),
+      needUpgradeEstimate: readFlag("needUpgradeEstimate", false),
+      makeTaskFaster: readFlag("makeTaskFaster", false),
+    };
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    const first = (menuState.durations ?? [])[0];
+    if (first?.comment) {
+      setRiskState(parseRiskBlock(first.comment));
+    } else {
+      setRiskState({
+        deadlineOk: true,
+        needUpgradeEstimate: false,
+        makeTaskFaster: false,
+      });
+    }
+  }, [open, menuState.durations]);
+
+  const riskBlock = useMemo(
+    () =>
+      `[Risks: { deadlineOk: ${riskState.deadlineOk}, needUpgradeEstimate: ${riskState.needUpgradeEstimate}, makeTaskFaster: ${riskState.makeTaskFaster} }]`,
+    [riskState]
+  );
+
+  const stripRiskBlock = (comment: string) =>
+    (comment ?? "")
+      .replace(/\n?\[Risks:\s*\{[\s\S]*?\}\s*\]/m, "")
+      .trimEnd();
+
+  const appendRisksToComment = useCallback(
+    (comment: string) => {
+      const cleaned = stripRiskBlock(comment);
+      return cleaned ? `${cleaned}\n${riskBlock}` : riskBlock;
+    },
+    [riskBlock]
   );
 
   const rememberRecentIssueType = useCallback((label: string | null) => {
@@ -162,7 +233,7 @@ const TableCellMenu: FC<EditableCellMenuProps> = ({
       for (const d of durations) {
         const id = String(d.id);
         const parsedLabel = parseFirstIssueTypeLabel(d.comment ?? "") ?? null;
-        const clean = stripIssueTypeTags(d.comment ?? "");
+        const clean = stripRiskBlock(stripIssueTypeTags(d.comment ?? ""));
         next[id] = {
           durationRaw: prev[id]?.durationRaw ?? d.duration,
           cleanComment: prev[id]?.cleanComment ?? clean,
@@ -291,7 +362,7 @@ const TableCellMenu: FC<EditableCellMenuProps> = ({
       const id = String(item.id);
       const row = rows[id] ?? {
         durationRaw: item.duration,
-        cleanComment: stripIssueTypeTags(item.comment ?? ""),
+        cleanComment: stripRiskBlock(stripIssueTypeTags(item.comment ?? "")),
         selectedLabel:
           parseFirstIssueTypeLabel(item.comment ?? "") &&
           issueTypes.find(
@@ -329,7 +400,7 @@ const TableCellMenu: FC<EditableCellMenuProps> = ({
       const id = String(item.id);
       const row = rows[id] ?? {
         durationRaw: item.duration,
-        cleanComment: stripIssueTypeTags(item.comment ?? ""),
+        cleanComment: stripRiskBlock(stripIssueTypeTags(item.comment ?? "")),
         selectedLabel:
           parseFirstIssueTypeLabel(item.comment ?? "") &&
           issueTypes.find(
@@ -343,14 +414,20 @@ const TableCellMenu: FC<EditableCellMenuProps> = ({
         row.cleanComment,
         row.selectedLabel ?? undefined
       );
+      const finalWithRisks = appendRisksToComment(finalComment);
 
       setData({
+        dateCell: menuState.dateField || undefined,
         dispatch,
         token,
         issueId: menuState.issueId,
         duration: normalizeDuration(row.durationRaw ?? ""),
-        comment: finalComment,
+        comment: finalWithRisks,
         worklogId: item.id,
+        deadlineOk: riskState.deadlineOk,
+        needUpgradeEstimate: riskState.needUpgradeEstimate,
+        makeTaskFaster: riskState.makeTaskFaster,
+        trackerUid,
       });
     }
 
@@ -360,10 +437,14 @@ const TableCellMenu: FC<EditableCellMenuProps> = ({
     durations,
     rows,
     issueTypes,
+    appendRisksToComment,
+    riskState,
     setData,
     dispatch,
     token,
     menuState.issueId,
+    menuState.dateField,
+    trackerUid,
     onClose,
   ]);
 
@@ -377,7 +458,7 @@ const TableCellMenu: FC<EditableCellMenuProps> = ({
       const id = String(item.id);
       const row = rows[id] ?? {
         durationRaw: item.duration,
-        cleanComment: stripIssueTypeTags(item.comment ?? ""),
+        cleanComment: stripRiskBlock(stripIssueTypeTags(item.comment ?? "")),
         selectedLabel:
           parseFirstIssueTypeLabel(item.comment ?? "") &&
           issueTypes.find(
@@ -394,6 +475,61 @@ const TableCellMenu: FC<EditableCellMenuProps> = ({
     }
     return false;
   }, [loaded, durations, rows, issueTypes, validateDurationValue]);
+
+  const riskSection = (
+    <>
+      <Grid size={12}>
+        <Divider sx={{ my: 1 }} />
+        <Typography variant="subtitle1">Риски по задаче</Typography>
+      </Grid>
+      <Grid size={12}>
+        <Stack spacing={1} mt={1}>
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={riskState.deadlineOk}
+                onChange={(e) =>
+                  setRiskState((prev) => ({
+                    ...prev,
+                    deadlineOk: e.target.checked,
+                  }))
+                }
+              />
+            }
+            label="Подтверждаю выполнение в срок"
+          />
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={riskState.needUpgradeEstimate}
+                onChange={(e) =>
+                  setRiskState((prev) => ({
+                    ...prev,
+                    needUpgradeEstimate: e.target.checked,
+                  }))
+                }
+              />
+            }
+            label="Требуется увеличить оценку времени"
+          />
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={riskState.makeTaskFaster}
+                onChange={(e) =>
+                  setRiskState((prev) => ({
+                    ...prev,
+                    makeTaskFaster: e.target.checked,
+                  }))
+                }
+              />
+            }
+            label="Сделаю быстрее (оценка)"
+          />
+        </Stack>
+      </Grid>
+    </>
+  );
 
   // --- ДОБАВИТЬ
   const handleAddNewDuration = useCallback(
@@ -440,6 +576,7 @@ const TableCellMenu: FC<EditableCellMenuProps> = ({
       newEntry.comment ?? "",
       selectedIssueTypeLabelNew ?? undefined
     );
+    const finalWithRisks = appendRisksToComment(finalComment);
 
     setData({
       dateCell: menuState.dateField || undefined,
@@ -447,7 +584,11 @@ const TableCellMenu: FC<EditableCellMenuProps> = ({
       token,
       issueId: menuState.issueId,
       duration: normalizeDuration(newEntry.duration ?? ""),
-      comment: finalComment,
+      comment: finalWithRisks,
+      deadlineOk: riskState.deadlineOk,
+      needUpgradeEstimate: riskState.needUpgradeEstimate,
+      makeTaskFaster: riskState.makeTaskFaster,
+      trackerUid,
     });
     setNewEntry({ duration: "", comment: "" });
     setSelectedIssueTypeLabelNew(null);
@@ -457,11 +598,14 @@ const TableCellMenu: FC<EditableCellMenuProps> = ({
     validateDurationValue,
     issueTypes.length,
     selectedIssueTypeLabelNew,
+    appendRisksToComment,
+    riskState,
     setData,
     menuState.dateField,
     menuState.issueId,
     dispatch,
     token,
+    trackerUid,
     onClose,
   ]);
 
@@ -474,11 +618,13 @@ const TableCellMenu: FC<EditableCellMenuProps> = ({
         dispatch,
         issueId: menuState.issueId,
         ids,
+        durations: menuState.durations ?? undefined,
+        trackerUid,
       });
     }
     setOpenConfirm(false);
     onClose();
-  }, [menuState, token, deleteData, dispatch, onClose]);
+  }, [menuState, token, deleteData, dispatch, onClose, trackerUid]);
 
   const handleCancelDeleteAll = useCallback(() => setOpenConfirm(false), []);
   const handleDeleteItem = useCallback(
@@ -488,10 +634,12 @@ const TableCellMenu: FC<EditableCellMenuProps> = ({
         dispatch,
         issueId: menuState.issueId,
         ids: [item.id],
+        durations: [item],
+        trackerUid,
       });
       onClose();
     },
-    [menuState.issueId, token, deleteData, dispatch, onClose]
+    [menuState.issueId, token, deleteData, dispatch, onClose, trackerUid]
   );
 
   return (
@@ -568,7 +716,7 @@ const TableCellMenu: FC<EditableCellMenuProps> = ({
                 const id = String(item.id);
                 const row = rows[id] ?? {
                   durationRaw: item.duration,
-                  cleanComment: stripIssueTypeTags(item.comment ?? ""),
+                  cleanComment: stripRiskBlock(stripIssueTypeTags(item.comment ?? "")),
                   selectedLabel:
                     parseFirstIssueTypeLabel(item.comment ?? "") &&
                     issueTypes.find(
@@ -688,6 +836,8 @@ const TableCellMenu: FC<EditableCellMenuProps> = ({
                 );
               })}
 
+              {riskSection}
+
               {/* Общая кнопка сохранить изменения */}
               <Grid size={12} display="flex" justifyContent="flex-end" mt={1}>
                 <Button
@@ -698,6 +848,7 @@ const TableCellMenu: FC<EditableCellMenuProps> = ({
                   Сохранить изменения
                 </Button>
               </Grid>
+
             </>
           )}
         </Grid>
@@ -815,6 +966,7 @@ const TableCellMenu: FC<EditableCellMenuProps> = ({
                   Добавить
                 </Button>
               </Grid>
+
             </Grid>
           </>
         )}

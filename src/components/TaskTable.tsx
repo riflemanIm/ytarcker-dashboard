@@ -159,6 +159,12 @@ const TaskTable: FC<TaskTableProps> = ({
 }) => {
   const { state: appState, dispatch } = useAppContext();
   const { token } = appState.auth;
+  const trackerUid =
+    appState.state.userId ||
+    appState.tableTimePlanState.selectedPatientUid ||
+    (Array.isArray(appState.state.users) && appState.state.users.length === 1
+      ? appState.state.users[0]?.id ?? null
+      : null);
   // --- 0) Выравниваем «шапку недели» под данные / выбранную неделю ---
   const viewStart = useMemo(() => {
     const s = toTarget(start).startOf("isoWeek");
@@ -423,6 +429,7 @@ const TaskTable: FC<TaskTableProps> = ({
           token,
           issueId,
           duration: normalizedValue,
+          trackerUid,
         });
         return true;
       } catch (err: any) {
@@ -434,7 +441,7 @@ const TaskTable: FC<TaskTableProps> = ({
         return false;
       }
     },
-    [dispatch, viewStart, setData, token]
+    [dispatch, viewStart, setData, token, trackerUid]
   );
 
   // --- 7) Колонки (шапка дат строится от viewStart) ---

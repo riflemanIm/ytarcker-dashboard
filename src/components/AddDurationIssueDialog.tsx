@@ -5,12 +5,16 @@ import AddIcon from "@mui/icons-material/Add";
 import {
   Box,
   Button,
+  Checkbox,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
+  Divider,
+  FormControlLabel,
   Grid2 as Grid,
   IconButton,
+  Stack,
   TextField,
   Tooltip,
   Typography,
@@ -39,7 +43,18 @@ export default function AddDurationIssueDialog({
 }: AddDurationIssueDialogProps) {
   const { state, dispatch } = useAppContext();
   const { token } = state.auth;
+  const trackerUid =
+    state.state.userId ||
+    state.tableTimePlanState.selectedPatientUid ||
+    (Array.isArray(state.state.users) && state.state.users.length === 1
+      ? state.state.users[0]?.id ?? null
+      : null);
   const [open, setOpen] = useState(false);
+  const [riskState, setRiskState] = useState({
+    deadlineOk: true,
+    needUpgradeEstimate: false,
+    makeTaskFaster: false,
+  });
 
   // список типов по выбранной задаче
   const [issueTypesState, setIssueTypesState] = useState<{
@@ -49,7 +64,7 @@ export default function AddDurationIssueDialog({
 
   // выбранный тип (только значение label; тег в комментарий НЕ вставляем до сохранения)
   const [selectedIssueType, setSelectedIssueType] = useState<string | null>(
-    null
+    null,
   );
 
   const initialValues = {
@@ -61,8 +76,19 @@ export default function AddDurationIssueDialog({
 
   const labels = useMemo(
     () => (issueTypesState.issue_type_list ?? []).map((t) => t.label),
-    [issueTypesState.issue_type_list]
+    [issueTypesState.issue_type_list],
   );
+
+  const buildRiskBlock = () =>
+    `[Risks: { deadlineOk: ${riskState.deadlineOk}, needUpgradeEstimate: ${riskState.needUpgradeEstimate}, makeTaskFaster: ${riskState.makeTaskFaster} }]`;
+
+  const appendRisksToComment = (comment: string) => {
+    const cleaned = (comment ?? "")
+      .replace(/\n?\[Risks:\s*\{[\s\S]*?\}\s*\]/m, "")
+      .trimEnd();
+    const riskBlock = buildRiskBlock();
+    return cleaned ? `${cleaned}\n${riskBlock}` : riskBlock;
+  };
 
   // валидация формы (без тегов в comment)
   const validate = (values: typeof initialValues) => {
@@ -100,8 +126,9 @@ export default function AddDurationIssueDialog({
     const dateCell = dayjs(values.dateTime);
     const finalComment = buildFinalComment(
       values.comment ?? "",
-      selectedIssueType ?? undefined
+      selectedIssueType ?? undefined,
     );
+    const finalWithRisks = appendRisksToComment(finalComment);
 
     setData({
       dateCell,
@@ -109,8 +136,12 @@ export default function AddDurationIssueDialog({
       token,
       issueId: values.issue!.key,
       duration: normalizeDuration(values.duration ?? ""),
-      comment: finalComment, // тег добавляется здесь
+      comment: finalWithRisks, // тег и риски добавляются здесь
+      deadlineOk: riskState.deadlineOk,
+      needUpgradeEstimate: riskState.needUpgradeEstimate,
+      makeTaskFaster: riskState.makeTaskFaster,
       addEndWorkDayTime: false,
+      trackerUid,
     } as SetDataArgs);
 
     dispatch({
@@ -165,6 +196,11 @@ export default function AddDurationIssueDialog({
     setErrors({});
     setIssueTypesState({ issue_type_list: [], loaded: true });
     setSelectedIssueType(null);
+    setRiskState({
+      deadlineOk: true,
+      needUpgradeEstimate: false,
+      makeTaskFaster: false,
+    });
 
     setOpen(true);
   };
@@ -317,6 +353,58 @@ export default function AddDurationIssueDialog({
                 />
               </Grid>
             )}
+
+            <Grid size={12}>
+              <Divider sx={{ my: 1 }} />
+              <Typography variant="subtitle1">Риски по задаче</Typography>
+            </Grid>
+
+            <Grid size={12}>
+              <Stack spacing={1} mt={1}>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={riskState.deadlineOk}
+                      onChange={(e) =>
+                        setRiskState((prev) => ({
+                          ...prev,
+                          deadlineOk: e.target.checked,
+                        }))
+                      }
+                    />
+                  }
+                  label="Подтверждаю выполнение в срок"
+                />
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={riskState.needUpgradeEstimate}
+                      onChange={(e) =>
+                        setRiskState((prev) => ({
+                          ...prev,
+                          needUpgradeEstimate: e.target.checked,
+                        }))
+                      }
+                    />
+                  }
+                  label="Требуется увеличить оценку времени"
+                />
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={riskState.makeTaskFaster}
+                      onChange={(e) =>
+                        setRiskState((prev) => ({
+                          ...prev,
+                          makeTaskFaster: e.target.checked,
+                        }))
+                      }
+                    />
+                  }
+                  label="Сделаю быстрее (оценка)"
+                />
+              </Stack>
+            </Grid>
           </Grid>
         </DialogContent>
 

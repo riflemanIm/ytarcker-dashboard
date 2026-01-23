@@ -2,7 +2,7 @@ import dayjs, { Dayjs } from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import axios from "axios";
-import isEmpty from "@/helpers";
+import isEmpty, { parseISODurationToSeconds } from "@/helpers";
 import {
   AppState,
   DataItem,
@@ -17,6 +17,7 @@ import {
   TlRole,
   TlSprint,
   TaskListItem,
+  DurationItem,
   WorkPlanItem,
   WorkPlanCapacityItem,
 } from "@/types/global";
@@ -88,9 +89,83 @@ export interface SetDataArgs {
   issueId: string | null;
   duration: string;
   comment?: string;
+  planningComment?: string;
   worklogId?: string | null;
   addEndWorkDayTime?: boolean;
+  trackerUid?: string | null;
+  checklistItemId?: string | null;
+  deadlineOk?: boolean;
+  needUpgradeEstimate?: boolean;
+  makeTaskFaster?: boolean;
+  startDate?: string;
 }
+
+export interface TlWorklogUpdateArgs {
+  taskKey: string;
+  duration: number;
+  startDate: string;
+  deadlineOk: boolean;
+  needUpgradeEstimate: boolean;
+  makeTaskFaster: boolean;
+  comment: string;
+  action: 0 | 1 | 2;
+  checklistItemId?: string;
+  trackerUid: string;
+  worklogId?: number;
+}
+
+export const updateTlWorklog = async (
+  payload: TlWorklogUpdateArgs
+): Promise<{ YT_TL_WORKLOG_ID: number } | null> => {
+  try {
+    if ((payload.action === 1 || payload.action === 2) && !payload.worklogId) {
+      throw new Error("worklogId is required for edit/delete actions");
+    }
+    const res = await axios.post<{ YT_TL_WORKLOG_ID: number }>(
+      `${apiUrl}/tlworklogupdate`,
+      payload
+    );
+    return res.data ?? null;
+  } catch (err: any) {
+    console.error("[Ошибка в updateTlWorklog]:", err.message);
+    return null;
+  }
+};
+
+const buildTlWorklogPayload = (args: {
+  taskKey: string;
+  durationIso: string;
+  startDate: string;
+  comment: string;
+  action: 0 | 1 | 2;
+  trackerUid: string;
+  checklistItemId?: string | null;
+  worklogId?: string | number | null;
+  deadlineOk?: boolean;
+  needUpgradeEstimate?: boolean;
+  makeTaskFaster?: boolean;
+}): TlWorklogUpdateArgs | null => {
+  const seconds = parseISODurationToSeconds(args.durationIso);
+  const minutes = Math.round(seconds / 60);
+  if (!Number.isFinite(minutes)) return null;
+  const worklogId =
+    args.worklogId != null && args.worklogId !== ""
+      ? Number(args.worklogId)
+      : undefined;
+  return {
+    taskKey: args.taskKey,
+    duration: minutes,
+    startDate: args.startDate,
+    deadlineOk: args.deadlineOk ?? true,
+    needUpgradeEstimate: args.needUpgradeEstimate ?? false,
+    makeTaskFaster: args.makeTaskFaster ?? false,
+    comment: args.comment ?? "",
+    action: args.action,
+    checklistItemId: args.checklistItemId ?? undefined,
+    trackerUid: args.trackerUid,
+    worklogId: Number.isFinite(worklogId) ? worklogId : undefined,
+  };
+};
 
 export const setData = async ({
   dateCell,
@@ -99,86 +174,97 @@ export const setData = async ({
   issueId,
   duration,
   comment = "",
+  planningComment,
   worklogId = null,
   addEndWorkDayTime = true,
+  trackerUid,
+  checklistItemId,
+  deadlineOk,
+  needUpgradeEstimate,
+  makeTaskFaster,
+  startDate,
 }: SetDataArgs): Promise<void> => {
   if (token == null) {
     return;
   }
+  if (!issueId) {
+    dispatch({
+      type: "setAlert",
+      payload: {
+        open: true,
+        severity: "error",
+        message: "Не указан ключ задачи (taskKey)",
+      },
+    });
+    return;
+  }
+  if (!trackerUid) {
+    dispatch({
+      type: "setAlert",
+      payload: {
+        open: true,
+        severity: "error",
+        message: "Не выбран UID пользователя (trackerUid)",
+      },
+    });
+    return;
+  }
 
   try {
-    let res;
-    if (worklogId) {
-      // Если worklogId передан, редактируем существующую запись
-      const payload = {
-        token,
-        issueId,
-        worklogId,
-        duration,
-        comment,
-      };
-      res = await axios.patch(`${apiUrl}/api/edit_time`, payload);
-    } else {
-      // Добавляем новую запись, формируем время из dateCell
+    const startDateTime = (() => {
+      const HOURS_END_DAY = 18; // конец рабочего дня
 
-      const startDate = (): string => {
-        const HOURS_END_DAY = 18; // конец рабочего дня
+      if (addEndWorkDayTime && dateCell) {
+        // дата из ячейки + конец рабочего дня
+        return dateCell
+          .add(HOURS_END_DAY, "hours")
+          .format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
+      }
 
-        if (addEndWorkDayTime && dateCell) {
-          // дата из ячейки + конец рабочего дня
-          return dateCell
-            .add(HOURS_END_DAY, "hours")
-            .format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
-        }
+      if (addEndWorkDayTime && !dateCell) {
+        // текущая дата + конец рабочего дня
+        return dayjs()
+          .add(HOURS_END_DAY, "hours")
+          .format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
+      }
 
-        if (addEndWorkDayTime && !dateCell) {
-          // текущая дата + конец рабочего дня
-          return dayjs()
-            .add(HOURS_END_DAY, "hours")
-            .format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
-        }
+      if (dateCell) {
+        return dateCell.format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
+      }
 
-        if (dateCell) {
-          return dateCell.format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
-        }
+      return dayjs().format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
+    })();
 
-        return dayjs().format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
-      };
+    const internalStartDate =
+      startDate ||
+      (dateCell
+        ? dayjs(dateCell).format("YYYY-MM-DD")
+        : dayjs().format("YYYY-MM-DD"));
 
-      // const startDate = () => {
-      //   const now = dayjs();
-
-      //   if (addEndWorkDayTime && dateCell) {
-      //     // дата из ячейки + текущее время
-      //     return dayjs(
-      //       `${dateCell.format("YYYY-MM-DD")}T${now.format("HH:mm:ss.SSSZZ")}`
-      //     ).format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
-      //   }
-
-      //   if (addEndWorkDayTime) {
-      //     // просто now
-      //     return now.format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
-      //   }
-
-      //   if (dateCell) {
-      //     // дата из ячейки + текущее время
-      //     return dayjs(
-      //       `${dateCell.format("YYYY-MM-DD")}T${now.format("HH:mm:ss.SSSZZ")}`
-      //     ).format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
-      //   }
-
-      //   return now.format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
-      // };
-
-      const payload = {
-        token,
-        issueId,
-        start: startDate(),
-        duration,
-        comment,
-      };
-      res = await axios.post(`${apiUrl}/api/add_time`, payload);
+    const seconds = parseISODurationToSeconds(duration);
+    const durationMinutes = Math.round(seconds / 60);
+    if (!Number.isFinite(durationMinutes)) {
+      throw new Error("Некорректная длительность");
     }
+
+    const payload = {
+      token,
+      taskKey: issueId,
+      action: worklogId ? 1 : 0,
+      duration,
+      durationMinutes,
+      start: startDateTime,
+      startDate: internalStartDate,
+      comment: planningComment ?? comment ?? "",
+      worklogId: worklogId ? Number(worklogId) : undefined,
+      trackerUid,
+      checklistItemId,
+      deadlineOk: deadlineOk ?? true,
+      needUpgradeEstimate: needUpgradeEstimate ?? false,
+      makeTaskFaster: makeTaskFaster ?? false,
+    };
+
+    const res = await axios.post(`${apiUrl}/api/worklog_update`, payload);
 
     if (res.status !== 200) {
       throw new Error("Api set data error");
@@ -232,6 +318,12 @@ export interface DeleteDataArgs {
   dispatch: AppDispatch;
   issueId: string | null;
   ids: string[];
+  durations?: DurationItem[] | null;
+  trackerUid?: string | null;
+  checklistItemId?: string | null;
+  deadlineOk?: boolean;
+  needUpgradeEstimate?: boolean;
+  makeTaskFaster?: boolean;
 }
 
 export const deleteData = async ({
@@ -239,18 +331,69 @@ export const deleteData = async ({
   dispatch,
   issueId,
   ids,
+  durations,
+  trackerUid,
+  checklistItemId,
+  deadlineOk,
+  needUpgradeEstimate,
+  makeTaskFaster,
 }: DeleteDataArgs): Promise<void> => {
   if (token == null) {
     return;
   }
+  if (!issueId) {
+    dispatch({
+      type: "setAlert",
+      payload: {
+        open: true,
+        severity: "error",
+        message: "Не указан ключ задачи (taskKey)",
+      },
+    });
+    return;
+  }
+  if (!trackerUid) {
+    dispatch({
+      type: "setAlert",
+      payload: {
+        open: true,
+        severity: "error",
+        message: "Не выбран UID пользователя (trackerUid)",
+      },
+    });
+    return;
+  }
 
   try {
+    const items =
+      Array.isArray(durations) && durations.length
+        ? durations
+            .filter((item) => ids.includes(item.id))
+            .map((item) => {
+              const seconds = parseISODurationToSeconds(item.duration);
+              const durationMinutes = Math.round(seconds / 60);
+              return {
+                worklogId: item.id,
+                durationMinutes,
+                startDate: dayjs(item.start).format("YYYY-MM-DD"),
+                comment: item.comment ?? "",
+              };
+            })
+        : [];
+
     const payload = {
-      issueId,
-      ids,
       token,
+      taskKey: issueId,
+      action: 2,
+      ids,
+      items,
+      trackerUid,
+      checklistItemId,
+      deadlineOk: deadlineOk ?? true,
+      needUpgradeEstimate: needUpgradeEstimate ?? false,
+      makeTaskFaster: makeTaskFaster ?? false,
     };
-    const res = await axios.post(`${apiUrl}/api/delete_all`, payload);
+    const res = await axios.post(`${apiUrl}/api/worklog_update`, payload);
     if (res.status !== 200) {
       throw new Error("Ошибка удаления данных");
     }
