@@ -1,12 +1,25 @@
-import { getWorkPlan } from "@/actions/data";
+import { getWorkPlan, setWorkPlan } from "@/actions/data";
 import { WorkPlanItem } from "@/types/global";
-import { Box } from "@mui/material";
+import {
+  Box,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  IconButton,
+  Stack,
+} from "@mui/material";
 import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import dayjs from "dayjs";
 import { FC, useEffect, useMemo, useState } from "react";
 import IssueDisplay from "./IssueDisplay";
 import { useTableTimePlanSelectors } from "@/hooks/useTableTimePlanSelectors";
 import { getPriorityPalette } from "@/helpers/priorityStyles";
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
+import SetIssuePlanTable from "./SetIssuePlanTable";
+import { useAppContext } from "@/context/AppContext";
 
 const WorkPlanTable: FC = () => {
   const {
@@ -17,9 +30,15 @@ const WorkPlanTable: FC = () => {
     groupIds,
     workPlanRefreshKey,
   } = useTableTimePlanSelectors();
+  const { dispatch } = useAppContext();
   const [rows, setRows] = useState<WorkPlanItem[]>([]);
   const [loading, setLoading] = useState(false);
   const isSprintReady = sprintId != null;
+  const [editOpen, setEditOpen] = useState(false);
+  const [selectedRow, setSelectedRow] = useState<WorkPlanItem | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<WorkPlanItem | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -79,59 +98,90 @@ const WorkPlanTable: FC = () => {
       {
         field: "TaskKey",
         headerName: "Key",
-        minWidth: 120,
-        flex: 0.5,
+        minWidth: 100,
+        flex: 0.4,
         sortable: false,
         filterable: false,
         disableColumnMenu: true,
       },
-
-      { field: "WorkName", headerName: "Работа", flex: 1.5, minWidth: 160 },
+      {
+        field: "actions",
+        headerName: "Действия",
+        minWidth: 120,
+        sortable: false,
+        filterable: false,
+        disableColumnMenu: true,
+        renderCell: (params: GridRenderCellParams<WorkPlanItem>) => (
+          <Stack direction="row" spacing={1}>
+            <IconButton
+              size="small"
+              sx={(theme) => ({ color: theme.palette.primary.main })}
+              onClick={() => {
+                setSelectedRow(params.row);
+                setEditOpen(true);
+              }}
+            >
+              <EditIcon fontSize="small" />
+            </IconButton>
+            <IconButton
+              size="small"
+              sx={(theme) => ({ color: theme.palette.warning.main })}
+              onClick={() => {
+                setDeleteTarget(params.row);
+                setDeleteOpen(true);
+              }}
+            >
+              <DeleteIcon fontSize="small" />
+            </IconButton>
+          </Stack>
+        ),
+      },
+      { field: "WorkName", headerName: "Работа", flex: 1, minWidth: 120 },
       {
         field: "WorkDone",
         headerName: "Сделано",
-        flex: 1,
-        minWidth: 110,
+        flex: 0.6,
+        minWidth: 70,
         valueFormatter: (value: WorkPlanItem["WorkDone"]) =>
           value ? "Да" : "Нет",
       },
       {
         field: "WorkNameDict",
         headerName: "Тип работы",
-        flex: 1.5,
-        minWidth: 180,
+        flex: 0.9,
+        minWidth: 120,
       },
-      { field: "IsPlan", headerName: "План", flex: 1, minWidth: 100 },
+      { field: "IsPlan", headerName: "План", flex: 0.5, minWidth: 70 },
       {
         field: "CheckListAssignee",
         headerName: "Сотрудник",
         flex: 1.5,
         minWidth: 160,
       },
-      { field: "ProjectName", headerName: "Проект", flex: 1.5, minWidth: 180 },
+      { field: "ProjectName", headerName: "Проект", flex: 1.2, minWidth: 150 },
       {
         field: "EstimateTimeDays",
         headerName: "Оценка, дн.",
-        flex: 1,
-        minWidth: 120,
+        flex: 0.7,
+        minWidth: 90,
       },
       {
         field: "SpentTimeDays",
         headerName: "Потрачено, дн.",
-        flex: 1,
-        minWidth: 140,
+        flex: 0.8,
+        minWidth: 100,
       },
       {
         field: "RemainTimeDays",
         headerName: "Остаток, дн.",
-        flex: 1,
-        minWidth: 140,
+        flex: 0.8,
+        minWidth: 100,
       },
       {
         field: "Deadline",
         headerName: "Дедлайн",
-        flex: 1,
-        minWidth: 120,
+        flex: 0.7,
+        minWidth: 90,
         valueFormatter: (value: WorkPlanItem["Deadline"]) =>
           value && dayjs(value).isValid()
             ? dayjs(value).format("DD.MM.YYYY")
@@ -140,6 +190,35 @@ const WorkPlanTable: FC = () => {
     ],
     [],
   );
+
+  const handleDelete = async () => {
+    if (!deleteTarget || !sprintId) return;
+    setDeleteLoading(true);
+    try {
+      const res = await setWorkPlan({
+        sprintId,
+        taskKey: deleteTarget.TaskKey,
+        trackerUid: deleteTarget.trackerUid,
+        action: 2,
+        workPlanId: deleteTarget.YT_TL_WORKPLAN_ID,
+      });
+      if (res?.YT_TL_WORKPLAN_ID != null) {
+        dispatch({
+          type: "setTableTimePlanState",
+          payload: (prev) => ({
+            ...prev,
+            workPlanRefreshKey: prev.workPlanRefreshKey + 1,
+          }),
+        });
+        setDeleteOpen(false);
+        setDeleteTarget(null);
+      }
+    } catch (error: any) {
+      console.error("[WorkPlanTable] delete work plan error:", error?.message);
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
 
   return (
     <Box sx={{ mt: 2, height: 600 }}>
@@ -190,6 +269,48 @@ const WorkPlanTable: FC = () => {
           };
         }}
       />
+      <SetIssuePlanTable
+        open={editOpen}
+        onClose={() => {
+          setEditOpen(false);
+          setSelectedRow(null);
+        }}
+        issue={selectedRow}
+        sprintId={sprintId}
+        mode="edit"
+      />
+      <Dialog
+        open={deleteOpen}
+        onClose={() => {
+          setDeleteOpen(false);
+          setDeleteTarget(null);
+        }}
+      >
+        <DialogTitle>Удалить запись из плана?</DialogTitle>
+        <DialogContent>
+          <Box sx={{ py: 1 }}>
+            {deleteTarget?.TaskName} • {deleteTarget?.TaskKey}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => {
+              setDeleteOpen(false);
+              setDeleteTarget(null);
+            }}
+          >
+            Отмена
+          </Button>
+          <Button
+            color="error"
+            variant="contained"
+            onClick={handleDelete}
+            disabled={deleteLoading}
+          >
+            Удалить
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

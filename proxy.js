@@ -906,12 +906,14 @@ app.post("/api/tl_workplan_capacity", async (req, res) => {
   }
 });
 
-app.post("/api/tl_workplan_add", async (req, res) => {
+const handleSetWorkPlan = async (req, res) => {
   try {
     const {
       sprintId,
       taskKey,
       trackerUid,
+      action,
+      workPlanId,
       checklistItemId,
       workName,
       deadline,
@@ -934,6 +936,17 @@ app.post("/api/tl_workplan_add", async (req, res) => {
         message: "Missing or invalid field 'trackerUid'. It must be a string.",
       });
     }
+    if (![0, 1, 2].includes(action)) {
+      return res.status(400).json({
+        message: "Missing or invalid field 'action'. It must be 0, 1, or 2.",
+      });
+    }
+    if ((action === 1 || action === 2) && !Number.isInteger(workPlanId)) {
+      return res.status(400).json({
+        message:
+          "Field 'workPlanId' is required and must be an integer for Edit or Delete actions.",
+      });
+    }
 
     const resp = await axios.post(
       "http://of-srv-apps-001.pmtech.ru:18005/acceptor/yandextracker/setworkplan",
@@ -941,6 +954,8 @@ app.post("/api/tl_workplan_add", async (req, res) => {
         sprintId,
         taskKey,
         trackerUid,
+        action,
+        workPlanId,
         checklistItemId,
         workName,
         deadline,
@@ -962,9 +977,11 @@ app.post("/api/tl_workplan_add", async (req, res) => {
       upstreamStatus: error.response?.status,
       upstreamData: error.response?.data,
     };
-    console.error("[api/tl_workplan_add] upstream error:", payload);
+    console.error("[setworkplan] upstream error:", payload);
     res.status(status).json(payload);
   }
-});
+};
+
+app.post("/setworkplan", handleSetWorkPlan);
 
 app.listen(4000, () => console.log("Proxy server running on port 4000"));

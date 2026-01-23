@@ -5,7 +5,7 @@ import {
   normalizeDuration,
   workDaysToDurationInput,
 } from "@/helpers";
-import { TaskListItem } from "@/types/global";
+import { TaskListItem, WorkPlanItem } from "@/types/global";
 import {
   Button,
   Dialog,
@@ -28,8 +28,9 @@ import { getPriorityPalette } from "@/helpers/priorityStyles";
 interface SetIssuePlanTableProps {
   open: boolean;
   onClose: () => void;
-  issue: TaskListItem | null;
+  issue: TaskListItem | WorkPlanItem | null;
   sprintId: number | null;
+  mode?: "add" | "edit";
 }
 
 type FormState = {
@@ -43,11 +44,28 @@ type FormState = {
   priority: "Red" | "Orange" | "Green";
 };
 
+const isWorkPlanItem = (
+  value: TaskListItem | WorkPlanItem | null,
+): value is WorkPlanItem => Boolean(value && "YT_TL_WORKPLAN_ID" in value);
+
+const getPriorityValue = (
+  value: TaskListItem | WorkPlanItem | null,
+): "Red" | "Orange" | "Green" => {
+  if (isWorkPlanItem(value)) {
+    const priority = value.Priority;
+    if (priority === "Red" || priority === "Orange" || priority === "Green") {
+      return priority;
+    }
+  }
+  return "Green";
+};
+
 const SetIssuePlanTable: FC<SetIssuePlanTableProps> = ({
   open,
   onClose,
   issue,
   sprintId,
+  mode = "add",
 }) => {
   console.log("issue", issue);
   const { state, dispatch } = useAppContext();
@@ -62,8 +80,10 @@ const SetIssuePlanTable: FC<SetIssuePlanTableProps> = ({
       issue?.Deadline && dayjs(issue.Deadline).isValid()
         ? dayjs(issue.Deadline)
         : null,
-    estimateTimeDays: workDaysToDurationInput(issue?.WorkDays),
-    priority: "Green",
+    estimateTimeDays: isWorkPlanItem(issue)
+      ? workDaysToDurationInput(issue.EstimateTimeDays)
+      : workDaysToDurationInput(issue?.WorkDays),
+    priority: getPriorityValue(issue),
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
@@ -79,8 +99,10 @@ const SetIssuePlanTable: FC<SetIssuePlanTableProps> = ({
         issue?.Deadline && dayjs(issue.Deadline).isValid()
           ? dayjs(issue.Deadline)
           : null,
-      estimateTimeDays: workDaysToDurationInput(issue?.WorkDays),
-      priority: "Green",
+      estimateTimeDays: isWorkPlanItem(issue)
+        ? workDaysToDurationInput(issue.EstimateTimeDays)
+        : workDaysToDurationInput(issue?.WorkDays),
+      priority: getPriorityValue(issue),
     });
     setErrors({});
   }, [issue, sprintId, open]);
@@ -159,12 +181,19 @@ const SetIssuePlanTable: FC<SetIssuePlanTableProps> = ({
       normalizedEstimate !== ""
         ? durationToWorkDays(normalizedEstimate)
         : undefined;
+    const action: 0 | 1 = mode === "edit" ? 1 : 0;
+    if (action === 1 && !isWorkPlanItem(issue)) {
+      setSaving(false);
+      return;
+    }
 
     setSaving(true);
     const payload = {
       sprintId: form.sprintId as number,
       taskKey: form.taskKey,
       trackerUid: form.trackerUid,
+      action,
+      workPlanId: isWorkPlanItem(issue) ? issue.YT_TL_WORKPLAN_ID : undefined,
       checklistItemId: form.checklistItemId || undefined,
       workName: form.workName || undefined,
       deadline: form.deadline
@@ -176,7 +205,7 @@ const SetIssuePlanTable: FC<SetIssuePlanTableProps> = ({
 
     try {
       const res = await setWorkPlan(payload);
-      if (res?.YT_TL_WORKPLAN_ID) {
+      if (res?.YT_TL_WORKPLAN_ID != null) {
         dispatch({
           type: "setTableTimePlanState",
           payload: (prev) => ({
@@ -202,7 +231,9 @@ const SetIssuePlanTable: FC<SetIssuePlanTableProps> = ({
           justifyContent="space-between"
         >
           <Stack spacing={0.5}>
-            <Typography variant="subtitle1">Добавить в план</Typography>
+            <Typography variant="subtitle1">
+              {mode === "edit" ? "Изменить запись плана" : "Добавить в план"}
+            </Typography>
             <Typography variant="subtitle2">
               {issue?.TaskName} • {form?.taskKey || "-"} • {form?.workName}
             </Typography>

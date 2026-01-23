@@ -604,19 +604,24 @@ export interface SetWorkPlanArgs {
   sprintId: number;
   taskKey: string;
   trackerUid: string;
+  action: 0 | 1 | 2;
   checklistItemId?: string;
   workName?: string;
   deadline?: string | null;
   estimateTimeDays?: number;
   priority?: "Red" | "Orange" | "Green";
+  workPlanId?: number;
 }
 
 export const setWorkPlan = async (
   payload: SetWorkPlanArgs
 ): Promise<{ YT_TL_WORKPLAN_ID: number } | null> => {
   try {
+    if ((payload.action === 1 || payload.action === 2) && !payload.workPlanId) {
+      throw new Error("workPlanId is required for edit/delete actions");
+    }
     const res = await axios.post<{ YT_TL_WORKPLAN_ID: number }>(
-      `${apiUrl}/api/tl_workplan_add`,
+      `${apiUrl}/setworkplan`,
       payload
     );
     return res.data ?? null;
