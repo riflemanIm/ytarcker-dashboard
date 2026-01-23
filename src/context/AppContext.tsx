@@ -131,7 +131,10 @@ const initAppContextState = (): AppContextState => ({
   workPlanCapacityState: initialWorkPlanCapacityState,
 });
 
-function appReducer(state: AppContextState, action: AppAction): AppContextState {
+function appReducer(
+  state: AppContextState,
+  action: AppAction,
+): AppContextState {
   switch (action.type) {
     case "setAuth":
       return { ...state, auth: applySetState(state.auth, action.payload) };
@@ -160,11 +163,12 @@ function appReducer(state: AppContextState, action: AppAction): AppContextState 
         reportTo: applySetState(state.reportTo, action.payload),
       };
     case "setTableTimePlanState":
+      console.log("case setTableTimePlanState");
       return {
         ...state,
         tableTimePlanState: applySetState(
           state.tableTimePlanState,
-          action.payload
+          action.payload,
         ),
       };
     case "setWorkPlanCapacityState":
@@ -172,7 +176,7 @@ function appReducer(state: AppContextState, action: AppAction): AppContextState 
         ...state,
         workPlanCapacityState: applySetState(
           state.workPlanCapacityState,
-          action.payload
+          action.payload,
         ),
       };
     default:
@@ -184,7 +188,7 @@ export const AppProvider: FC<PropsWithChildren> = ({ children }) => {
   const [appState, dispatch] = useReducer(
     appReducer,
     undefined,
-    initAppContextState
+    initAppContextState,
   );
 
   const value = useMemo(() => ({ state: appState, dispatch }), [appState]);

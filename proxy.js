@@ -81,7 +81,7 @@ const mapWithConcurrency = async (items, mapper, limit = 5) => {
   };
 
   const workers = Array.from({ length: Math.min(limit, items.length) }).map(
-    () => worker()
+    () => worker(),
   );
   await Promise.all(workers);
   return result;
@@ -193,7 +193,7 @@ app.post("/api/add_time", async (req, res) => {
     const { data } = await axios.post(
       url,
       { start, duration, comment },
-      headers(token)
+      headers(token),
     );
 
     res.json(data);
@@ -243,13 +243,13 @@ app.post("/api/delete_all", async (req, res) => {
           axios
             .delete(
               `https://api.tracker.yandex.net/v2/issues/${issueId}/worklog/${id}`,
-              headers(token)
+              headers(token),
             )
             .catch((err) => {
               console.error(`Ошибка удаления worklog ${id}:`, err.message);
               throw err;
-            })
-        )
+            }),
+        ),
       );
     }
 
@@ -273,18 +273,18 @@ const trackerSearchRequest = async (token, body, options = {}) => {
   const requestedPage = toNumberOrFallback(options.page, DEFAULT_TRACKER_PAGE);
   const requestedPerPage = toNumberOrFallback(
     options.perPage,
-    DEFAULT_TRACKER_PER_PAGE
+    DEFAULT_TRACKER_PER_PAGE,
   );
   const page = Math.max(1, Math.floor(requestedPage));
   const perPage = Math.max(
     1,
-    Math.min(MAX_TRACKER_PER_PAGE, Math.floor(requestedPerPage))
+    Math.min(MAX_TRACKER_PER_PAGE, Math.floor(requestedPerPage)),
   );
 
   const url = `https://api.tracker.yandex.net/v3/issues/_search?perPage=${perPage}&page=${page}`;
   const response = await withRetries(
     () => axios.post(url, body, headers(token)),
-    { retries: 4, baseDelay: 600 }
+    { retries: 4, baseDelay: 600 },
   );
   const payload = response.data ?? {};
 
@@ -310,7 +310,7 @@ const trackerSearchRequest = async (token, body, options = {}) => {
     payload?.total,
     payload?.totalCount,
     meta?.total,
-    meta?.totalCount
+    meta?.totalCount,
   );
   const total = totalFromPayload ?? issues.length;
   const resolvedPage = extractNumber(payload?.page, meta?.page) ?? page;
@@ -340,7 +340,7 @@ const searchTracker = (token, filter, options = {}) => {
   return trackerSearchRequest(
     token,
     { filter, order: "-updated" },
-    mergedOptions
+    mergedOptions,
   ).then((result) => result.issues);
 };
 
@@ -361,9 +361,9 @@ const fetchIssueComments = async (token, issueId) => {
       () =>
         axios.get(
           `https://api.tracker.yandex.net/v2/issues/${issueId}/comments`,
-          headers(token)
+          headers(token),
         ),
-      { retries: 4, baseDelay: 600 }
+      { retries: 4, baseDelay: 600 },
     );
     if (!Array.isArray(data)) return "";
     return data
@@ -424,7 +424,7 @@ app.get("/api/queues", async (req, res) => {
   try {
     const response = await axios.get(
       "https://api.tracker.yandex.net/v2/queues?perPage=1000",
-      headers(token)
+      headers(token),
     );
     const payload = Array.isArray(response.data) ? response.data : [];
     const queues = payload.map((queue) => ({
@@ -482,7 +482,7 @@ app.get("/api/search_issues", async (req, res) => {
   const perPageCandidate = perPageRaw ?? perPageAltRaw;
   const requestedPerPage = pickPositiveInt(
     perPageCandidate,
-    SEARCH_DEFAULT_PER_PAGE
+    SEARCH_DEFAULT_PER_PAGE,
   );
   const perPage = Math.min(SEARCH_MAX_PER_PAGE, requestedPerPage);
 
@@ -502,7 +502,7 @@ app.get("/api/search_issues", async (req, res) => {
         assignee: issue.assignee?.display,
         description: issue.description ?? issue?.descriptionHtml ?? "",
         commentsText: await fetchIssueComments(token, issue.id),
-      })
+      }),
     );
 
     res.json({
@@ -539,7 +539,7 @@ app.get("/api/issue_type_list", async (req, res) => {
       {
         httpsAgent,
         timeout: 15000,
-      }
+      },
     );
 
     res.json({ issue_type_list: resp.data });
@@ -565,7 +565,7 @@ app.post("/api/tl_sprints", async (req, res) => {
       {},
       {
         timeout: 15000,
-      }
+      },
     );
 
     res.json(resp.data);
@@ -590,7 +590,7 @@ app.post("/api/tl_groups", async (req, res) => {
       {},
       {
         timeout: 15000,
-      }
+      },
     );
 
     res.json(resp.data);
@@ -615,7 +615,7 @@ app.post("/api/tl_roles", async (req, res) => {
       {},
       {
         timeout: 15000,
-      }
+      },
     );
 
     res.json(resp.data);
@@ -640,7 +640,7 @@ app.post("/api/tl_projects", async (req, res) => {
       {},
       {
         timeout: 15000,
-      }
+      },
     );
 
     res.json(resp.data);
@@ -666,7 +666,8 @@ app.post("/api/tl_group_patients", async (req, res) => {
 
     if (!isValidGroupIds) {
       return res.status(400).json({
-        message: "Missing or invalid field 'groupIds'. It must be an array of integers.",
+        message:
+          "Missing or invalid field 'groupIds'. It must be an array of integers.",
       });
     }
 
@@ -675,7 +676,7 @@ app.post("/api/tl_group_patients", async (req, res) => {
       { groupIds },
       {
         timeout: 15000,
-      }
+      },
     );
 
     res.json(resp.data);
@@ -739,7 +740,7 @@ app.post("/api/tl_tasklist", async (req, res) => {
       { trackerUids, projectIds, roleIds, groupIds },
       {
         timeout: 15000,
-      }
+      },
     );
 
     res.json(resp.data);
@@ -810,7 +811,7 @@ app.post("/api/tl_workplan", async (req, res) => {
       { sprintId, trackerUids, projectIds, roleIds, groupIds },
       {
         timeout: 15000,
-      }
+      },
     );
 
     res.json(resp.data);
@@ -887,7 +888,7 @@ app.post("/api/tl_workplan_capacity", async (req, res) => {
       { dateStart, dateEnd, trackerUids, projectIds, roleIds, groupIds },
       {
         timeout: 15000,
-      }
+      },
     );
 
     res.json(resp.data);
@@ -948,7 +949,7 @@ app.post("/api/tl_workplan_add", async (req, res) => {
       },
       {
         timeout: 15000,
-      }
+      },
     );
 
     res.json(resp.data);

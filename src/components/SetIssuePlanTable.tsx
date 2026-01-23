@@ -243,13 +243,38 @@ const SetIssuePlanTable: FC<SetIssuePlanTableProps> = ({
             InputProps={{ readOnly: true }}
           /> */}
           <TextField
+            label="Спринт"
+            select
+            value={form.sprintId ?? ""}
+            onChange={(event) =>
+              updateForm({
+                ...form,
+                sprintId: event.target.value
+                  ? Number(event.target.value)
+                  : null,
+              })
+            }
+            error={Boolean(errors.sprintId)}
+            helperText={errors.sprintId}
+            fullWidth
+          >
+            {tableTimePlanState.sprins.map((item) => (
+              <MenuItem
+                key={item.yt_tl_sprints_id}
+                value={item.yt_tl_sprints_id}
+              >
+                {item.sprint}
+              </MenuItem>
+            ))}
+          </TextField>
+          {/* <TextField
             label="Название работы"
             value={form.workName}
             onChange={handleChange("workName")}
             error={Boolean(errors.workName)}
             helperText={errors.workName}
             fullWidth
-          />
+          /> */}
           <MuiUIPicker
             value={form.deadline ?? null}
             handleDateChange={(date) => handleDeadlineChange(date)}

@@ -103,11 +103,16 @@ const WorkPlanCapacityTable: FC = () => {
       { field: "Sprint", headerName: "Спринт", flex: 1, minWidth: 160 },
       {
         field: "CheckListAssignee",
-        headerName: "Сотрудник",
-        flex: 0.8,
-        minWidth: 60,
+        headerName: "Сотрудник / Роль",
+        flex: 1.2,
+        minWidth: 160,
+        renderCell: (params) => (
+          <Box sx={{ display: "flex", flexDirection: "column" }}>
+            <span>{params.row.CheckListAssignee}</span>
+            <span>{params.row.RoleName}</span>
+          </Box>
+        ),
       },
-      { field: "RoleName", headerName: "Роль", flex: 1, minWidth: 140 },
       {
         field: "EstimateTimeDays",
         headerName: "План, дн.",

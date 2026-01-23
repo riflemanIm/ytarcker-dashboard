@@ -12,7 +12,7 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 interface SelectSprintListProps {
   variant?: "standard" | "outlined" | "filled";
@@ -32,7 +32,7 @@ const SelectSprintList: React.FC<SelectSprintListProps> = ({
   const { state: appState, dispatch } = useAppContext();
   const { tableTimePlanState } = appState;
   const { sprins, sprinsLoaded, selectedSprintId } = tableTimePlanState;
-  const loading = !appState.state.loaded;
+  const [loading, setLoading] = useState(false);
   const hasFetchedRef = useRef(false);
 
   useEffect(() => {
@@ -40,10 +40,7 @@ const SelectSprintList: React.FC<SelectSprintListProps> = ({
     if (sprinsLoaded || sprins.length > 0) return;
     if (hasFetchedRef.current) return;
     hasFetchedRef.current = true;
-    dispatch({
-      type: "setState",
-      payload: (prev) => ({ ...prev, loaded: false }),
-    });
+    setLoading(true);
     getTlSprints()
       .then((data) => {
         if (!isMounted) return;
@@ -74,16 +71,14 @@ const SelectSprintList: React.FC<SelectSprintListProps> = ({
         });
       })
       .finally(() => {
-        dispatch({
-          type: "setState",
-          payload: (prev) => ({ ...prev, loaded: true }),
-        });
+        if (!isMounted) return;
+        setLoading(false);
       });
 
     return () => {
       isMounted = false;
     };
-  }, [dispatch, sprins.length, sprinsLoaded]);
+  }, []);
 
   const handleChange = (e: SelectChangeEvent<string>) => {
     const sprintId = e.target.value;
@@ -115,7 +110,10 @@ const SelectSprintList: React.FC<SelectSprintListProps> = ({
         sx={{ width: "auto" }}
       >
         {(sprins ?? []).map((item) => (
-          <MenuItem key={item.yt_tl_sprints_id} value={String(item.yt_tl_sprints_id)}>
+          <MenuItem
+            key={item.yt_tl_sprints_id}
+            value={String(item.yt_tl_sprints_id)}
+          >
             <Box sx={{ maxWidth: 380 }}>
               <Typography variant="body1" whiteSpace="wrap">
                 {item.sprint}

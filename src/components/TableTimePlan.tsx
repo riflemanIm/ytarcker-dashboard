@@ -15,7 +15,7 @@ const TableTimePlan: FC = () => {
       >
         <Box
           sx={{
-            flexBasis: { xs: "100%", lg: "60%" },
+            flexBasis: { xs: "100%", lg: "50%" },
             flexGrow: 1,
             minWidth: 0,
             minHeight: 550,
@@ -28,7 +28,7 @@ const TableTimePlan: FC = () => {
         </Box>
         <Box
           sx={{
-            flexBasis: { xs: "100%", lg: "40%" },
+            flexBasis: { xs: "100%", lg: "50%" },
             flexGrow: 1,
             minWidth: 0,
           }}
