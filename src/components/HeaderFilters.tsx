@@ -83,21 +83,21 @@ const HeaderFilters: FC<HeaderFiltersProps> = ({
         spacing={1}
         alignItems="center"
         flexWrap="wrap"
-        sx={{ overflowX: "auto", width: "100%" }}
+        sx={{ width: "100%", minWidth: 0 }}
       >
-        <Box sx={{ minWidth: 160, flex: "0 0 auto" }}>
+        <Box sx={{ flex: "1 1 160px", minWidth: 0 }}>
           <SelectSprintList />
         </Box>
-        <Box sx={{ minWidth: 160, flex: "0 0 auto" }}>
+        <Box sx={{ flex: "1 1 160px", minWidth: 0 }}>
           <SelectGroupList />
         </Box>
-        <Box sx={{ minWidth: 160, flex: "0 0 auto" }}>
+        <Box sx={{ flex: "1 0 210px", minWidth: 0 }}>
           <SelectGroupPatientsList />
         </Box>
-        <Box sx={{ minWidth: 160, flex: "0 0 auto" }}>
+        <Box sx={{ flex: "0 0 120px", minWidth: 0 }}>
           <SelectRoleList />
         </Box>
-        <Box sx={{ minWidth: 160, flex: "0 0 auto" }}>
+        <Box sx={{ flex: "0 0 120px", minWidth: 0 }}>
           <SelectProjectList />
         </Box>
       </Stack>
@@ -110,10 +110,10 @@ const HeaderFilters: FC<HeaderFiltersProps> = ({
       alignItems="center"
       justifyContent="flex-start"
       flexWrap="nowrap"
-      sx={{ overflowX: "auto", width: "100%" }}
+      sx={{ overflowX: "auto", width: "100%", minWidth: 0, flex: "1 1 auto" }}
     >
       {showAdminControls && (
-        <Stack direction="row" spacing={2} alignItems="center">
+        <Stack direction="row" spacing={2} alignItems="center" sx={{ flex: "0 0 auto" }}>
           {showUserSelection && viewMode !== "table_time_plan" && (
             <>
               <Box>
@@ -130,7 +130,7 @@ const HeaderFilters: FC<HeaderFiltersProps> = ({
                   Нет сотрудников за этот период
                 </Alert>
               ) : (
-                <Box sx={{ flex: 1, minWidth: 260 }}>
+                <Box sx={{ flex: "1 1 260px", minWidth: 0 }}>
                   <AutocompleteUsers
                     userId={userId}
                     handleSelectedUsersChange={handleSelectedUsersChange}
@@ -147,8 +147,8 @@ const HeaderFilters: FC<HeaderFiltersProps> = ({
       {showRange && rangeFilters && (
         <Box
           sx={{
-            flex: "0 1 auto",
-            width: "auto",
+            flex: "1 1 auto",
+            width: "100%",
             minWidth: 0,
           }}
         >

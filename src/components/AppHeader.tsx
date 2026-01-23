@@ -74,17 +74,17 @@ const AppHeader: FC<AppHeaderProps> = ({
           gap: theme.spacing(3),
           gridTemplateColumns: {
             xs: "1fr",
-            md: showUserSelection
-              ? "auto minmax(280px, 1fr) auto"
-              : "auto auto",
+            sm: showUserSelection
+              ? "auto minmax(0, 1fr) auto"
+              : "auto minmax(0, 1fr)",
           },
           alignItems: "center",
         })}
       >
-        {" "}
         <Box sx={{ display: "flex", justifyContent: "flex-start" }}>
           <ToggleViewButton viewMode={viewMode} onChange={onViewModeChange} />
         </Box>
+
         <HeaderFilters
           showAdminControls={showAdminControls}
           showRange={showRange}
@@ -100,6 +100,7 @@ const AppHeader: FC<AppHeaderProps> = ({
           userId={userId}
           handleSelectedUsersChange={handleSelectedUsersChange}
         />
+
         <Stack
           direction={{ xs: "row-reverse", md: "row" }}
           spacing={2}

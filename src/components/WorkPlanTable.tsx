@@ -20,6 +20,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import SetIssuePlanTable from "./SetIssuePlanTable";
 import { useAppContext } from "@/context/AppContext";
+import TableTextFilter from "./TableTextFilter";
 
 const WorkPlanTable: FC = () => {
   const {
@@ -32,6 +33,7 @@ const WorkPlanTable: FC = () => {
   } = useTableTimePlanSelectors();
   const { dispatch } = useAppContext();
   const [rows, setRows] = useState<WorkPlanItem[]>([]);
+  const [filterText, setFilterText] = useState("");
   const [loading, setLoading] = useState(false);
   const isSprintReady = sprintId != null;
   const [editOpen, setEditOpen] = useState(false);
@@ -191,6 +193,24 @@ const WorkPlanTable: FC = () => {
     [],
   );
 
+  const filteredRows = useMemo(() => {
+    const query = filterText.trim().toLowerCase();
+    if (!query) return rows;
+    return rows.filter((item) => {
+      const values = [
+        item.TaskName,
+        item.TaskKey,
+        item.WorkName,
+        item.WorkNameDict,
+        item.ProjectName,
+        item.CheckListAssignee,
+      ]
+        .filter(Boolean)
+        .map((value) => String(value).toLowerCase());
+      return values.some((value) => value.includes(query));
+    });
+  }, [rows, filterText]);
+
   const handleDelete = async () => {
     if (!deleteTarget || !sprintId) return;
     setDeleteLoading(true);
@@ -222,8 +242,15 @@ const WorkPlanTable: FC = () => {
 
   return (
     <Box sx={{ mt: 2, height: 600 }}>
+      <TableTextFilter
+        value={filterText}
+        onChange={setFilterText}
+        label="Фильтр"
+        placeholder="Название, Key, Работа, Тип работы, Проект, Сотрудник"
+        disabled={loading || rows.length === 0}
+      />
       <DataGrid
-        rows={rows}
+        rows={filteredRows}
         columns={columns}
         loading={loading || !isSprintReady}
         pageSizeOptions={[20, 50, 100]}

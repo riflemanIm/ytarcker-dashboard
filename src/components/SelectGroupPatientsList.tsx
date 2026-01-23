@@ -120,8 +120,7 @@ const SelectGroupPatientsList: React.FC<SelectGroupPatientsListProps> = ({
     });
   };
 
-  const disabled =
-    loadingPatients || !groupPatients || groupPatients.length === 0;
+  const disabled = loadingPatients || isEmpty(groupPatients);
 
   const options = (groupPatients || []).map((item) => item);
   const value =
@@ -130,54 +129,52 @@ const SelectGroupPatientsList: React.FC<SelectGroupPatientsListProps> = ({
     ) || null;
 
   return (
-    (loadingPatients || !isEmpty(options)) && (
-      <Autocomplete
-        blurOnSelect
-        clearOnBlur
-        autoSelect
-        disabled={disabled}
-        value={value}
-        options={options}
-        onChange={handleChange}
-        getOptionLabel={(option: TlGroupPatient) => option?.patients_fio || ""}
-        isOptionEqualToValue={(option: TlGroupPatient, value: TlGroupPatient) =>
-          option.trackerUid === value.trackerUid
-        }
-        renderOption={(props, option: TlGroupPatient) => (
-          <Box
-            component="li"
-            {...props}
-            sx={{ display: "flex", alignItems: "center", gap: 1.5 }}
-          >
-            <Typography variant="body1" whiteSpace="wrap">
-              {option.patients_fio}
-            </Typography>
-          </Box>
-        )}
-        noOptionsText={"Введите имя сотрудника"}
-        renderInput={(params) => (
-          <TextField
-            {...params}
-            name="filter-patients"
-            margin={margin}
-            label={"Сотрудник"}
-            fullWidth
-            variant={variant}
-            required={required}
-            error={error}
-            helperText={
-              loadingPatients ? (
-                <Stack direction="row" spacing={1} alignItems="center">
-                  <CircularProgress size={16} />
-                </Stack>
-              ) : (
-                helperText
-              )
-            }
-          />
-        )}
-      />
-    )
+    <Autocomplete
+      blurOnSelect
+      clearOnBlur
+      autoSelect
+      disabled={disabled}
+      value={value}
+      options={options}
+      onChange={handleChange}
+      getOptionLabel={(option: TlGroupPatient) => option?.patients_fio || ""}
+      isOptionEqualToValue={(option: TlGroupPatient, value: TlGroupPatient) =>
+        option.trackerUid === value.trackerUid
+      }
+      renderOption={(props, option: TlGroupPatient) => (
+        <Box
+          component="li"
+          {...props}
+          sx={{ display: "flex", alignItems: "center", gap: 1.5 }}
+        >
+          <Typography variant="body1" whiteSpace="wrap">
+            {option.patients_fio}
+          </Typography>
+        </Box>
+      )}
+      noOptionsText={"Введите имя сотрудника"}
+      renderInput={(params) => (
+        <TextField
+          {...params}
+          name="filter-patients"
+          margin={margin}
+          label={"Сотрудник"}
+          fullWidth
+          variant={variant}
+          required={required}
+          error={error}
+          helperText={
+            loadingPatients ? (
+              <Stack direction="row" spacing={1} alignItems="center">
+                <CircularProgress size={16} />
+              </Stack>
+            ) : (
+              helperText
+            )
+          }
+        />
+      )}
+    />
   );
 };
 
