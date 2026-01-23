@@ -9,6 +9,7 @@ import {
   DialogTitle,
   IconButton,
   Stack,
+  Typography,
 } from "@mui/material";
 import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import dayjs from "dayjs";
@@ -41,6 +42,12 @@ const WorkPlanTable: FC = () => {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<WorkPlanItem | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+
+  const formatTenths = (value: unknown) => {
+    const num = Number(value);
+    if (!Number.isFinite(num)) return "";
+    return (Math.round(num * 10) / 10).toFixed(1);
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -78,7 +85,7 @@ const WorkPlanTable: FC = () => {
     workPlanRefreshKey,
   ]);
 
-  const columns = useMemo<GridColDef<WorkPlanItem>[]>(
+  const columns = useMemo<GridColDef<WorkPlanItem | { id: string }>[]>(
     () => [
       {
         field: "TaskName",
@@ -88,13 +95,16 @@ const WorkPlanTable: FC = () => {
         sortable: false,
         filterable: false,
         disableColumnMenu: true,
-        renderCell: (params: GridRenderCellParams) => (
-          <IssueDisplay
-            display={params.value}
-            href={`https://tracker.yandex.ru/${params.row.TaskKey}`}
-            fio={params.row.CheckListAssignee ?? ""}
-          />
-        ),
+        renderCell: (params: GridRenderCellParams) =>
+          (params.row as any).id === "__total__" ? (
+            <Typography variant="subtitle1">{params.value}</Typography>
+          ) : (
+            <IssueDisplay
+              display={params.value}
+              href={`https://tracker.yandex.ru/${(params.row as WorkPlanItem).TaskKey}`}
+              fio={(params.row as WorkPlanItem).CheckListAssignee ?? ""}
+            />
+          ),
       },
 
       {
@@ -113,30 +123,33 @@ const WorkPlanTable: FC = () => {
         sortable: false,
         filterable: false,
         disableColumnMenu: true,
-        renderCell: (params: GridRenderCellParams<WorkPlanItem>) => (
-          <Stack direction="row" spacing={1}>
-            <IconButton
-              size="small"
-              sx={(theme) => ({ color: theme.palette.primary.main })}
-              onClick={() => {
-                setSelectedRow(params.row);
-                setEditOpen(true);
-              }}
-            >
-              <EditIcon fontSize="small" />
-            </IconButton>
-            <IconButton
-              size="small"
-              sx={(theme) => ({ color: theme.palette.warning.main })}
-              onClick={() => {
-                setDeleteTarget(params.row);
-                setDeleteOpen(true);
-              }}
-            >
-              <DeleteIcon fontSize="small" />
-            </IconButton>
-          </Stack>
-        ),
+        renderCell: (
+          params: GridRenderCellParams<WorkPlanItem | { id: string }>,
+        ) =>
+          (params.row as any).id === "__total__" ? null : (
+            <Stack direction="row" spacing={1}>
+              <IconButton
+                size="small"
+                sx={(theme) => ({ color: theme.palette.primary.main })}
+                onClick={() => {
+                  setSelectedRow(params.row as WorkPlanItem);
+                  setEditOpen(true);
+                }}
+              >
+                <EditIcon fontSize="small" />
+              </IconButton>
+              <IconButton
+                size="small"
+                sx={(theme) => ({ color: theme.palette.warning.main })}
+                onClick={() => {
+                  setDeleteTarget(params.row as WorkPlanItem);
+                  setDeleteOpen(true);
+                }}
+              >
+                <DeleteIcon fontSize="small" />
+              </IconButton>
+            </Stack>
+          ),
       },
       { field: "WorkName", headerName: "Работа", flex: 1, minWidth: 120 },
       {
@@ -166,18 +179,24 @@ const WorkPlanTable: FC = () => {
         headerName: "Оценка, дн.",
         flex: 0.7,
         minWidth: 90,
+        valueFormatter: (value: WorkPlanItem["EstimateTimeDays"]) =>
+          formatTenths(value),
       },
       {
         field: "SpentTimeDays",
         headerName: "Потрачено, дн.",
         flex: 0.8,
         minWidth: 100,
+        valueFormatter: (value: WorkPlanItem["SpentTimeDays"]) =>
+          formatTenths(value),
       },
       {
         field: "RemainTimeDays",
         headerName: "Остаток, дн.",
         flex: 0.8,
         minWidth: 100,
+        valueFormatter: (value: WorkPlanItem["RemainTimeDays"]) =>
+          formatTenths(value),
       },
       {
         field: "Deadline",
@@ -210,6 +229,28 @@ const WorkPlanTable: FC = () => {
       return values.some((value) => value.includes(query));
     });
   }, [rows, filterText]);
+
+  const rowsWithTotal = useMemo(() => {
+    if (filteredRows.length === 0) return filteredRows;
+    const sum = (items: WorkPlanItem[], key: keyof WorkPlanItem) =>
+      items.reduce((acc, item) => acc + (Number(item[key]) || 0), 0);
+
+    return [
+      ...filteredRows,
+      {
+        id: "__total__",
+        TaskName: "Итого",
+        TaskKey: "",
+        WorkName: "",
+        WorkNameDict: "",
+        CheckListAssignee: "",
+        ProjectName: "",
+        EstimateTimeDays: sum(filteredRows, "EstimateTimeDays"),
+        SpentTimeDays: sum(filteredRows, "SpentTimeDays"),
+        RemainTimeDays: sum(filteredRows, "RemainTimeDays"),
+      } as any,
+    ];
+  }, [filteredRows]);
 
   const handleDelete = async () => {
     if (!deleteTarget || !sprintId) return;
@@ -250,19 +291,20 @@ const WorkPlanTable: FC = () => {
         disabled={loading || rows.length === 0}
       />
       <DataGrid
-        rows={filteredRows}
+        rows={rowsWithTotal}
         columns={columns}
         loading={loading || !isSprintReady}
         pageSizeOptions={[20, 50, 100]}
         disableColumnMenu
         getRowClassName={(params) => {
-          const priority = params.row.Priority;
+          if ((params.row as any).id === "__total__") return "row-total";
+          const priority = (params.row as WorkPlanItem).Priority;
           if (priority === "Red") return "priority-red";
           if (priority === "Orange") return "priority-orange";
           if (priority === "Green") return "priority-green";
           return "";
         }}
-        getRowId={(row) => row.YT_TL_WORKPLAN_ID}
+        getRowId={(row) => (row as any).id ?? row.YT_TL_WORKPLAN_ID}
         sx={(theme) => {
           const palette = getPriorityPalette(theme);
           return {
@@ -292,6 +334,10 @@ const WorkPlanTable: FC = () => {
             },
             "& .MuiDataGrid-row.Mui-selected:hover .MuiDataGrid-cell": {
               backgroundColor: "inherit",
+            },
+            "& .row-total": {
+              fontWeight: 600,
+              backgroundColor: theme.palette.action.hover,
             },
           };
         }}

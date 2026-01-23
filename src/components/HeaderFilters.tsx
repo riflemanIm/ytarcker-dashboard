@@ -113,7 +113,12 @@ const HeaderFilters: FC<HeaderFiltersProps> = ({
       sx={{ overflowX: "auto", width: "100%", minWidth: 0, flex: "1 1 auto" }}
     >
       {showAdminControls && (
-        <Stack direction="row" spacing={2} alignItems="center" sx={{ flex: "0 0 auto" }}>
+        <Stack
+          direction="row"
+          spacing={2}
+          alignItems="center"
+          sx={{ flex: "0 0 auto" }}
+        >
           {showUserSelection && viewMode !== "table_time_plan" && (
             <>
               <Box>
@@ -130,7 +135,7 @@ const HeaderFilters: FC<HeaderFiltersProps> = ({
                   Нет сотрудников за этот период
                 </Alert>
               ) : (
-                <Box sx={{ flex: "1 1 260px", minWidth: 0 }}>
+                <Box sx={{ flex: "1 1 260px", minWidth: 260 }}>
                   <AutocompleteUsers
                     userId={userId}
                     handleSelectedUsersChange={handleSelectedUsersChange}
