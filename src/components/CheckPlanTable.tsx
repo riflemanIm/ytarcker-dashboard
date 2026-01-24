@@ -118,10 +118,19 @@ const CheckPlanTable: FC = () => {
     [sprintId],
   );
 
+  const rowsWithId = useMemo(
+    () =>
+      rows.map((item, index) => ({
+        ...item,
+        id: `${item.TaskKey}_${item.checklistItemId ?? "none"}_${index}`,
+      })),
+    [rows],
+  );
+
   const filteredRows = useMemo(() => {
     const query = filterText.trim().toLowerCase();
-    if (!query) return rows;
-    return rows.filter((item) => {
+    if (!query) return rowsWithId;
+    return rowsWithId.filter((item) => {
       const values = [
         item.TaskName,
         item.TaskKey,
@@ -132,7 +141,7 @@ const CheckPlanTable: FC = () => {
         .map((value) => String(value).toLowerCase());
       return values.some((value) => value.includes(query));
     });
-  }, [rows, filterText]);
+  }, [rowsWithId, filterText]);
 
   return (
     <Box sx={{ mt: 2, height: 400 }}>
@@ -144,10 +153,7 @@ const CheckPlanTable: FC = () => {
         disabled={loading || rows.length === 0}
       />
       <DataGrid
-        rows={filteredRows.map((item) => ({
-          ...item,
-          id: item.checklistItemId,
-        }))}
+        rows={filteredRows}
         columns={columns}
         loading={loading || !isSprintReady}
         pageSizeOptions={[20, 50, 100]}
