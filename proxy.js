@@ -98,6 +98,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+const ENABLE_INTERNAL_UPDATES = false;
+
 const SEARCH_DEFAULT_PER_PAGE = 20;
 const SEARCH_MAX_PER_PAGE = 50;
 
@@ -299,13 +301,19 @@ app.post("/api/worklog_update", async (req, res) => {
       if (typeof payload.durationMinutes !== "number") {
         return "Missing or invalid field 'durationMinutes'. It must be a number.";
       }
-      if (typeof payload.startDate !== "string" || payload.startDate.length === 0) {
+      if (
+        typeof payload.startDate !== "string" ||
+        payload.startDate.length === 0
+      ) {
         return "Missing or invalid field 'startDate'. It must be a string.";
       }
       if (typeof payload.comment !== "string") {
         return "Missing or invalid field 'comment'. It must be a string.";
       }
-      if (typeof payload.trackerUid !== "string" || payload.trackerUid.length === 0) {
+      if (
+        typeof payload.trackerUid !== "string" ||
+        payload.trackerUid.length === 0
+      ) {
         return "Missing or invalid field 'trackerUid'. It must be a string.";
       }
       if (typeof payload.deadlineOk !== "boolean") {
@@ -320,12 +328,17 @@ app.post("/api/worklog_update", async (req, res) => {
       return null;
     };
 
-    const sendInternal = async (payload) =>
-      axios.post(
+    const sendInternal = async (payload) => {
+      console.log("ENABLE_INTERNAL_UPDATES", ENABLE_INTERNAL_UPDATES);
+      if (!ENABLE_INTERNAL_UPDATES) {
+        return { data: { skipped: true } };
+      }
+      return axios.post(
         "http://of-srv-apps-001.pmtech.ru:18005/acceptor/yandextracker/tlworklogupdate",
         payload,
         { timeout: 15000 },
       );
+    };
 
     if (action === 0 || action === 1) {
       if (typeof duration !== "string" || duration.length === 0) {
@@ -1291,10 +1304,7 @@ const handleTlWorklogUpdate = async (req, res) => {
         message: "Missing or invalid field 'trackerUid'. It must be a string.",
       });
     }
-    if (
-      checklistItemId != null &&
-      typeof checklistItemId !== "string"
-    ) {
+    if (checklistItemId != null && typeof checklistItemId !== "string") {
       return res.status(400).json({
         message: "Field 'checklistItemId' must be a string when provided.",
       });
