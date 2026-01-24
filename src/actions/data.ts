@@ -49,7 +49,10 @@ export const getData = async ({
   end,
   login,
 }: GetDataArgs): Promise<void> => {
-  dispatch({ type: "setState", payload: (prev) => ({ ...prev, loaded: false }) });
+  dispatch({
+    type: "setState",
+    payload: (prev) => ({ ...prev, loaded: false }),
+  });
 
   try {
     // Проверяем обязательный токен
@@ -58,7 +61,7 @@ export const getData = async ({
     }
 
     const res = await axios.get(
-      `${apiUrl}/api/issues?token=${token}&endDate=${end}&startDate=${start}&userId=${userId}&login=${login}`
+      `${apiUrl}/api/issues?token=${token}&endDate=${end}&startDate=${start}&userId=${userId}&login=${login}`,
     );
 
     if (res.status !== 200) {
@@ -115,7 +118,7 @@ export interface TlWorklogUpdateArgs {
 }
 
 export const updateTlWorklog = async (
-  payload: TlWorklogUpdateArgs
+  payload: TlWorklogUpdateArgs,
 ): Promise<{ YT_TL_WORKLOG_ID: number } | null> => {
   try {
     if ((payload.action === 1 || payload.action === 2) && !payload.worklogId) {
@@ -123,7 +126,7 @@ export const updateTlWorklog = async (
     }
     const res = await axios.post<{ YT_TL_WORKLOG_ID: number }>(
       `${apiUrl}/tlworklogupdate`,
-      payload
+      payload,
     );
     return res.data ?? null;
   } catch (err: any) {
@@ -280,7 +283,7 @@ export const setData = async ({
             ? prev.data.map((item: DataItem) =>
                 item.id === (res.data as DataItem).id
                   ? (res.data as DataItem)
-                  : item
+                  : item,
               )
             : [...prev.data, { ...(res.data as DataItem) }],
         }),
@@ -297,7 +300,7 @@ export const setData = async ({
       });
     } else {
       throw new Error(
-        worklogId ? "Ошибка изменения данных" : "Ошибка добавления данных"
+        worklogId ? "Ошибка изменения данных" : "Ошибка добавления данных",
       );
     }
   } catch (err: any) {
@@ -443,7 +446,10 @@ export const getUserIssues = async ({
   userId?: string | null;
   login?: string | null;
 }): Promise<void> => {
-  dispatch({ type: "setState", payload: (prev) => ({ ...prev, loaded: false }) });
+  dispatch({
+    type: "setState",
+    payload: (prev) => ({ ...prev, loaded: false }),
+  });
   try {
     // Проверяем обязательный токен
     if (!token) {
@@ -462,7 +468,7 @@ export const getUserIssues = async ({
       `${apiUrl}/api/user_issues`,
       {
         params: { token, userId, login },
-      }
+      },
     );
     dispatch({
       type: "setState",
@@ -503,7 +509,7 @@ export const getQueues = async (token: string | null): Promise<QueueInfo[]> => {
       `${apiUrl}/api/queues`,
       {
         params: { token },
-      }
+      },
     );
     return res.data.queues ?? [];
   } catch (err: any) {
@@ -549,16 +555,13 @@ export const searchIssues = async ({
       page?: number;
       perPage?: number;
       hasMore?: boolean;
-    }>(
-      `${apiUrl}/api/search_issues`,
-      {
-        params,
-      }
-    );
+    }>(`${apiUrl}/api/search_issues`, {
+      params,
+    });
     const totalCount =
       typeof res.data.total === "number"
         ? res.data.total
-        : res.data.issues?.length ?? 0;
+        : (res.data.issues?.length ?? 0);
     return {
       issues: res.data.issues ?? [],
       total: totalCount,
@@ -611,7 +614,7 @@ export const getIssueTypeList = async ({
       `${apiUrl}/api/issue_type_list`,
       {
         params: { token, entityKey, email: yandex_login },
-      }
+      },
     );
     // const mok = [
     //   {
@@ -684,12 +687,12 @@ export const getTlProjects = async (): Promise<TlProject[]> => {
 };
 
 export const getTlGroupPatients = async (
-  groupIds: number[]
+  groupIds: number[],
 ): Promise<TlGroupPatient[]> => {
   try {
     const res = await axios.post<TlGroupPatient[]>(
       `${apiUrl}/api/tl_group_patients`,
-      { groupIds }
+      { groupIds },
     );
     return Array.isArray(res.data) ? res.data : [];
   } catch (err: any) {
@@ -706,12 +709,12 @@ export interface TaskListFilters {
 }
 
 export const getTaskList = async (
-  filters: TaskListFilters
+  filters: TaskListFilters,
 ): Promise<TaskListItem[]> => {
   try {
     const res = await axios.post<TaskListItem[]>(
       `${apiUrl}/api/tl_tasklist`,
-      filters
+      filters,
     );
     return Array.isArray(res.data) ? res.data : [];
   } catch (err: any) {
@@ -729,12 +732,12 @@ export interface WorkPlanFilters {
 }
 
 export const getWorkPlan = async (
-  filters: WorkPlanFilters
+  filters: WorkPlanFilters,
 ): Promise<WorkPlanItem[]> => {
   try {
     const res = await axios.post<WorkPlanItem[]>(
       `${apiUrl}/api/tl_workplan`,
-      filters
+      filters,
     );
     return Array.isArray(res.data) ? res.data : [];
   } catch (err: any) {
@@ -757,15 +760,15 @@ export interface SetWorkPlanArgs {
 }
 
 export const setWorkPlan = async (
-  payload: SetWorkPlanArgs
+  payload: SetWorkPlanArgs,
 ): Promise<{ YT_TL_WORKPLAN_ID: number } | null> => {
   try {
     if ((payload.action === 1 || payload.action === 2) && !payload.workPlanId) {
       throw new Error("workPlanId is required for edit/delete actions");
     }
     const res = await axios.post<{ YT_TL_WORKPLAN_ID: number }>(
-      `${apiUrl}/setworkplan`,
-      payload
+      `${apiUrl}/api/setworkplan`,
+      payload,
     );
     return res.data ?? null;
   } catch (err: any) {
@@ -784,12 +787,12 @@ export interface WorkPlanCapacityFilters {
 }
 
 export const getWorkPlanCapacity = async (
-  filters: WorkPlanCapacityFilters
+  filters: WorkPlanCapacityFilters,
 ): Promise<WorkPlanCapacityItem[]> => {
   try {
     const res = await axios.post<WorkPlanCapacityItem[]>(
       `${apiUrl}/api/tl_workplan_capacity`,
-      filters
+      filters,
     );
     return Array.isArray(res.data) ? res.data : [];
   } catch (err: any) {

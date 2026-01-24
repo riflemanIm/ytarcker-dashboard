@@ -1239,7 +1239,7 @@ const handleSetWorkPlan = async (req, res) => {
   }
 };
 
-app.post("/setworkplan", handleSetWorkPlan);
+app.post("/api/setworkplan", handleSetWorkPlan);
 
 const handleTlWorklogUpdate = async (req, res) => {
   try {
@@ -1351,6 +1351,6 @@ const handleTlWorklogUpdate = async (req, res) => {
   }
 };
 
-app.post("/tlworklogupdate", handleTlWorklogUpdate);
+app.post("/api/tlworklogupdate", handleTlWorklogUpdate);
 
 app.listen(4000, () => console.log("Proxy server running on port 4000"));
