@@ -81,7 +81,11 @@ const AppHeader: FC<AppHeaderProps> = ({
         }}
       >
         <Box sx={{ minWidth: 200, mr: "auto", display: "flex" }}>
-          <ToggleViewButton viewMode={viewMode} onChange={onViewModeChange} />
+          <ToggleViewButton
+            showAdminControls={showAdminControls}
+            viewMode={viewMode}
+            onChange={onViewModeChange}
+          />
         </Box>
 
         <HeaderFilters

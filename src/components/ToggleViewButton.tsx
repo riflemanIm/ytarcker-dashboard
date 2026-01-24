@@ -15,41 +15,44 @@ import { ViewMode } from "../types/global";
 export interface ToggleViewButtonProps {
   viewMode: ViewMode;
   onChange: (mode: ViewMode) => void;
+  showAdminControls: boolean;
 }
 
 type IconComponent = typeof TodayIcon;
 
-const VIEW_MODE_OPTIONS: Record<
-  ViewMode,
-  { icon: IconComponent; tooltip: string; menuLabel: string }
-> = {
-  table_time_spend: {
+const VIEW_MODE_OPTIONS: Array<{
+  mode: ViewMode;
+  icon: IconComponent;
+  tooltip: string;
+  menuLabel: string;
+  isAdminOnly?: boolean;
+}> = [
+  {
+    mode: "table_time_spend",
     icon: TodayIcon,
     tooltip: "Показать таблицу списания времени за неделю",
     menuLabel: "Списания",
   },
-  table_time_plan: {
+  {
+    mode: "table_time_plan",
     icon: EventNoteIcon,
     tooltip: "Показать планирования времени",
     menuLabel: "Планирование",
+    isAdminOnly: true,
   },
-  report: {
+  {
+    mode: "report",
     icon: DateRangeIcon,
     tooltip: "Показать месячный отчёт по неделям",
     menuLabel: "Месячный отчёт",
+    isAdminOnly: true,
   },
-  search: {
+  {
+    mode: "search",
     icon: SearchIcon,
     tooltip: "Перейти в поиск по задачам",
     menuLabel: "Поиск по задачам",
   },
-};
-
-const VIEW_MODE_ORDER: ViewMode[] = [
-  "table_time_spend",
-  "table_time_plan",
-  "report",
-  "search",
 ];
 
 /**
@@ -58,10 +61,13 @@ const VIEW_MODE_ORDER: ViewMode[] = [
 export default function ToggleViewButton({
   viewMode,
   onChange,
+  showAdminControls,
 }: ToggleViewButtonProps) {
   const [anchorEl, setAnchorEl] = React.useState<HTMLElement | null>(null);
 
-  const currentOption = VIEW_MODE_OPTIONS[viewMode];
+  const currentOption =
+    VIEW_MODE_OPTIONS.find((option) => option.mode === viewMode) ||
+    VIEW_MODE_OPTIONS[0];
   const Icon = currentOption.icon;
 
   const handleOpen = (event: React.MouseEvent<HTMLElement>) => {
@@ -111,18 +117,20 @@ export default function ToggleViewButton({
         anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
         transformOrigin={{ vertical: "top", horizontal: "center" }}
       >
-        {VIEW_MODE_ORDER.map((mode) => {
-          const OptionIcon = VIEW_MODE_OPTIONS[mode].icon;
+        {VIEW_MODE_OPTIONS.filter(
+          (option) => showAdminControls || !option.isAdminOnly
+        ).map((option) => {
+          const OptionIcon = option.icon;
           return (
             <MenuItem
-              key={mode}
-              selected={mode === viewMode}
-              onClick={() => handleSelect(mode)}
+              key={option.mode}
+              selected={option.mode === viewMode}
+              onClick={() => handleSelect(option.mode)}
             >
               <ListItemIcon>
                 <OptionIcon fontSize="medium" />
               </ListItemIcon>
-              <ListItemText primary={VIEW_MODE_OPTIONS[mode].menuLabel} />
+              <ListItemText primary={option.menuLabel} />
             </MenuItem>
           );
         })}
