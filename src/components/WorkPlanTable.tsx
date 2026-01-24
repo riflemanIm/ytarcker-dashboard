@@ -282,7 +282,7 @@ const WorkPlanTable: FC = () => {
   };
 
   return (
-    <Box sx={{ mt: 2, height: 600 }}>
+    <Box sx={{ mt: 2 }}>
       <TableTextFilter
         value={filterText}
         onChange={setFilterText}

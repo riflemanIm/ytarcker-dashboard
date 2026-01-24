@@ -1,16 +1,16 @@
 import { Box, Stack, Typography } from "@mui/material";
 import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
-import * as React from "react";
 import dayjs, { Dayjs } from "dayjs";
 import "dayjs/locale/ru";
+import * as React from "react";
 
 import {
   displayDuration,
   normalizeWorklogItem,
   sumDurations,
-  WorklogItem,
   // ⬇️ обязательно импортируй этот хелпер из helpers (как делали в TaskTable)
   toTarget,
+  WorklogItem,
 } from "../helpers";
 import IssueDisplay from "./IssueDisplay";
 
@@ -53,7 +53,7 @@ export default function WorklogWeeklyReport({
   // 2) нормализуем в WorklogItem (оставляем start как есть — со своим оффсетом)
   const items: WorklogItem[] = React.useMemo(
     () => inputArray.map(normalizeWorklogItem).filter(Boolean) as WorklogItem[],
-    [inputArray]
+    [inputArray],
   );
 
   // 3) границы периода в целевом поясе (Пн 00:00:00 — Вс 23:59:59)
@@ -196,7 +196,7 @@ export default function WorklogWeeklyReport({
         const weekISO = rows.reduce(
           (accISO: string, r: any) =>
             sumDurations([accISO, String(r[key] ?? "PT0M")]),
-          "PT0M"
+          "PT0M",
         );
         totalRow[key] = weekISO;
         grandISO = sumDurations([grandISO, weekISO]);
@@ -210,7 +210,7 @@ export default function WorklogWeeklyReport({
   }, [weeks, fromT, toT, items]);
 
   return (
-    <Stack gap={1} sx={{ width: "100%" }}>
+    <Stack gap={1} sx={{ width: "100%" }} mt={2}>
       <Typography variant="h5" align="center">
         Месячный отчёт по неделям
       </Typography>

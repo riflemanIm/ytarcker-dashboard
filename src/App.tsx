@@ -153,11 +153,10 @@ const YandexTracker: FC = () => {
         sx={{
           background: "white",
           height: "100vh",
-          width: "98vw",
+
           justifyContent: "center",
           textAlign: "center",
         }}
-        spacing={3}
       >
         <Grid size={12}>
           <AppHeader
@@ -202,7 +201,7 @@ const YandexTracker: FC = () => {
         {token && state.loaded && (
           <Grid
             size={12}
-            sx={{ height: "80vh", background: "white", mx: "auto" }}
+            sx={{ height: "87vh", background: "white", mx: "auto", mt: 2 }}
           >
             {viewMode === "search" ? (
               <SearchIssues token={token} />

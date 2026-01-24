@@ -1,17 +1,17 @@
+import isEmpty from "@/helpers";
+import { User, ViewMode } from "@/types/global";
 import { Alert, Box, Stack } from "@mui/material";
 import dayjs from "dayjs";
 import { FC } from "react";
-import isEmpty from "@/helpers";
-import { User, ViewMode } from "@/types/global";
 import AutocompleteUsers from "./AutocompleteUsers";
 import FetchModeSwitch from "./FetchModeSwitch";
 import ReportDateRange from "./ReportDateRange";
-import WeekNavigator from "./WeekNavigator";
 import SelectGroupList from "./SelectGroupList";
 import SelectGroupPatientsList from "./SelectGroupPatientsList";
 import SelectProjectList from "./SelectProjectList";
 import SelectRoleList from "./SelectRoleList";
 import SelectSprintList from "./SelectSprintList";
+import WeekNavigator from "./WeekNavigator";
 
 export interface WeekNavigationProps {
   start: dayjs.Dayjs;
@@ -80,7 +80,7 @@ const HeaderFilters: FC<HeaderFiltersProps> = ({
     ) : viewMode === "table_time_plan" ? (
       <Stack
         direction="row"
-        spacing={1}
+        gap={1}
         alignItems="center"
         flexWrap="wrap"
         sx={{ width: "100%", minWidth: 0 }}
@@ -101,7 +101,9 @@ const HeaderFilters: FC<HeaderFiltersProps> = ({
           <SelectProjectList />
         </Box>
       </Stack>
-    ) : null;
+    ) : (
+      <Box sx={{ width: "auto" }}></Box>
+    );
 
   return (
     <Stack
@@ -112,39 +114,35 @@ const HeaderFilters: FC<HeaderFiltersProps> = ({
       flexWrap="nowrap"
       sx={{ overflowX: "auto", width: "100%", minWidth: 0, flex: "1 1 auto" }}
     >
-      {showAdminControls && (
+      {showAdminControls && viewMode !== "table_time_plan" && (
         <Stack
           direction="row"
           spacing={2}
           alignItems="center"
           sx={{ flex: "0 0 auto" }}
         >
-          {showUserSelection && viewMode !== "table_time_plan" && (
-            <>
-              <Box>
-                <FetchModeSwitch
-                  fetchByLogin={fetchByLogin}
-                  login={login ?? ""}
-                  onToggle={onToggleFetchMode}
-                  disabled={!loaded}
-                />
-              </Box>
-              {}
-              {isEmpty(users) && !fetchByLogin ? (
-                <Alert severity="info" sx={{ flex: 1, minWidth: 260 }}>
-                  Нет сотрудников за этот период
-                </Alert>
-              ) : (
-                <Box sx={{ flex: "1 1 260px", minWidth: 260 }}>
-                  <AutocompleteUsers
-                    userId={userId}
-                    handleSelectedUsersChange={handleSelectedUsersChange}
-                    users={users}
-                    disabled={!loaded || fetchByLogin}
-                  />
-                </Box>
-              )}
-            </>
+          <Box>
+            <FetchModeSwitch
+              fetchByLogin={fetchByLogin}
+              login={login ?? ""}
+              onToggle={onToggleFetchMode}
+              disabled={!loaded}
+            />
+          </Box>
+
+          {isEmpty(users) && !fetchByLogin ? (
+            <Alert severity="info" sx={{ flex: 1, minWidth: 260 }}>
+              Нет сотрудников за этот период
+            </Alert>
+          ) : (
+            <Box sx={{ flex: "1 1 260px", minWidth: 260 }}>
+              <AutocompleteUsers
+                userId={userId}
+                handleSelectedUsersChange={handleSelectedUsersChange}
+                users={users}
+                disabled={!loaded || fetchByLogin}
+              />
+            </Box>
           )}
         </Stack>
       )}

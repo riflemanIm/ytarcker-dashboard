@@ -116,7 +116,7 @@ export const getDateOfCurrentWeekday = (isoDay: number): dayjs.Dayjs =>
 // Дата iso-дня недели, чей понедельник = start (в целевом поясе)
 export const getDateOfWeekday = (
   start: dayjs.Dayjs,
-  isoDay: number
+  isoDay: number,
 ): dayjs.Dayjs =>
   toTarget(start)
     .startOf("isoWeek")
@@ -186,7 +186,7 @@ export function aggregateDurations(data: DataItem[]): TaskItem[] {
       (acc[groupKey] ||= []).push(groupItem);
       return acc;
     },
-    {} as Record<string, TaskItem[]>
+    {} as Record<string, TaskItem[]>,
   );
 
   return Object.values(grouped).map((group) => {
@@ -197,7 +197,7 @@ export function aggregateDurations(data: DataItem[]): TaskItem[] {
           duration: i.duration,
           start: i.start,
           comment: i.comment,
-        }) as DurationItem
+        }) as DurationItem,
     );
     const totalDuration = sumDurations(group.map((i) => i.duration));
     return { ...group[0], duration: totalDuration, durations };
@@ -340,7 +340,7 @@ export interface WorklogItem {
 
 // Универсальная нормализация одной записи worklog → WorklogItem
 export function normalizeWorklogItem(
-  x: Record<string, any>
+  x: Record<string, any>,
 ): WorklogItem | null {
   if (!x) return null;
 
@@ -537,7 +537,7 @@ export const workDaysToDurationInput = (days?: number | null): string => {
 export const durationToWorkDays = (isoDuration: string): number => {
   if (!isoDuration) return 0;
   const match = isoDuration.match(
-    /^P(?:(\d+)W)?(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?$/i
+    /^P(?:(\d+)W)?(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?$/i,
   );
   if (!match) return 0;
 

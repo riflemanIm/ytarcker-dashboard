@@ -1,4 +1,4 @@
-import { Box, Stack, Typography } from "@mui/material";
+import { Box, Paper, Stack, Typography } from "@mui/material";
 import { FC } from "react";
 import CheckPlanTable from "./CheckPlanTable";
 import WorkPlanTable from "./WorkPlanTable";
@@ -13,36 +13,61 @@ const TableTimePlan: FC = () => {
         alignItems="stretch"
         sx={{ width: "100%" }}
       >
-        <Box
-          sx={{
+        <Paper
+          variant="elevation"
+          sx={(theme) => ({
+            p: { xs: 1, sm: 2 },
+            borderRadius: { xs: 1, sm: 2 },
+            border: `1px solid ${theme.palette.divider}`,
+            boxShadow: "0px 10px 15px rgba(15, 23, 42, 0.04)",
+            my: 2,
             flexBasis: { xs: "100%", lg: "50%" },
             flexGrow: 1,
             minWidth: 0,
-            minHeight: 550,
-          }}
+            minHeight: 530,
+          })}
         >
           <Typography variant="h5" textAlign="center" my={2}>
             Подбор задач в план
           </Typography>
           <CheckPlanTable />
-        </Box>
-        <Box
-          sx={{
+        </Paper>
+        <Paper
+          variant="elevation"
+          sx={(theme) => ({
+            p: { xs: 1, sm: 2 },
+            borderRadius: { xs: 1, sm: 2 },
+            border: `1px solid ${theme.palette.divider}`,
+            boxShadow: "0px 10px 15px rgba(15, 23, 42, 0.04)",
+            my: 2,
             flexBasis: { xs: "100%", lg: "50%" },
             flexGrow: 1,
             minWidth: 0,
-          }}
+            minHeight: 530,
+          })}
         >
           <Typography variant="h5" textAlign="center" my={2}>
             Загрузка сотрудников
           </Typography>
           <WorkPlanCapacityTable />
-        </Box>
+        </Paper>
       </Stack>
-      <Typography variant="h5" textAlign="center" my={2}>
-        План работ
-      </Typography>
-      <WorkPlanTable />
+      <Paper
+        variant="elevation"
+        sx={(theme) => ({
+          p: { xs: 1, sm: 2 },
+          borderRadius: { xs: 1, sm: 2 },
+          border: `1px solid ${theme.palette.divider}`,
+          boxShadow: "0px 10px 15px rgba(15, 23, 42, 0.04)",
+          my: 2,
+          height: 670,
+        })}
+      >
+        <Typography variant="h5" textAlign="center" my={2}>
+          План работ
+        </Typography>
+        <WorkPlanTable />
+      </Paper>
     </Box>
   );
 };

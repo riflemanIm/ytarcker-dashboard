@@ -1,4 +1,5 @@
 import { DeleteDataArgs, SetDataArgs } from "@/actions/data";
+import { useAppContext } from "@/context/AppContext";
 import {
   dayOfWeekNameByDate,
   daysMap,
@@ -14,7 +15,7 @@ import {
 } from "@/helpers";
 import { parseFirstIssueTypeLabel } from "@/helpers/issueTypeComment";
 import AddIcon from "@mui/icons-material/Add";
-import { Box, Chip, IconButton, Stack, Typography } from "@mui/material";
+import { Box, Chip, IconButton, Paper, Stack, Typography } from "@mui/material";
 import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import dayjs, { Dayjs } from "dayjs";
 import utc from "dayjs/plugin/utc";
@@ -33,11 +34,10 @@ import {
   TaskItemIssue,
   TransformedTaskRow,
 } from "../types/global";
-import { useAppContext } from "@/context/AppContext";
 import AddDurationIssueDialog from "./AddDurationIssueDialog";
 import IssueDisplay from "./IssueDisplay";
-import TableCellMenu from "./TableCellMenu";
 import TableCellInfoPopover from "./TableCellInfoPopover";
+import TableCellMenu from "./TableCellMenu";
 
 dayjs.locale("ru");
 dayjs.extend(utc);
@@ -85,7 +85,7 @@ const transformData = (data: TaskItem[]): TransformedTaskRow[] => {
 
   data.forEach((item: TaskItem) => {
     const dayName: DayOfWeek = dayOfWeekNameByDate(
-      dayjs(item.start)
+      dayjs(item.start),
     ) as DayOfWeek;
 
     if (!grouped[item.key]) {
@@ -163,7 +163,7 @@ const TaskTable: FC<TaskTableProps> = ({
     appState.state.userId ||
     appState.tableTimePlanState.selectedPatientUid ||
     (Array.isArray(appState.state.users) && appState.state.users.length === 1
-      ? appState.state.users[0]?.id ?? null
+      ? (appState.state.users[0]?.id ?? null)
       : null);
   // --- 0) Выравниваем «шапку недели» под данные / выбранную неделю ---
   const viewStart = useMemo(() => {
@@ -208,7 +208,7 @@ const TaskTable: FC<TaskTableProps> = ({
         /\[\s*ProjectControlWT\s*:\s*Временно\s+не\s*определ[её]н\s*\]/i;
 
       const rawItems = dataForWeek.filter(
-        (r) => r.key === rowId && dayOfWeekNameByDate(dayjs(r.start)) === field
+        (r) => r.key === rowId && dayOfWeekNameByDate(dayjs(r.start)) === field,
       );
 
       if (rawItems.length === 0) return false;
@@ -232,7 +232,7 @@ const TaskTable: FC<TaskTableProps> = ({
       }
       return true;
     },
-    [dataForWeek]
+    [dataForWeek],
   );
 
   // --- 3) Строим строки по отфильтрованным данным ---
@@ -244,7 +244,7 @@ const TaskTable: FC<TaskTableProps> = ({
     for (const day of daysMap) {
       const dateOfThisDay = getDateOfWeekday(
         viewStart,
-        dayToNumber(day)
+        dayToNumber(day),
       ).startOf("day");
       if (dateOfThisDay.isSame(today)) return day;
     }
@@ -293,7 +293,7 @@ const TaskTable: FC<TaskTableProps> = ({
           ? dataForWeek.find(
               (row) =>
                 dayOfWeekNameByDate(dayjs(row.start)) === params.field &&
-                row.key === params.id
+                row.key === params.id,
             )?.durations
           : null;
 
@@ -305,11 +305,11 @@ const TaskTable: FC<TaskTableProps> = ({
         durations: foundRow ?? null,
         dateField: getDateOfWeekday(
           viewStart,
-          dayToNumber(params.field as DayOfWeek)
+          dayToNumber(params.field as DayOfWeek),
         ),
       });
     },
-    [dataForWeek, viewStart, setMenuState]
+    [dataForWeek, viewStart, setMenuState],
   );
 
   const handleMenuClose = useCallback(() => {
@@ -325,7 +325,7 @@ const TaskTable: FC<TaskTableProps> = ({
           ? dataForWeek.find(
               (row) =>
                 dayOfWeekNameByDate(dayjs(row.start)) === params.field &&
-                row.key === params.id
+                row.key === params.id,
             )?.durations
           : null;
 
@@ -345,7 +345,7 @@ const TaskTable: FC<TaskTableProps> = ({
         durations: foundRow,
         dateField: getDateOfWeekday(
           viewStart,
-          dayToNumber(params.field as DayOfWeek)
+          dayToNumber(params.field as DayOfWeek),
         ),
       };
 
@@ -359,7 +359,7 @@ const TaskTable: FC<TaskTableProps> = ({
       setInfoState,
       setInfoOpen,
       clearInfoCloseTimer,
-    ]
+    ],
   );
 
   const handleCellInfoLeave = useCallback(
@@ -374,7 +374,7 @@ const TaskTable: FC<TaskTableProps> = ({
       }
       scheduleInfoClose();
     },
-    [scheduleInfoClose]
+    [scheduleInfoClose],
   );
 
   const handlePopoverMouseLeave = useCallback(
@@ -386,7 +386,7 @@ const TaskTable: FC<TaskTableProps> = ({
       }
       scheduleInfoClose();
     },
-    [infoState.anchorEl, scheduleInfoClose]
+    [infoState.anchorEl, scheduleInfoClose],
   );
 
   const handlePopoverMouseEnter = useCallback(() => {
@@ -441,7 +441,7 @@ const TaskTable: FC<TaskTableProps> = ({
         return false;
       }
     },
-    [dispatch, viewStart, setData, token, trackerUid]
+    [dispatch, viewStart, setData, token, trackerUid],
   );
 
   // --- 7) Колонки (шапка дат строится от viewStart) ---
@@ -467,7 +467,7 @@ const TaskTable: FC<TaskTableProps> = ({
     ...daysMap.map((day) => {
       const header = `${headerWeekName[day]} ${getDateOfWeekday(
         viewStart,
-        dayToNumber(day)
+        dayToNumber(day),
       ).format("DD.MM")}`;
 
       return {
@@ -586,10 +586,10 @@ const TaskTable: FC<TaskTableProps> = ({
       const totalsVals: Record<string, string> = {};
       daysMap.forEach((field) => {
         totals[field] = displayDuration(
-          sumDurations(rows.map((row) => (row as any)[field] as string))
+          sumDurations(rows.map((row) => (row as any)[field] as string)),
         );
         totalsVals[field] = sumDurations(
-          rows.map((row) => (row as any)[field] as string)
+          rows.map((row) => (row as any)[field] as string),
         );
       });
 
@@ -602,12 +602,12 @@ const TaskTable: FC<TaskTableProps> = ({
         ...totals,
       } as TransformedTaskRow;
     },
-    []
+    [],
   );
 
   const totalRow = useMemo(
     () => calculateTotalRow(tableRows),
-    [tableRows, calculateTotalRow]
+    [tableRows, calculateTotalRow],
   );
 
   const isEmptyDurationValue = (value: unknown): boolean => {
@@ -617,13 +617,21 @@ const TaskTable: FC<TaskTableProps> = ({
   };
 
   return (
-    <>
+    <Paper
+      variant="elevation"
+      sx={(theme) => ({
+        p: { xs: 1, sm: 2 },
+        borderRadius: { xs: 1, sm: 2 },
+        border: `1px solid ${theme.palette.divider}`,
+        boxShadow: "0px 10px 15px rgba(15, 23, 42, 0.04)",
+      })}
+    >
       <Stack
         spacing={2}
         direction="row"
         alignItems="center"
         justifyContent="center"
-        my={2}
+        mb={2}
       >
         <Typography variant="h5">
           Затраченное время{" "}
@@ -651,21 +659,21 @@ const TaskTable: FC<TaskTableProps> = ({
           ) {
             handleMenuOpen(
               event as React.MouseEvent<HTMLElement>,
-              params as GridRenderCellParams
+              params as GridRenderCellParams,
             );
           }
         }}
         processRowUpdate={(updatedRow, originalRow) =>
           handleCellEdit(
             Object.keys(updatedRow).find(
-              (key) => (updatedRow as any)[key] !== (originalRow as any)[key]
+              (key) => (updatedRow as any)[key] !== (originalRow as any)[key],
             ) as DayOfWeek,
             updatedRow[
               Object.keys(updatedRow).find(
-                (key) => (updatedRow as any)[key] !== (originalRow as any)[key]
+                (key) => (updatedRow as any)[key] !== (originalRow as any)[key],
               ) as DayOfWeek
             ],
-            updatedRow.issueId
+            updatedRow.issueId,
           )
             ? updatedRow
             : originalRow
@@ -679,6 +687,7 @@ const TaskTable: FC<TaskTableProps> = ({
           "& .current-column-cell": {
             backgroundColor: "rgba(200, 230, 255, 0.2)",
           },
+          height: "81vh",
         }}
       />
       <TableCellMenu
@@ -698,7 +707,7 @@ const TaskTable: FC<TaskTableProps> = ({
         onCloseButtonClick={() => handleCellInfoLeave()}
         paperRef={popoverPaperRef}
       />
-    </>
+    </Paper>
   );
 };
 

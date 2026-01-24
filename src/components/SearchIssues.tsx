@@ -1,4 +1,5 @@
-import { useState, useEffect, Fragment, ReactNode, ChangeEvent } from "react";
+import { getQueues, searchIssues } from "@/actions/data";
+import { Issue, QueueInfo } from "@/types/global";
 import {
   Alert,
   Box,
@@ -15,8 +16,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { getQueues, searchIssues } from "@/actions/data";
-import { Issue, QueueInfo } from "@/types/global";
+import { ChangeEvent, Fragment, ReactNode, useEffect, useState } from "react";
 import IssueDisplay from "./IssueDisplay";
 
 const escapeRegExp = (value: string) =>
@@ -69,7 +69,7 @@ const highlightText = (text: string, query: string): ReactNode => {
         }}
       >
         {text.slice(start, end)}
-      </Box>
+      </Box>,
     );
     lastIndex = end;
   }
@@ -166,7 +166,7 @@ const SearchIssues = ({ token }: SearchIssuesProps) => {
   const executeSearch = async (
     searchText: string,
     pageToRequest = 1,
-    perPageToRequest = perPage
+    perPageToRequest = perPage,
   ) => {
     if (!token) return;
     setLoading(true);
@@ -226,7 +226,7 @@ const SearchIssues = ({ token }: SearchIssuesProps) => {
   };
 
   const handleQueueChange = (
-    event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     setSelectedQueue(event.target.value);
   };
@@ -237,7 +237,7 @@ const SearchIssues = ({ token }: SearchIssuesProps) => {
   };
 
   const handlePerPageChange = (
-    event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     const parsed = Number(event.target.value);
     const nextPerPage = Number.isFinite(parsed) ? parsed : DEFAULT_PER_PAGE;
@@ -341,11 +341,11 @@ const SearchIssues = ({ token }: SearchIssuesProps) => {
                   : issue.key;
                 const descriptionSnippet = buildSnippet(
                   issue.description ?? "",
-                  appliedQuery
+                  appliedQuery,
                 );
                 const commentSnippet = buildSnippet(
                   issue.commentsText ?? "",
-                  appliedQuery
+                  appliedQuery,
                 );
                 return (
                   <Fragment key={issue.key}>

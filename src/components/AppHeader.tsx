@@ -1,8 +1,8 @@
+import { useAppContext } from "@/context/AppContext";
+import { User, ViewMode } from "@/types/global";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import { Box, IconButton, Paper, Stack, useTheme } from "@mui/material";
 import { FC } from "react";
-import { useAppContext } from "@/context/AppContext";
-import { User, ViewMode } from "@/types/global";
 import HeaderFilters, {
   ReportRangeProps,
   WeekNavigationProps,
@@ -55,7 +55,7 @@ const AppHeader: FC<AppHeaderProps> = ({
     <Paper
       elevation={2}
       sx={{
-        p: { xs: 2, md: 3 },
+        p: { xs: 1, sm: 2 },
         borderRadius: 3,
         backgroundImage:
           theme.palette.mode === "light"
@@ -68,20 +68,19 @@ const AppHeader: FC<AppHeaderProps> = ({
             : theme.shadows[3],
       }}
     >
-      <Box
-        sx={(theme) => ({
-          display: "grid",
-          gap: theme.spacing(3),
-          gridTemplateColumns: {
-            xs: "1fr",
-            sm: showUserSelection
-              ? "auto minmax(0, 1fr) auto"
-              : "auto minmax(0, 1fr)",
-          },
-          alignItems: "center",
-        })}
+      <Stack
+        direction="row"
+        spacing={1}
+        alignItems="center"
+        flexWrap="nowrap"
+        sx={{
+          width: "100%",
+          minWidth: 0,
+          gap: { xs: 2, sm: 2, md: 0 },
+          flexWrap: { xs: "wrap", sm: "wrap", md: "nowrap" },
+        }}
       >
-        <Box sx={{ display: "flex", justifyContent: "flex-start" }}>
+        <Box sx={{ minWidth: 200, mr: "auto", display: "flex" }}>
           <ToggleViewButton viewMode={viewMode} onChange={onViewModeChange} />
         </Box>
 
@@ -107,8 +106,8 @@ const AppHeader: FC<AppHeaderProps> = ({
           alignItems="center"
           justifyContent={{ xs: "space-between", md: "flex-end" }}
           sx={{
-            width: "100%",
-            minWidth: { xs: "100%", md: 220 },
+            width: "auto",
+            minWidth: 280,
           }}
         >
           <Box sx={{ display: "flex", justifyContent: "flex-end", flex: 1 }}>
@@ -136,7 +135,7 @@ const AppHeader: FC<AppHeaderProps> = ({
             </IconButton>
           )}
         </Stack>
-      </Box>
+      </Stack>
     </Paper>
   );
 };
