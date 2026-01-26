@@ -37,7 +37,7 @@ import {
 import AddDurationIssueDialog from "./AddDurationIssueDialog";
 import IssueDisplay from "./IssueDisplay";
 import TableCellInfoPopover from "./TableCellInfoPopover";
-import TableCellMenu from "./TableCellMenu";
+import SetTimeSpend from "./SetTimeSpend";
 
 dayjs.locale("ru");
 dayjs.extend(utc);
@@ -47,6 +47,8 @@ const createEmptyMenuState = (): MenuState => ({
   issue: null,
   field: null,
   issueId: null,
+  checklistItemId: null,
+  remainTimeDays: undefined,
   durations: null,
   dateField: null,
 });
@@ -67,6 +69,7 @@ interface RawTransformedRow {
   issue: TaskItemIssue;
   issueId: string;
   groupIssue: string;
+  checklistItemId?: string | null;
   monday: string[];
   tuesday: string[];
   wednesday: string[];
@@ -94,6 +97,7 @@ const transformData = (data: TaskItem[]): TransformedTaskRow[] => {
         issue: item.issue,
         issueId: item.issueId,
         groupIssue: item.groupIssue,
+        checklistItemId: item.checklistItemId ?? null,
         monday: [],
         tuesday: [],
         wednesday: [],
@@ -138,6 +142,7 @@ const transformData = (data: TaskItem[]): TransformedTaskRow[] => {
       issue: rawRow.issue,
       issueId: rawRow.issueId,
       groupIssue: rawRow.groupIssue,
+      checklistItemId: rawRow.checklistItemId ?? null,
       monday,
       tuesday,
       wednesday,
@@ -302,6 +307,8 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
         issue: params.row.issue.display,
         field: params.field as DayOfWeek,
         issueId: params.row.issueId,
+        checklistItemId: params.row.checklistItemId ?? null,
+        remainTimeDays: params.row.remainTimeDays,
         durations: foundRow ?? null,
         dateField: getDateOfWeekday(
           viewStart,
@@ -342,6 +349,8 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
         issue: params.row.issue.display,
         field: params.field as DayOfWeek,
         issueId: params.row.issueId,
+        checklistItemId: params.row.checklistItemId ?? null,
+        remainTimeDays: params.row.remainTimeDays,
         durations: foundRow,
         dateField: getDateOfWeekday(
           viewStart,
@@ -401,7 +410,12 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
 
   // --- 6) Сохранение времени в выбранный день текущей (viewStart) недели ---
   const handleCellEdit = useCallback(
-    (field: DayOfWeek, newValue: string, issueId: string) => {
+    (
+      field: DayOfWeek,
+      newValue: string,
+      issueId: string,
+      checklistItemId?: string | null,
+    ) => {
       const normalizedValue = normalizeDuration(newValue);
       if (
         normalizedValue.trim() === "" ||
@@ -430,6 +444,7 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
           issueId,
           duration: normalizedValue,
           trackerUid,
+          checklistItemId: checklistItemId ?? undefined,
         });
         return true;
       } catch (err: any) {
@@ -674,6 +689,7 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
               ) as DayOfWeek
             ],
             updatedRow.issueId,
+            (updatedRow as any).checklistItemId,
           )
             ? updatedRow
             : originalRow
@@ -690,7 +706,7 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
           height: "81vh",
         }}
       />
-      <TableCellMenu
+      <SetTimeSpend
         key={`${menuState.issueId}-${menuState.field}-${menuState.dateField?.toISOString()}`}
         open={Boolean(menuState.anchorEl)}
         onClose={handleMenuClose}

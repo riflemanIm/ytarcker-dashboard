@@ -329,7 +329,6 @@ app.post("/api/worklog_update", async (req, res) => {
     };
 
     const sendInternal = async (payload) => {
-      console.log("ENABLE_INTERNAL_UPDATES", ENABLE_INTERNAL_UPDATES);
       if (!ENABLE_INTERNAL_UPDATES) {
         return { data: { skipped: true } };
       }

@@ -211,6 +211,8 @@ export interface TaskItem {
   duration: string;
   comment: string;
   durations?: DurationItem[];
+  checklistItemId?: string | null;
+  remainTimeDays?: number;
 }
 
 export interface TaskItemMenu {
@@ -228,6 +230,7 @@ export interface TransformedTaskRow {
   issue: TaskItemIssue;
   issueId: string;
   groupIssue: string;
+  checklistItemId?: string | null;
   monday: string;
   tuesday: string;
   wednesday: string;
@@ -243,6 +246,8 @@ export interface MenuState {
   issue: string | null;
   field: DayOfWeek | null;
   issueId: string | null;
+  checklistItemId?: string | null;
+  remainTimeDays?: number;
   durations: DurationItem[] | null;
   dateField: Dayjs | null;
 }

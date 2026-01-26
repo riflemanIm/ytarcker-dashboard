@@ -33,13 +33,13 @@ const VIEW_MODE_OPTIONS: Array<{
     tooltip: "Показать таблицу списания времени за неделю",
     menuLabel: "Списания",
   },
-  {
-    mode: "table_time_spend_plan",
-    icon: TodayIcon,
-    tooltip: "Показать списания времени по плану задач",
-    menuLabel: "Списания по плану",
-    isAdminOnly: true,
-  },
+  // {
+  //   mode: "table_time_spend_plan",
+  //   icon: TodayIcon,
+  //   tooltip: "Показать списания времени по плану задач",
+  //   menuLabel: "Списания по плану",
+  //   isAdminOnly: true,
+  // },
   {
     mode: "table_time_plan",
     icon: EventNoteIcon,
@@ -125,7 +125,7 @@ export default function ToggleViewButton({
         transformOrigin={{ vertical: "top", horizontal: "center" }}
       >
         {VIEW_MODE_OPTIONS.filter(
-          (option) => showAdminControls || !option.isAdminOnly
+          (option) => showAdminControls || !option.isAdminOnly,
         ).map((option) => {
           const OptionIcon = option.icon;
           return (

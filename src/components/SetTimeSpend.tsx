@@ -59,7 +59,7 @@ type RowUI = {
 
 const RECENT_ISSUE_TYPES_KEY = "recent_issue_types";
 
-const TableCellMenu: FC<EditableCellMenuProps> = ({
+const SetTimeSpend: FC<EditableCellMenuProps> = ({
   open,
   onClose,
   menuState,
@@ -428,6 +428,7 @@ const TableCellMenu: FC<EditableCellMenuProps> = ({
         needUpgradeEstimate: riskState.needUpgradeEstimate,
         makeTaskFaster: riskState.makeTaskFaster,
         trackerUid,
+        checklistItemId: menuState.checklistItemId ?? undefined,
       });
     }
 
@@ -475,6 +476,44 @@ const TableCellMenu: FC<EditableCellMenuProps> = ({
     }
     return false;
   }, [loaded, durations, rows, issueTypes, validateDurationValue]);
+
+  const [plannedDuration, setPlannedDuration] = useState<string>("");
+
+  const remainingInfo = useMemo(() => {
+    if (menuState.remainTimeDays == null) return null;
+    const planned = Number(plannedDuration);
+    if (!Number.isFinite(planned)) return null;
+    return planned - menuState.remainTimeDays;
+  }, [plannedDuration, menuState.remainTimeDays]);
+
+  const planningSection = (
+    <>
+      {menuState.remainTimeDays != null && (
+        <>
+          <Grid size={12}>
+            <Divider sx={{ my: 1 }} />
+            <Typography variant="subtitle1">Планирование</Typography>
+          </Grid>
+          <Grid size={12}>
+            <Stack direction="row" spacing={2} alignItems="center">
+              <TextField
+                label="длительность по плану"
+                value={plannedDuration}
+                onChange={(event) => setPlannedDuration(event.target.value)}
+                type="number"
+                size="small"
+                inputProps={{ step: "0.1", min: 0 }}
+              />
+              <Typography variant="subtitle2">
+                Осталось времени ={" "}
+                {remainingInfo == null ? "-" : remainingInfo.toFixed(1)}
+              </Typography>
+            </Stack>
+          </Grid>
+        </>
+      )}
+    </>
+  );
 
   const riskSection = (
     <>
@@ -589,6 +628,7 @@ const TableCellMenu: FC<EditableCellMenuProps> = ({
       needUpgradeEstimate: riskState.needUpgradeEstimate,
       makeTaskFaster: riskState.makeTaskFaster,
       trackerUid,
+      checklistItemId: menuState.checklistItemId ?? undefined,
     });
     setNewEntry({ duration: "", comment: "" });
     setSelectedIssueTypeLabelNew(null);
@@ -837,6 +877,7 @@ const TableCellMenu: FC<EditableCellMenuProps> = ({
               })}
 
               {riskSection}
+              {planningSection}
 
               {/* Общая кнопка сохранить изменения */}
               <Grid size={12} display="flex" justifyContent="flex-end" mt={1}>
@@ -1002,4 +1043,4 @@ const TableCellMenu: FC<EditableCellMenuProps> = ({
   );
 };
 
-export default TableCellMenu;
+export default SetTimeSpend;
