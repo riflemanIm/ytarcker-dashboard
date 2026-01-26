@@ -98,7 +98,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const ENABLE_INTERNAL_UPDATES = false;
+const ENABLE_INTERNAL_UPDATES = true;
 
 const SEARCH_DEFAULT_PER_PAGE = 20;
 const SEARCH_MAX_PER_PAGE = 50;
