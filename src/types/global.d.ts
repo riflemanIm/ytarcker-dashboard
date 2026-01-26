@@ -29,6 +29,7 @@ export interface TlSprint {
   current_sprint: boolean;
   archive: boolean;
   sort_by: number;
+  workingdays?: number;
 }
 
 export interface TlGroup {

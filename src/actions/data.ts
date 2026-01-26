@@ -649,6 +649,7 @@ export const getIssueTypeList = async ({
 export const getTlSprints = async (): Promise<TlSprint[]> => {
   try {
     const res = await axios.post<TlSprint[]>(`${apiUrl}/api/tl_sprints`, {});
+    console.log("getTlSprints", res.data);
     return Array.isArray(res.data) ? res.data : [];
   } catch (err: any) {
     console.error("[Ошибка в getTlSprints]:", err.message);
@@ -659,6 +660,7 @@ export const getTlSprints = async (): Promise<TlSprint[]> => {
 export const getTlGroups = async (): Promise<TlGroup[]> => {
   try {
     const res = await axios.post<TlGroup[]>(`${apiUrl}/api/tl_groups`, {});
+
     return Array.isArray(res.data) ? res.data : [];
   } catch (err: any) {
     console.error("[Ошибка в getTlGroups]:", err.message);

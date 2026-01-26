@@ -32,7 +32,7 @@ const TableWorkPlan: FC = () => {
     groupIds,
     workPlanRefreshKey,
   } = useTableTimePlanSelectors();
-  const { dispatch } = useAppContext();
+  const { state, dispatch } = useAppContext();
   const [rows, setRows] = useState<WorkPlanItem[]>([]);
   const [filterText, setFilterText] = useState("");
   const [loading, setLoading] = useState(false);
@@ -116,12 +116,7 @@ const TableWorkPlan: FC = () => {
         filterable: false,
         disableColumnMenu: true,
       },
-      // {
-      //   field: "Sprint",
-      //   headerName: "Спринт",
-      //   flex: 0.8,
-      //   minWidth: 120,
-      // },
+
       {
         field: "actions",
         headerName: "Действия",
@@ -204,14 +199,7 @@ const TableWorkPlan: FC = () => {
         valueFormatter: (value: WorkPlanItem["RemainTimeDays"]) =>
           formatTenths(value),
       },
-      // {
-      //   field: "WorkingDays",
-      //   headerName: "WorkingDays",
-      //   flex: 0.7,
-      //   minWidth: 110,
-      //   valueFormatter: (value: WorkPlanItem["WorkingDays"]) =>
-      //     value == null ? "" : formatTenths(value),
-      // },
+
       {
         field: "Deadline",
         headerName: "Дедлайн",
@@ -267,6 +255,30 @@ const TableWorkPlan: FC = () => {
       } as any,
     ];
   }, [filteredRows]);
+
+  const sprintWorkingDays = useMemo(() => {
+    const { selectedSprintId, sprins } = state.tableTimePlanState;
+    if (!selectedSprintId) return null;
+    const sprint = sprins.find(
+      (item) => String(item.yt_tl_sprints_id) === selectedSprintId,
+    );
+    return sprint?.workingdays ?? null;
+  }, [state.tableTimePlanState]);
+
+  const totalSpentDays = useMemo(() => {
+    const total = filteredRows.reduce(
+      (acc, item) => acc + (Number(item.SpentTimeDays) || 0),
+      0,
+    );
+    return formatTenths(total);
+  }, [filteredRows]);
+
+  const remainingDays = useMemo(() => {
+    if (sprintWorkingDays == null) return null;
+    const spent = Number(totalSpentDays);
+    if (!Number.isFinite(spent)) return null;
+    return formatTenths(sprintWorkingDays - spent);
+  }, [sprintWorkingDays, totalSpentDays]);
 
   const handleDelete = async () => {
     if (!deleteTarget || !sprintId) return;
@@ -358,6 +370,11 @@ const TableWorkPlan: FC = () => {
           };
         }}
       />
+      <Box sx={{ mt: 1 }}>
+        <Typography variant="subtitle2">
+          Остаток: {remainingDays ?? "-"}
+        </Typography>
+      </Box>
       <SetIssuePlanTable
         open={editOpen}
         onClose={() => {

@@ -60,7 +60,6 @@ const ViewTimePlan: FC = () => {
           border: `1px solid ${theme.palette.divider}`,
           boxShadow: "0px 10px 15px rgba(15, 23, 42, 0.04)",
           my: 2,
-          height: 670,
         })}
       >
         <Typography variant="h5" textAlign="center" my={2}>
