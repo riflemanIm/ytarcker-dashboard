@@ -1,15 +1,15 @@
 import { getTaskList } from "@/actions/data";
 import { TaskListItem } from "@/types/global";
-import { Box, Button, Stack, Typography } from "@mui/material";
+import { Box, Button, Stack, Tooltip } from "@mui/material";
 import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import dayjs from "dayjs";
 import { FC, useEffect, useMemo, useState } from "react";
 import IssueDisplay from "./IssueDisplay";
 import SetIssuePlanTable from "./SetIssuePlanTable";
 import { useTableTimePlanSelectors } from "@/hooks/useTableTimePlanSelectors";
-import TableTextFilter from "./TableTextFilter";
+import FilterTableText from "./FilterTableText";
 
-const CheckPlanTable: FC = () => {
+const TableCheckPlan: FC = () => {
   const { sprintId, trackerUids, projectIds, roleIds, groupIds } =
     useTableTimePlanSelectors();
   const [rows, setRows] = useState<TaskListItem[]>([]);
@@ -28,7 +28,7 @@ const CheckPlanTable: FC = () => {
         setLoading(false);
       })
       .catch((error) => {
-        console.error("[CheckPlanTable] getTaskList error:", error.message);
+        console.error("[TableCheckPlan] getTaskList error:", error.message);
         if (!isMounted) return;
         setLoading(false);
       });
@@ -44,29 +44,37 @@ const CheckPlanTable: FC = () => {
         field: "TaskName",
         headerName: "Название",
         flex: 1,
-        minWidth: 220,
+        minWidth: 480,
         sortable: false,
         filterable: false,
         disableColumnMenu: true,
-        renderCell: (params: GridRenderCellParams) => (
-          <IssueDisplay
-            display={params.value}
-            href={`https://tracker.yandex.ru/${params.row.TaskKey}`}
-            fio={params.row.CheckListAssignee ?? ""}
-          />
-        ),
+        renderCell: (params: GridRenderCellParams) => {
+          const workName = params.row.WorkName ?? "";
+          const workType = params.row.WorkNameDict ?? "";
+          const title = [workName, workType].filter(Boolean).join(" / ") || "-";
+          return (
+            <Tooltip title={title}>
+              <span>
+                <IssueDisplay
+                  display={params.value}
+                  href={`https://tracker.yandex.ru/${params.row.TaskKey}`}
+                  fio={params.row.CheckListAssignee ?? ""}
+                />
+              </span>
+            </Tooltip>
+          );
+        },
       },
       {
         field: "TaskKey",
-        headerName: "Key",
-        minWidth: 150,
+        headerName: "В План",
+        minWidth: 100,
         flex: 0.2,
         sortable: false,
         filterable: false,
         disableColumnMenu: true,
         renderCell: (params: GridRenderCellParams) => (
-          <Stack direction="row" spacing={1} alignItems="center">
-            <span>{params.value}</span>
+          <Tooltip title="В План">
             <Button
               size="small"
               variant="outlined"
@@ -77,24 +85,9 @@ const CheckPlanTable: FC = () => {
               }}
               disabled={!sprintId}
             >
-              в план
+              {params.value}
             </Button>
-          </Stack>
-        ),
-      },
-
-      {
-        field: "WorkNameDict",
-        flex: 0.1,
-        minWidth: 100,
-        headerName: "Работа / Тип работы ",
-        renderCell: (params: GridRenderCellParams) => (
-          <Stack spacing={0.25}>
-            <Typography variant="body2">{params.row.WorkName}</Typography>
-            <Typography variant="body2" color="text.secondary">
-              {params.row.WorkNameDict}
-            </Typography>
-          </Stack>
+          </Tooltip>
         ),
       },
 
@@ -145,7 +138,7 @@ const CheckPlanTable: FC = () => {
 
   return (
     <Box sx={{ mt: 2, height: 400 }}>
-      <TableTextFilter
+      <FilterTableText
         value={filterText}
         onChange={setFilterText}
         label="Фильтр"
@@ -169,4 +162,4 @@ const CheckPlanTable: FC = () => {
   );
 };
 
-export default CheckPlanTable;
+export default TableCheckPlan;

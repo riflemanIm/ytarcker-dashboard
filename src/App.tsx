@@ -10,8 +10,8 @@ import { deleteData, getData, getUserIssues, setData } from "./actions/data";
 import AppHeader from "./components/AppHeader";
 import DurationAlert from "./components/DurationAlert";
 import SearchIssues from "./components/SearchIssues";
-import TaskTable from "./components/TaskTable";
-import TableTimePlan from "./components/TableTimePlan";
+import TableTimeSpend from "./components/TableTimeSpend";
+import ViewTimePlan from "./components/ViewTimePlan";
 import WorklogWeeklyReport from "./components/WorklogWeeklyReport";
 import { useAppContext } from "./context/AppContext";
 import isEmpty, {
@@ -47,7 +47,7 @@ const YandexTracker: FC = () => {
     });
   };
 
-  // НЕДЕЛЬНЫЙ РЕЖИМ (TaskTable)
+  // НЕДЕЛЬНЫЙ РЕЖИМ (TableTimeSpend)
   const { start, end } = getWeekRange(weekOffset);
 
   // РЕЖИМ ОТЧЁТА: произвольный диапазон дат (по умолчанию текущий месяц)
@@ -206,11 +206,11 @@ const YandexTracker: FC = () => {
             {viewMode === "search" ? (
               <SearchIssues token={token} />
             ) : viewMode === "table_time_plan" ? (
-              <TableTimePlan />
+              <ViewTimePlan />
             ) : !isEmpty(state.data) ? (
               <>
                 {viewMode === "table_time_spend" ? (
-                  <TaskTable
+                  <TableTimeSpend
                     data={aggregateDurations(state.data as DataItem[])}
                     start={start}
                     setData={setData}

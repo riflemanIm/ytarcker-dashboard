@@ -8,7 +8,7 @@ import {
   displayDuration,
   normalizeWorklogItem,
   sumDurations,
-  // ⬇️ обязательно импортируй этот хелпер из helpers (как делали в TaskTable)
+  // ⬇️ обязательно импортируй этот хелпер из helpers (как делали в TableTimeSpend)
   toTarget,
   WorklogItem,
 } from "../helpers";

@@ -21,9 +21,9 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import SetIssuePlanTable from "./SetIssuePlanTable";
 import { useAppContext } from "@/context/AppContext";
-import TableTextFilter from "./TableTextFilter";
+import FilterTableText from "./FilterTableText";
 
-const WorkPlanTable: FC = () => {
+const TableWorkPlan: FC = () => {
   const {
     sprintId,
     trackerUids,
@@ -68,7 +68,7 @@ const WorkPlanTable: FC = () => {
         setLoading(false);
       })
       .catch((error) => {
-        console.error("[WorkPlanTable] getWorkPlan error:", error.message);
+        console.error("[TableWorkPlan] getWorkPlan error:", error.message);
         if (!isMounted) return;
         setLoading(false);
       });
@@ -116,6 +116,12 @@ const WorkPlanTable: FC = () => {
         filterable: false,
         disableColumnMenu: true,
       },
+      // {
+      //   field: "Sprint",
+      //   headerName: "Спринт",
+      //   flex: 0.8,
+      //   minWidth: 120,
+      // },
       {
         field: "actions",
         headerName: "Действия",
@@ -198,6 +204,14 @@ const WorkPlanTable: FC = () => {
         valueFormatter: (value: WorkPlanItem["RemainTimeDays"]) =>
           formatTenths(value),
       },
+      // {
+      //   field: "WorkingDays",
+      //   headerName: "WorkingDays",
+      //   flex: 0.7,
+      //   minWidth: 110,
+      //   valueFormatter: (value: WorkPlanItem["WorkingDays"]) =>
+      //     value == null ? "" : formatTenths(value),
+      // },
       {
         field: "Deadline",
         headerName: "Дедлайн",
@@ -219,6 +233,7 @@ const WorkPlanTable: FC = () => {
       const values = [
         item.TaskName,
         item.TaskKey,
+        item.Sprint,
         item.WorkName,
         item.WorkNameDict,
         item.ProjectName,
@@ -241,6 +256,7 @@ const WorkPlanTable: FC = () => {
         id: "__total__",
         TaskName: "Итого",
         TaskKey: "",
+        Sprint: "",
         WorkName: "",
         WorkNameDict: "",
         CheckListAssignee: "",
@@ -275,7 +291,7 @@ const WorkPlanTable: FC = () => {
         setDeleteTarget(null);
       }
     } catch (error: any) {
-      console.error("[WorkPlanTable] delete work plan error:", error?.message);
+      console.error("[TableWorkPlan] delete work plan error:", error?.message);
     } finally {
       setDeleteLoading(false);
     }
@@ -283,7 +299,7 @@ const WorkPlanTable: FC = () => {
 
   return (
     <Box sx={{ mt: 2 }}>
-      <TableTextFilter
+      <FilterTableText
         value={filterText}
         onChange={setFilterText}
         label="Фильтр"
@@ -388,4 +404,4 @@ const WorkPlanTable: FC = () => {
   );
 };
 
-export default WorkPlanTable;
+export default TableWorkPlan;

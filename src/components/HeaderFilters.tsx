@@ -6,10 +6,10 @@ import { FC } from "react";
 import AutocompleteUsers from "./AutocompleteUsers";
 import FetchModeSwitch from "./FetchModeSwitch";
 import ReportDateRange from "./ReportDateRange";
-import SelectGroupList from "./SelectGroupList";
-import SelectGroupPatientsList from "./SelectGroupPatientsList";
-import SelectProjectList from "./SelectProjectList";
-import SelectRoleList from "./SelectRoleList";
+import AutocompleteGroupList from "./AutocompleteGroupList";
+import AutocompleteGroupPatientsList from "./AutocompleteGroupPatientsList";
+import AutocompleteProjectList from "./AutocompleteProjectList";
+import AutocompleteRoleList from "./AutocompleteRoleList";
 import SelectSprintList from "./SelectSprintList";
 import WeekNavigator from "./WeekNavigator";
 
@@ -89,16 +89,16 @@ const HeaderFilters: FC<HeaderFiltersProps> = ({
           <SelectSprintList />
         </Box>
         <Box sx={{ flex: "1 1 160px", minWidth: 0 }}>
-          <SelectGroupList />
+          <AutocompleteGroupList />
         </Box>
         <Box sx={{ flex: "1 0 210px", minWidth: 0 }}>
-          <SelectGroupPatientsList />
+          <AutocompleteGroupPatientsList />
         </Box>
-        <Box sx={{ flex: "0 0 120px", minWidth: 0 }}>
-          <SelectRoleList />
+        <Box sx={{ flex: "0 0 220px", minWidth: 0 }}>
+          <AutocompleteRoleList />
         </Box>
-        <Box sx={{ flex: "0 0 120px", minWidth: 0 }}>
-          <SelectProjectList />
+        <Box sx={{ flex: "0 0 260px", minWidth: 0 }}>
+          <AutocompleteProjectList />
         </Box>
       </Stack>
     ) : (

@@ -80,6 +80,8 @@ export interface WorkPlanItem {
   EstimateTimeDays: number;
   SpentTimeDays: number;
   RemainTimeDays: number;
+  Sprint?: string;
+  WorkingDays?: number;
   ProjectName: string;
   checklistItemId?: string | null;
   ProjectId: number;

@@ -2,19 +2,16 @@ import { getTlGroups } from "@/actions/data";
 import { useAppContext } from "@/context/AppContext";
 import {
   Checkbox,
-  FormControl,
-  FormHelperText,
-  InputLabel,
-  ListItemText,
-  MenuItem,
-  Select,
-  SelectChangeEvent,
-  Stack,
   CircularProgress,
+  Stack,
+  TextField,
+  Typography,
 } from "@mui/material";
+import Autocomplete from "@mui/material/Autocomplete";
+import ClearIcon from "@mui/icons-material/Clear";
 import React, { useEffect, useRef } from "react";
 
-interface SelectGroupListProps {
+interface AutocompleteGroupListProps {
   variant?: "standard" | "outlined" | "filled";
   margin?: "none" | "dense" | "normal";
   required?: boolean;
@@ -22,7 +19,7 @@ interface SelectGroupListProps {
   helperText?: string;
 }
 
-const SelectGroupList: React.FC<SelectGroupListProps> = ({
+const AutocompleteGroupList: React.FC<AutocompleteGroupListProps> = ({
   variant = "outlined",
   margin = "normal",
   required = false,
@@ -60,7 +57,10 @@ const SelectGroupList: React.FC<SelectGroupListProps> = ({
         });
       })
       .catch((error) => {
-        console.error("[SelectGroupList] getTlGroups error:", error.message);
+        console.error(
+          "[AutocompleteGroupList] getTlGroups error:",
+          error.message,
+        );
         if (!isMounted) return;
         hasFetchedRef.current = false;
         dispatch({
@@ -80,66 +80,73 @@ const SelectGroupList: React.FC<SelectGroupListProps> = ({
     };
   }, [dispatch, groups.length, groupsLoaded]);
 
-  const handleChange = (e: SelectChangeEvent<string[]>) => {
-    const value = e.target.value;
+  const handleChange = (
+    event: React.SyntheticEvent,
+    value: { yt_tl_group_id: number; label: string }[],
+  ) => {
     dispatch({
       type: "setTableTimePlanState",
       payload: (prev) => ({
         ...prev,
-        selectedGroupIds: Array.isArray(value) ? value : [],
+        selectedGroupIds: value.map((item) =>
+          String(item.yt_tl_group_id),
+        ),
       }),
     });
   };
 
   const disabled = loadingGroups || !groups || groups.length === 0;
+  const options = (groups || []).map((item) => item);
+  const value = (groups || []).filter((item) =>
+    selectedGroupIds.includes(String(item.yt_tl_group_id)),
+  );
 
   return (
-    <FormControl
-      fullWidth
-      variant={variant}
-      margin={margin}
-      required={required}
-      error={error}
+    <Autocomplete
+      multiple
+      disableCloseOnSelect
+      blurOnSelect
+      clearOnBlur
+      autoSelect
+      clearIcon={<ClearIcon fontSize="small" />}
       disabled={disabled}
-    >
-      <InputLabel id="select-group-label">Группы</InputLabel>
-      <Select
-        labelId="select-group-label"
-        id="select-group"
-        multiple
-        value={selectedGroupIds}
-        label="Группы"
-        onChange={handleChange}
-        renderValue={(selected) =>
-          groups
-            .filter((item) => selected.includes(String(item.yt_tl_group_id)))
-            .map((item) => item.label)
-            .join(", ")
-        }
-        sx={{ width: "auto" }}
-      >
-        {(groups ?? []).map((item) => {
-          const value = String(item.yt_tl_group_id);
-          return (
-            <MenuItem key={item.yt_tl_group_id} value={value}>
-              <Checkbox checked={selectedGroupIds.includes(value)} />
-              <ListItemText primary={item.label} />
-            </MenuItem>
-          );
-        })}
-      </Select>
-
-      {loadingGroups ? (
-        <FormHelperText>
-          <Stack direction="row" spacing={1} alignItems="center">
-            <CircularProgress size={16} />
-          </Stack>
-        </FormHelperText>
-      ) : helperText ? (
-        <FormHelperText>{helperText}</FormHelperText>
-      ) : null}
-    </FormControl>
+      value={value}
+      options={options}
+      onChange={handleChange}
+      getOptionLabel={(option) => option?.label || ""}
+      isOptionEqualToValue={(option, value) =>
+        option.yt_tl_group_id === value.yt_tl_group_id
+      }
+      renderOption={(props, option, { selected }) => (
+        <li {...props}>
+          <Checkbox checked={selected} />
+          <Typography variant="body1">{option.label}</Typography>
+        </li>
+      )}
+      noOptionsText={"Введите название группы"}
+      renderInput={(params) => (
+        <TextField
+          {...params}
+          name="filter-groups"
+          margin={margin}
+          label={"Группы"}
+          fullWidth
+          variant={variant}
+          required={required}
+          error={error}
+          helperText={
+            loadingGroups ? (
+              <Stack direction="row" spacing={1} alignItems="center">
+                <CircularProgress size={16} />
+              </Stack>
+            ) : (
+              helperText
+            )
+          }
+        />
+      )}
+    />
   );
 };
 
-export default SelectGroupList;
+export default AutocompleteGroupList;

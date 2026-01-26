@@ -56,7 +56,7 @@ const VIEW_MODE_OPTIONS: Array<{
 ];
 
 /**
- * Кнопка-переключатель представления между TaskTable, WorklogWeeklyReport и SearchIssues.
+ * Кнопка-переключатель представления между TableTimeSpend, WorklogWeeklyReport и SearchIssues.
  */
 export default function ToggleViewButton({
   viewMode,

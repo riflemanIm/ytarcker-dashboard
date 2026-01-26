@@ -1,7 +1,7 @@
 import { TextField } from "@mui/material";
 import React from "react";
 
-interface TableTextFilterProps {
+interface FilterTableTextProps {
   value: string;
   onChange: (value: string) => void;
   label?: string;
@@ -9,7 +9,7 @@ interface TableTextFilterProps {
   disabled?: boolean;
 }
 
-const TableTextFilter: React.FC<TableTextFilterProps> = ({
+const FilterTableText: React.FC<FilterTableTextProps> = ({
   value,
   onChange,
   label = "Фильтр",
@@ -30,4 +30,4 @@ const TableTextFilter: React.FC<TableTextFilterProps> = ({
   );
 };
 
-export default TableTextFilter;
+export default FilterTableText;

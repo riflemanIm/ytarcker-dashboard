@@ -3,18 +3,16 @@ import { useAppContext } from "@/context/AppContext";
 import {
   Checkbox,
   CircularProgress,
-  FormControl,
-  FormHelperText,
-  InputLabel,
-  ListItemText,
-  MenuItem,
-  Select,
-  SelectChangeEvent,
   Stack,
+  TextField,
+  Typography,
 } from "@mui/material";
+import Autocomplete from "@mui/material/Autocomplete";
+import ClearIcon from "@mui/icons-material/Clear";
 import React, { useEffect, useRef } from "react";
+import { TlProject } from "@/types/global";
 
-interface SelectProjectListProps {
+interface AutocompleteProjectListProps {
   variant?: "standard" | "outlined" | "filled";
   margin?: "none" | "dense" | "normal";
   required?: boolean;
@@ -22,7 +20,7 @@ interface SelectProjectListProps {
   helperText?: string;
 }
 
-const SelectProjectList: React.FC<SelectProjectListProps> = ({
+const AutocompleteProjectList: React.FC<AutocompleteProjectListProps> = ({
   variant = "outlined",
   margin = "normal",
   required = false,
@@ -60,7 +58,10 @@ const SelectProjectList: React.FC<SelectProjectListProps> = ({
         });
       })
       .catch((error) => {
-        console.error("[SelectProjectList] getTlProjects error:", error.message);
+        console.error(
+          "[AutocompleteProjectList] getTlProjects error:",
+          error.message,
+        );
         if (!isMounted) return;
         hasFetchedRef.current = false;
         dispatch({
@@ -80,66 +81,71 @@ const SelectProjectList: React.FC<SelectProjectListProps> = ({
     };
   }, [dispatch, projects.length, projectsLoaded]);
 
-  const handleChange = (e: SelectChangeEvent<string[]>) => {
-    const value = e.target.value;
+  const handleChange = (
+    event: React.SyntheticEvent,
+    value: TlProject[],
+  ) => {
     dispatch({
       type: "setTableTimePlanState",
       payload: (prev) => ({
         ...prev,
-        selectedProjectIds: Array.isArray(value) ? value : [],
+        selectedProjectIds: value.map((item) => String(item.projectId)),
       }),
     });
   };
 
   const disabled = loadingProjects || !projects || projects.length === 0;
+  const options = (projects || []).map((item) => item);
+  const value = (projects || []).filter((item) =>
+    selectedProjectIds.includes(String(item.projectId)),
+  );
 
   return (
-    <FormControl
-      fullWidth
-      variant={variant}
-      margin={margin}
-      required={required}
-      error={error}
+    <Autocomplete
+      multiple
+      disableCloseOnSelect
+      blurOnSelect
+      clearOnBlur
+      autoSelect
+      clearIcon={<ClearIcon fontSize="small" />}
       disabled={disabled}
-    >
-      <InputLabel id="select-project-label">Проекты</InputLabel>
-      <Select
-        labelId="select-project-label"
-        id="select-project"
-        multiple
-        value={selectedProjectIds}
-        label="Проекты"
-        onChange={handleChange}
-        renderValue={(selected) =>
-          projects
-            .filter((item) => selected.includes(String(item.projectId)))
-            .map((item) => item.ProjectName)
-            .join(", ")
-        }
-        sx={{ width: "auto" }}
-      >
-        {(projects ?? []).map((item) => {
-          const value = String(item.projectId);
-          return (
-            <MenuItem key={item.projectId} value={value}>
-              <Checkbox checked={selectedProjectIds.includes(value)} />
-              <ListItemText primary={item.ProjectName} />
-            </MenuItem>
-          );
-        })}
-      </Select>
-
-      {loadingProjects ? (
-        <FormHelperText>
-          <Stack direction="row" spacing={1} alignItems="center">
-            <CircularProgress size={16} />
-          </Stack>
-        </FormHelperText>
-      ) : helperText ? (
-        <FormHelperText>{helperText}</FormHelperText>
-      ) : null}
-    </FormControl>
+      value={value}
+      options={options}
+      onChange={handleChange}
+      getOptionLabel={(option: TlProject) => option?.ProjectName || ""}
+      isOptionEqualToValue={(option: TlProject, value: TlProject) =>
+        option.projectId === value.projectId
+      }
+      renderOption={(props, option: TlProject, { selected }) => (
+        <li {...props}>
+          <Checkbox checked={selected} />
+          <Typography variant="body1">{option.ProjectName}</Typography>
+        </li>
+      )}
+      noOptionsText={"Введите название проекта"}
+      renderInput={(params) => (
+        <TextField
+          {...params}
+          name="filter-projects"
+          margin={margin}
+          label={"Проекты"}
+          fullWidth
+          variant={variant}
+          required={required}
+          error={error}
+          helperText={
+            loadingProjects ? (
+              <Stack direction="row" spacing={1} alignItems="center">
+                <CircularProgress size={16} />
+              </Stack>
+            ) : (
+              helperText
+            )
+          }
+        />
+      )}
+    />
   );
 };
 
-export default SelectProjectList;
+export default AutocompleteProjectList;

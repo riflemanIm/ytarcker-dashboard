@@ -8,7 +8,7 @@ import { FC, useEffect, useMemo } from "react";
 import ReportDateRange from "./ReportDateRange";
 import dayjs from "dayjs";
 
-const WorkPlanCapacityTable: FC = () => {
+const TableWorkPlanCapacity: FC = () => {
   const { state: appState, dispatch } = useAppContext();
   const { workPlanCapacityState } = appState;
   const { trackerUids, projectIds, roleIds, groupIds } =
@@ -74,7 +74,7 @@ const WorkPlanCapacityTable: FC = () => {
       })
       .catch((error) => {
         console.error(
-          "[WorkPlanCapacityTable] getWorkPlanCapacity error:",
+          "[TableWorkPlanCapacity] getWorkPlanCapacity error:",
           error.message,
         );
         if (!isMounted) return;
@@ -168,4 +168,4 @@ const WorkPlanCapacityTable: FC = () => {
   );
 };
 
-export default WorkPlanCapacityTable;
+export default TableWorkPlanCapacity;

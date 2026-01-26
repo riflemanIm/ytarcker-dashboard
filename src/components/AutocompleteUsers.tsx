@@ -2,6 +2,7 @@ import React from "react";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import Autocomplete from "@mui/material/Autocomplete";
+import ClearIcon from "@mui/icons-material/Clear";
 import isEmpty from "../helpers";
 import { User } from "@/types/global";
 
@@ -39,6 +40,7 @@ const AutocompleteUsers: React.FC<AutocompleteUsersProps> = ({
         blurOnSelect
         clearOnBlur
         autoSelect
+        clearIcon={<ClearIcon fontSize="small" />}
         disabled={disabled}
         value={value}
         options={options}

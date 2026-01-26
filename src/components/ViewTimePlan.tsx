@@ -1,10 +1,10 @@
 import { Box, Paper, Stack, Typography } from "@mui/material";
 import { FC } from "react";
-import CheckPlanTable from "./CheckPlanTable";
-import WorkPlanTable from "./WorkPlanTable";
-import WorkPlanCapacityTable from "./WorkPlanCapacityTable";
+import TableCheckPlan from "./TableCheckPlan";
+import TableWorkPlan from "./TableWorkPlan";
+import TableWorkPlanCapacity from "./TableWorkPlanCapacity";
 
-const TableTimePlan: FC = () => {
+const ViewTimePlan: FC = () => {
   return (
     <Box sx={{ px: 2 }}>
       <Stack
@@ -30,7 +30,7 @@ const TableTimePlan: FC = () => {
           <Typography variant="h5" textAlign="center" my={2}>
             Подбор задач в план
           </Typography>
-          <CheckPlanTable />
+          <TableCheckPlan />
         </Paper>
         <Paper
           variant="elevation"
@@ -49,7 +49,7 @@ const TableTimePlan: FC = () => {
           <Typography variant="h5" textAlign="center" my={2}>
             Загрузка сотрудников
           </Typography>
-          <WorkPlanCapacityTable />
+          <TableWorkPlanCapacity />
         </Paper>
       </Stack>
       <Paper
@@ -66,10 +66,10 @@ const TableTimePlan: FC = () => {
         <Typography variant="h5" textAlign="center" my={2}>
           План работ
         </Typography>
-        <WorkPlanTable />
+        <TableWorkPlan />
       </Paper>
     </Box>
   );
 };
 
-export default TableTimePlan;
+export default ViewTimePlan;

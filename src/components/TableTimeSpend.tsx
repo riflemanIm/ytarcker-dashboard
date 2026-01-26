@@ -54,7 +54,7 @@ const createEmptyMenuState = (): MenuState => ({
 export const durationComparator = (a: string, b: string): number =>
   parseISODurationToSeconds(a) - parseISODurationToSeconds(b);
 
-interface TaskTableProps {
+interface TableTimeSpendProps {
   data: TaskItem[];
   start: Dayjs; // первый день недели (понедельник)
   setData: (args: SetDataArgs) => Promise<void>;
@@ -150,7 +150,7 @@ const transformData = (data: TaskItem[]): TransformedTaskRow[] => {
   });
 };
 
-const TaskTable: FC<TaskTableProps> = ({
+const TableTimeSpend: FC<TableTimeSpendProps> = ({
   data,
   start,
   setData,
@@ -711,4 +711,4 @@ const TaskTable: FC<TaskTableProps> = ({
   );
 };
 
-export default TaskTable;
+export default TableTimeSpend;

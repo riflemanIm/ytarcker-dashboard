@@ -150,6 +150,13 @@ const SetIssuePlanTable: FC<SetIssuePlanTableProps> = ({
     tableTimePlanState.selectedSprintId,
     tableTimePlanState.sprins,
   ]);
+  const sprintOptions = useMemo(
+    () =>
+      mode === "edit"
+        ? tableTimePlanState.sprins.filter((item) => !item.archive)
+        : tableTimePlanState.sprins,
+    [mode, tableTimePlanState.sprins],
+  );
 
   const updateForm = (next: FormState) => {
     setForm(next);
@@ -289,7 +296,7 @@ const SetIssuePlanTable: FC<SetIssuePlanTableProps> = ({
             helperText={errors.sprintId}
             fullWidth
           >
-            {tableTimePlanState.sprins.map((item) => (
+            {sprintOptions.map((item) => (
               <MenuItem
                 key={item.yt_tl_sprints_id}
                 value={item.yt_tl_sprints_id}

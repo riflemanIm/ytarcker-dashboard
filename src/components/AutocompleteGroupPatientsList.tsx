@@ -8,11 +8,12 @@ import {
   Typography,
 } from "@mui/material";
 import Autocomplete from "@mui/material/Autocomplete";
+import ClearIcon from "@mui/icons-material/Clear";
 import React, { useEffect, useMemo, useRef } from "react";
 import isEmpty from "../helpers";
 import { TlGroupPatient } from "@/types/global";
 
-interface SelectGroupPatientsListProps {
+interface AutocompleteGroupPatientsListProps {
   variant?: "standard" | "outlined" | "filled";
   margin?: "none" | "dense" | "normal";
   required?: boolean;
@@ -20,7 +21,9 @@ interface SelectGroupPatientsListProps {
   helperText?: string;
 }
 
-const SelectGroupPatientsList: React.FC<SelectGroupPatientsListProps> = ({
+const AutocompleteGroupPatientsList: React.FC<
+  AutocompleteGroupPatientsListProps
+> = ({
   variant = "outlined",
   margin = "normal",
   required = false,
@@ -85,7 +88,7 @@ const SelectGroupPatientsList: React.FC<SelectGroupPatientsListProps> = ({
       })
       .catch((error) => {
         console.error(
-          "[SelectGroupPatientsList] getTlGroupPatients error:",
+          "[AutocompleteGroupPatientsList] getTlGroupPatients error:",
           error.message,
         );
         if (!isMounted) return;
@@ -133,6 +136,7 @@ const SelectGroupPatientsList: React.FC<SelectGroupPatientsListProps> = ({
       blurOnSelect
       clearOnBlur
       autoSelect
+      clearIcon={<ClearIcon fontSize="small" />}
       disabled={disabled}
       value={value}
       options={options}
@@ -178,4 +182,4 @@ const SelectGroupPatientsList: React.FC<SelectGroupPatientsListProps> = ({
   );
 };
 
-export default SelectGroupPatientsList;
+export default AutocompleteGroupPatientsList;
