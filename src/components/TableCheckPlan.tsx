@@ -10,7 +10,7 @@ import { useTableTimePlanSelectors } from "@/hooks/useTableTimePlanSelectors";
 import FilterTableText from "./FilterTableText";
 
 const TableCheckPlan: FC = () => {
-  const { sprintId, trackerUids, projectIds, roleIds, groupIds } =
+  const { sprintId, trackerUids, projectIds, roleIds, groupIds, workPlanRefreshKey } =
     useTableTimePlanSelectors();
   const [rows, setRows] = useState<TaskListItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -36,7 +36,7 @@ const TableCheckPlan: FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [trackerUids, projectIds, roleIds, groupIds]);
+  }, [trackerUids, projectIds, roleIds, groupIds, workPlanRefreshKey]);
 
   const columns = useMemo<GridColDef<TaskListItem>[]>(
     () => [
