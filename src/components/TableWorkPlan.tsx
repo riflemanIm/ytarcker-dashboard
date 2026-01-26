@@ -371,7 +371,7 @@ const TableWorkPlan: FC = () => {
         }}
       />
       <Box sx={{ mt: 1 }}>
-        <Typography variant="subtitle2">
+        <Typography variant="h6" color="error">
           Остаток: {remainingDays ?? "-"}
         </Typography>
       </Box>

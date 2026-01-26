@@ -6,7 +6,7 @@ import TableWorkPlanCapacity from "./TableWorkPlanCapacity";
 
 const ViewTimePlan: FC = () => {
   return (
-    <Box sx={{ px: 2 }}>
+    <Box sx={{ px: 2, pb: 2 }}>
       <Stack
         direction={{ xs: "column", lg: "row" }}
         spacing={2}
@@ -20,7 +20,6 @@ const ViewTimePlan: FC = () => {
             borderRadius: { xs: 1, sm: 2 },
             border: `1px solid ${theme.palette.divider}`,
             boxShadow: "0px 10px 15px rgba(15, 23, 42, 0.04)",
-            my: 2,
             flexBasis: { xs: "100%", lg: "50%" },
             flexGrow: 1,
             minWidth: 0,
