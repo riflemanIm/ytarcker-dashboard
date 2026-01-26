@@ -48,7 +48,6 @@ const AppHeader: FC<AppHeaderProps> = ({
   const showControls = !!token && loaded;
   const showAdminControls = showControls && !!isSuperUser;
   const showRange = showControls && showRangeControls;
-  const showUserSelection = showAdminControls && showRangeControls;
   const theme = useTheme();
 
   return (
@@ -91,7 +90,6 @@ const AppHeader: FC<AppHeaderProps> = ({
         <HeaderFilters
           showAdminControls={showAdminControls}
           showRange={showRange}
-          showUserSelection={showUserSelection}
           viewMode={viewMode}
           weekNavigation={weekNavigation}
           reportRange={reportRange}

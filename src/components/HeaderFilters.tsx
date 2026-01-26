@@ -3,6 +3,7 @@ import { User, ViewMode } from "@/types/global";
 import { Alert, Box, Stack } from "@mui/material";
 import dayjs from "dayjs";
 import { FC } from "react";
+import { useAppContext } from "@/context/AppContext";
 import AutocompleteUsers from "./AutocompleteUsers";
 import FetchModeSwitch from "./FetchModeSwitch";
 import ReportDateRange from "./ReportDateRange";
@@ -32,7 +33,6 @@ export interface ReportRangeProps {
 interface HeaderFiltersProps {
   showAdminControls: boolean;
   showRange: boolean;
-  showUserSelection: boolean;
   viewMode: ViewMode;
   weekNavigation: WeekNavigationProps;
   reportRange: ReportRangeProps;
@@ -48,7 +48,6 @@ interface HeaderFiltersProps {
 const HeaderFilters: FC<HeaderFiltersProps> = ({
   showAdminControls,
   showRange,
-  showUserSelection,
   viewMode,
   weekNavigation,
   reportRange,
@@ -60,6 +59,13 @@ const HeaderFilters: FC<HeaderFiltersProps> = ({
   userId,
   handleSelectedUsersChange,
 }) => {
+  const { state } = useAppContext();
+  const { selectedSprintId, sprins } = state.tableTimePlanState;
+  const hasSprint = Boolean(selectedSprintId);
+  const sprintLabel = hasSprint
+    ? sprins.find((item) => String(item.yt_tl_sprints_id) === selectedSprintId)
+        ?.sprint
+    : undefined;
   const rangeFilters =
     viewMode === "table_time_spend" ? (
       <WeekNavigator
@@ -69,6 +75,28 @@ const HeaderFilters: FC<HeaderFiltersProps> = ({
         onNext={weekNavigation.onNext}
         disableNext={weekNavigation.disableNext}
       />
+    ) : viewMode === "table_time_spend_plan" ? (
+        <Stack
+          direction="row"
+          gap={1}
+          alignItems="center"
+          flexWrap="wrap"
+          sx={{ width: "100%", minWidth: 0 }}
+        >
+          <Box sx={{ flex: "0 0 220px", minWidth: 0 }}>
+            <SelectSprintList />
+          </Box>
+          {hasSprint && (
+            <WeekNavigator
+              start={weekNavigation.start}
+              end={weekNavigation.end}
+              onPrevious={weekNavigation.onPrevious}
+              onNext={weekNavigation.onNext}
+              disableNext={weekNavigation.disableNext}
+              sprint={sprintLabel}
+            />
+          )}
+        </Stack>
     ) : viewMode === "report" ? (
       <ReportDateRange
         from={reportRange.from}

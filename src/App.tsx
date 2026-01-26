@@ -11,6 +11,7 @@ import AppHeader from "./components/AppHeader";
 import DurationAlert from "./components/DurationAlert";
 import SearchIssues from "./components/SearchIssues";
 import TableTimeSpend from "./components/TableTimeSpend";
+import TableTimeSpendByPlan from "./components/TableTimeSpendByPlan";
 import ViewTimePlan from "./components/ViewTimePlan";
 import WorklogWeeklyReport from "./components/WorklogWeeklyReport";
 import { useAppContext } from "./context/AppContext";
@@ -116,7 +117,10 @@ const YandexTracker: FC = () => {
     viewMode,
   ]);
   useEffect(() => {
-    if (viewMode === "table_time_spend") {
+    if (
+      viewMode === "table_time_spend" ||
+      viewMode === "table_time_spend_plan"
+    ) {
       getUserIssues({ dispatch, token, userId: state.userId, login });
     }
   }, [dispatch, login, state.userId, token, viewMode]);
@@ -211,6 +215,14 @@ const YandexTracker: FC = () => {
               <>
                 {viewMode === "table_time_spend" ? (
                   <TableTimeSpend
+                    data={aggregateDurations(state.data as DataItem[])}
+                    start={start}
+                    setData={setData}
+                    deleteData={deleteData}
+                    isEditable={state.fetchByLogin}
+                  />
+                ) : viewMode === "table_time_spend_plan" ? (
+                  <TableTimeSpendByPlan
                     data={aggregateDurations(state.data as DataItem[])}
                     start={start}
                     setData={setData}
