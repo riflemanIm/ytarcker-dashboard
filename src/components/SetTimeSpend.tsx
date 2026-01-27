@@ -35,11 +35,14 @@ import React, {
 import { getIssueTypeList } from "@/actions/data";
 import { useAppContext } from "@/context/AppContext";
 import isEmpty, {
+  dayOfWeekNameByDate,
   displayDuration,
   displayStartTime,
+  durationToWorkDays,
   headerWeekName,
   isValidDuration,
   normalizeDuration,
+  workDaysToDurationInput,
 } from "@/helpers";
 import {
   buildFinalComment,
@@ -72,7 +75,7 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
     state.state.userId ||
     state.tableTimePlanState.selectedPatientUid ||
     (Array.isArray(state.state.users) && state.state.users.length === 1
-      ? state.state.users[0]?.id ?? null
+      ? (state.state.users[0]?.id ?? null)
       : null);
   const [riskState, setRiskState] = useState({
     deadlineOk: true,
@@ -88,12 +91,12 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
 
   const issueTypes = useMemo(
     () => localState.issue_type_list ?? [],
-    [localState.issue_type_list]
+    [localState.issue_type_list],
   );
   const loaded = localState.loaded ?? true;
   const durations = useMemo<DurationItem[]>(
     () => localState.durations ?? [],
-    [localState.durations]
+    [localState.durations],
   );
 
   // --- UI по строкам
@@ -118,15 +121,13 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
   const availableRecentTypes = useMemo(
     () =>
       recentIssueTypes.filter((label) =>
-        issueTypes.some((type) => type.label === label)
+        issueTypes.some((type) => type.label === label),
       ),
-    [recentIssueTypes, issueTypes]
+    [recentIssueTypes, issueTypes],
   );
 
   const parseRiskBlock = (comment: string) => {
-    const match = (comment ?? "").match(
-      /\[Risks:\s*\{\s*([\s\S]*?)\}\s*\]/m,
-    );
+    const match = (comment ?? "").match(/\[Risks:\s*\{\s*([\s\S]*?)\}\s*\]/m);
     if (!match) {
       return {
         deadlineOk: true,
@@ -165,20 +166,18 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
   const riskBlock = useMemo(
     () =>
       `[Risks: { deadlineOk: ${riskState.deadlineOk}, needUpgradeEstimate: ${riskState.needUpgradeEstimate}, makeTaskFaster: ${riskState.makeTaskFaster} }]`,
-    [riskState]
+    [riskState],
   );
 
   const stripRiskBlock = (comment: string) =>
-    (comment ?? "")
-      .replace(/\n?\[Risks:\s*\{[\s\S]*?\}\s*\]/m, "")
-      .trimEnd();
+    (comment ?? "").replace(/\n?\[Risks:\s*\{[\s\S]*?\}\s*\]/m, "").trimEnd();
 
   const appendRisksToComment = useCallback(
     (comment: string) => {
       const cleaned = stripRiskBlock(comment);
       return cleaned ? `${cleaned}\n${riskBlock}` : riskBlock;
     },
-    [riskBlock]
+    [riskBlock],
   );
 
   const rememberRecentIssueType = useCallback((label: string | null) => {
@@ -186,12 +185,12 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
     setRecentIssueTypes((prev) => {
       const next = [label, ...prev.filter((item) => item !== label)].slice(
         0,
-        2
+        2,
       );
       try {
         window.localStorage.setItem(
           RECENT_ISSUE_TYPES_KEY,
-          JSON.stringify(next)
+          JSON.stringify(next),
         );
       } catch (error) {
         console.error("Failed to store issue types", error);
@@ -210,7 +209,7 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
           setRecentIssueTypes(
             parsed
               .filter((item): item is string => typeof item === "string")
-              .slice(0, 2)
+              .slice(0, 2),
           );
         }
       }
@@ -288,7 +287,7 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
   const handleDurationChange = useCallback(
     (
       item: DurationItem,
-      e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+      e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
     ) => {
       const id = String(item.id);
       const value = e.target.value ?? "";
@@ -308,13 +307,13 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
         [id]: validateDurationValue(value),
       }));
     },
-    [validateDurationValue]
+    [validateDurationValue],
   );
 
   const handleCommentChange = useCallback(
     (
       item: DurationItem,
-      e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+      e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
     ) => {
       const id = String(item.id);
       const value = e.target.value ?? "";
@@ -330,7 +329,7 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
         },
       }));
     },
-    []
+    [],
   );
 
   const handleIssueTypeChangeForItem = useCallback(
@@ -350,7 +349,7 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
       }));
       rememberRecentIssueType(normalizedLabel);
     },
-    [rememberRecentIssueType]
+    [rememberRecentIssueType],
   );
 
   // === Общее сохранение ВСЕХ изменений в блоке редактирования ===
@@ -366,14 +365,14 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
         selectedLabel:
           parseFirstIssueTypeLabel(item.comment ?? "") &&
           issueTypes.find(
-            (t) => t.label === parseFirstIssueTypeLabel(item.comment ?? "")
+            (t) => t.label === parseFirstIssueTypeLabel(item.comment ?? ""),
           )
             ? parseFirstIssueTypeLabel(item.comment ?? "")
             : null,
       };
 
       const durErr = validateDurationValue(
-        row.durationRaw ?? item.duration ?? ""
+        row.durationRaw ?? item.duration ?? "",
       );
       if (durErr) {
         nextErrors[id] = durErr;
@@ -404,7 +403,7 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
         selectedLabel:
           parseFirstIssueTypeLabel(item.comment ?? "") &&
           issueTypes.find(
-            (t) => t.label === parseFirstIssueTypeLabel(item.comment ?? "")
+            (t) => t.label === parseFirstIssueTypeLabel(item.comment ?? ""),
           )
             ? parseFirstIssueTypeLabel(item.comment ?? "")
             : null,
@@ -412,7 +411,7 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
 
       const finalComment = buildFinalComment(
         row.cleanComment,
-        row.selectedLabel ?? undefined
+        row.selectedLabel ?? undefined,
       );
       const finalWithRisks = appendRisksToComment(finalComment);
 
@@ -463,7 +462,7 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
         selectedLabel:
           parseFirstIssueTypeLabel(item.comment ?? "") &&
           issueTypes.find(
-            (t) => t.label === parseFirstIssueTypeLabel(item.comment ?? "")
+            (t) => t.label === parseFirstIssueTypeLabel(item.comment ?? ""),
           )
             ? parseFirstIssueTypeLabel(item.comment ?? "")
             : null,
@@ -478,95 +477,98 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
   }, [loaded, durations, rows, issueTypes, validateDurationValue]);
 
   const [plannedDuration, setPlannedDuration] = useState<string>("");
+  const [plannedDurationError, setPlannedDurationError] = useState<string>("");
+
+  const formatWorkDays = useCallback((value: number | null | undefined) => {
+    if (value == null || !Number.isFinite(value)) return "-";
+    const sign = value < 0 ? "-" : "";
+    return `${sign}${workDaysToDurationInput(Math.abs(value))}`;
+  }, []);
 
   const remainingInfo = useMemo(() => {
     if (menuState.remainTimeDays == null) return null;
-    const planned = Number(plannedDuration);
+    const normalized = normalizeDuration(plannedDuration ?? "");
+    if (
+      normalized.trim() === "" ||
+      normalized === "P" ||
+      !isValidDuration(normalized)
+    ) {
+      return null;
+    }
+    const planned = durationToWorkDays(normalized);
     if (!Number.isFinite(planned)) return null;
     return planned - menuState.remainTimeDays;
   }, [plannedDuration, menuState.remainTimeDays]);
 
-  const planningSection = (
+  const planningSection = menuState.remainTimeDays != null && (
     <>
-      {menuState.remainTimeDays != null && (
-        <>
-          <Grid size={12}>
-            <Divider sx={{ my: 1 }} />
-            <Typography variant="subtitle1">Планирование</Typography>
-          </Grid>
-          <Grid size={12}>
-            <Stack direction="row" spacing={2} alignItems="center">
-              <TextField
-                label="длительность по плану"
-                value={plannedDuration}
-                onChange={(event) => setPlannedDuration(event.target.value)}
-                type="number"
-                size="small"
-                inputProps={{ step: "0.1", min: 0 }}
-              />
-              <Typography variant="subtitle2">
-                Осталось времени ={" "}
-                {remainingInfo == null ? "-" : remainingInfo.toFixed(1)}
-              </Typography>
-            </Stack>
-          </Grid>
-        </>
-      )}
+      <Typography variant="subtitle1">Планирование</Typography>
+      <Stack direction="row" spacing={2} alignItems="center" mt={1}>
+        <TextField
+          label="длительность по плану"
+          value={displayDuration(plannedDuration ?? "")}
+          onChange={(event) => {
+            const raw = event.target.value ?? "";
+            setPlannedDuration(raw);
+            setPlannedDurationError(validateDurationValue(raw));
+          }}
+          error={Boolean(plannedDurationError)}
+          helperText={plannedDurationError}
+        />
+        <Typography variant="subtitle2">
+          Осталось времени = {formatWorkDays(remainingInfo)}
+        </Typography>
+      </Stack>
     </>
   );
 
   const riskSection = (
     <>
-      <Grid size={12}>
-        <Divider sx={{ my: 1 }} />
-        <Typography variant="subtitle1">Риски по задаче</Typography>
-      </Grid>
-      <Grid size={12}>
-        <Stack spacing={1} mt={1}>
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={riskState.deadlineOk}
-                onChange={(e) =>
-                  setRiskState((prev) => ({
-                    ...prev,
-                    deadlineOk: e.target.checked,
-                  }))
-                }
-              />
-            }
-            label="Подтверждаю выполнение в срок"
-          />
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={riskState.needUpgradeEstimate}
-                onChange={(e) =>
-                  setRiskState((prev) => ({
-                    ...prev,
-                    needUpgradeEstimate: e.target.checked,
-                  }))
-                }
-              />
-            }
-            label="Требуется увеличить оценку времени"
-          />
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={riskState.makeTaskFaster}
-                onChange={(e) =>
-                  setRiskState((prev) => ({
-                    ...prev,
-                    makeTaskFaster: e.target.checked,
-                  }))
-                }
-              />
-            }
-            label="Сделаю быстрее (оценка)"
-          />
-        </Stack>
-      </Grid>
+      <Typography variant="subtitle1">Риски по задаче</Typography>
+      <Stack spacing={1} mt={1}>
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={riskState.deadlineOk}
+              onChange={(e) =>
+                setRiskState((prev) => ({
+                  ...prev,
+                  deadlineOk: e.target.checked,
+                }))
+              }
+            />
+          }
+          label="Подтверждаю выполнение в срок"
+        />
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={riskState.needUpgradeEstimate}
+              onChange={(e) =>
+                setRiskState((prev) => ({
+                  ...prev,
+                  needUpgradeEstimate: e.target.checked,
+                }))
+              }
+            />
+          }
+          label="Требуется увеличить оценку времени"
+        />
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={riskState.makeTaskFaster}
+              onChange={(e) =>
+                setRiskState((prev) => ({
+                  ...prev,
+                  makeTaskFaster: e.target.checked,
+                }))
+              }
+            />
+          }
+          label="Сделаю быстрее (оценка)"
+        />
+      </Stack>
     </>
   );
 
@@ -580,7 +582,7 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
         add_new: validateDurationValue(value),
       }));
     },
-    [validateDurationValue]
+    [validateDurationValue],
   );
 
   const handleAddNewComment = useCallback(
@@ -588,7 +590,7 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
       const value = e.target.value ?? "";
       setNewEntry((p) => ({ ...p, comment: value }));
     },
-    []
+    [],
   );
 
   const handleIssueTypeChangeNew = useCallback(
@@ -597,7 +599,7 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
       setSelectedIssueTypeLabelNew(normalizedLabel);
       rememberRecentIssueType(normalizedLabel);
     },
-    [rememberRecentIssueType]
+    [rememberRecentIssueType],
   );
 
   const handleNewSubmitItem = useCallback(() => {
@@ -613,7 +615,7 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
 
     const finalComment = buildFinalComment(
       newEntry.comment ?? "",
-      selectedIssueTypeLabelNew ?? undefined
+      selectedIssueTypeLabelNew ?? undefined,
     );
     const finalWithRisks = appendRisksToComment(finalComment);
 
@@ -679,7 +681,7 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
       });
       onClose();
     },
-    [menuState.issueId, token, deleteData, dispatch, onClose, trackerUid]
+    [menuState.issueId, token, deleteData, dispatch, onClose, trackerUid],
   );
 
   return (
@@ -709,9 +711,9 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
             justifyContent="flex-end"
           >
             <Typography variant="subtitle2" color="success">
-              {menuState.field &&
+              {menuState.dateField &&
                 headerWeekName[
-                  menuState.field as keyof typeof headerWeekName
+                  dayOfWeekNameByDate(menuState.dateField) as keyof typeof headerWeekName
                 ]}{" "}
               {menuState.dateField && menuState.dateField.format("DD.MM")}
             </Typography>
@@ -756,12 +758,15 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
                 const id = String(item.id);
                 const row = rows[id] ?? {
                   durationRaw: item.duration,
-                  cleanComment: stripRiskBlock(stripIssueTypeTags(item.comment ?? "")),
+                  cleanComment: stripRiskBlock(
+                    stripIssueTypeTags(item.comment ?? ""),
+                  ),
                   selectedLabel:
                     parseFirstIssueTypeLabel(item.comment ?? "") &&
                     issueTypes.find(
                       (t) =>
-                        t.label === parseFirstIssueTypeLabel(item.comment ?? "")
+                        t.label ===
+                        parseFirstIssueTypeLabel(item.comment ?? ""),
                     )
                       ? parseFirstIssueTypeLabel(item.comment ?? "")
                       : null,
@@ -835,7 +840,10 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
                           />
                           {availableRecentTypes.length > 0 && (
                             <Stack spacing={0.5} mt={1}>
-                              <Typography variant="caption" color="text.secondary">
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                              >
                                 Последние выбранные типы работ
                               </Typography>
                               <Stack
@@ -850,7 +858,10 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
                                     size="small"
                                     variant="outlined"
                                     onClick={() =>
-                                      handleIssueTypeChangeForItem(item.id, label)
+                                      handleIssueTypeChangeForItem(
+                                        item.id,
+                                        label,
+                                      )
                                     }
                                   >
                                     {label}
@@ -876,8 +887,11 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
                 );
               })}
 
-              {riskSection}
-              {planningSection}
+              <Grid size={12}>
+                <Divider sx={{ my: 1 }} />
+              </Grid>
+              <Grid size={{ xs: 12, md: 6 }}>{riskSection}</Grid>
+              <Grid size={{ xs: 12, md: 6 }}>{planningSection}</Grid>
 
               {/* Общая кнопка сохранить изменения */}
               <Grid size={12} display="flex" justifyContent="flex-end" mt={1}>
@@ -889,7 +903,6 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
                   Сохранить изменения
                 </Button>
               </Grid>
-
             </>
           )}
         </Grid>
@@ -1007,7 +1020,6 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
                   Добавить
                 </Button>
               </Grid>
-
             </Grid>
           </>
         )}

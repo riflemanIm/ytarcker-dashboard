@@ -3,7 +3,6 @@ import { User, ViewMode } from "@/types/global";
 import { Alert, Box, Stack } from "@mui/material";
 import dayjs from "dayjs";
 import { FC } from "react";
-import { useAppContext } from "@/context/AppContext";
 import AutocompleteUsers from "./AutocompleteUsers";
 import FetchModeSwitch from "./FetchModeSwitch";
 import ReportDateRange from "./ReportDateRange";
@@ -13,7 +12,6 @@ import AutocompleteProjectList from "./AutocompleteProjectList";
 import AutocompleteRoleList from "./AutocompleteRoleList";
 import SelectSprintList from "./SelectSprintList";
 import WeekNavigator from "./WeekNavigator";
-import DateRangeSprint from "./DateRangeSprint";
 
 export interface WeekNavigationProps {
   start: dayjs.Dayjs;
@@ -60,13 +58,6 @@ const HeaderFilters: FC<HeaderFiltersProps> = ({
   userId,
   handleSelectedUsersChange,
 }) => {
-  const { state } = useAppContext();
-  const { selectedSprintId, sprins } = state.tableTimePlanState;
-  const hasSprint = Boolean(selectedSprintId);
-  const sprintLabel = hasSprint
-    ? sprins.find((item) => String(item.yt_tl_sprints_id) === selectedSprintId)
-        ?.sprint
-    : undefined;
   const rangeFilters =
     viewMode === "table_time_spend" ? (
       <WeekNavigator
@@ -87,16 +78,6 @@ const HeaderFilters: FC<HeaderFiltersProps> = ({
         <Box sx={{ flex: "0 0 220px", minWidth: 0 }}>
           <SelectSprintList />
         </Box>
-        {hasSprint && (
-          <WeekNavigator
-            start={weekNavigation.start}
-            end={weekNavigation.end}
-            onPrevious={weekNavigation.onPrevious}
-            onNext={weekNavigation.onNext}
-            disableNext={weekNavigation.disableNext}
-            sprint={sprintLabel}
-          />
-        )}
       </Stack>
     ) : viewMode === "report" ? (
       <ReportDateRange
@@ -122,9 +103,11 @@ const HeaderFilters: FC<HeaderFiltersProps> = ({
             <AutocompleteGroupList disabled={!showAdminControls} />
           </Box>
         )}
-        <Box sx={{ flex: "1 0 210px", minWidth: 0 }}>
-          <AutocompleteGroupPatientsList />
-        </Box>
+        {showAdminControls && (
+          <Box sx={{ flex: "1 0 210px", minWidth: 0 }}>
+            <AutocompleteGroupPatientsList />
+          </Box>
+        )}
         {showAdminControls && (
           <Box sx={{ flex: "0 0 220px", minWidth: 0 }}>
             <AutocompleteRoleList disabled={!showAdminControls} />

@@ -9,6 +9,7 @@ import SetIssuePlanTable from "./SetIssuePlanTable";
 import { useTableTimePlanSelectors } from "@/hooks/useTableTimePlanSelectors";
 import FilterTableText from "./FilterTableText";
 import { useTheme } from "@mui/material/styles";
+import { workDaysToDurationInput } from "@/helpers";
 
 const TableCheckPlan: FC = () => {
   const {
@@ -29,6 +30,11 @@ const TableCheckPlan: FC = () => {
   const isLgUp = useMediaQuery(theme.breakpoints.up("lg"));
   const isMdUp = useMediaQuery(theme.breakpoints.up("md"));
   const isSmUp = useMediaQuery(theme.breakpoints.up("sm"));
+  const formatWorkDays = (value: unknown) => {
+    const num = Number(value);
+    if (!Number.isFinite(num)) return "";
+    return workDaysToDurationInput(num);
+  };
   const nameMinWidth = useMemo(() => {
     if (isXlUp) return 620;
     if (isLgUp) return 380;
@@ -118,6 +124,8 @@ const TableCheckPlan: FC = () => {
         flex: 1,
         minWidth: 60,
         disableColumnMenu: true,
+        valueFormatter: (value: TaskListItem["WorkDays"]) =>
+          formatWorkDays(value) || "-",
       },
       {
         field: "Deadline",

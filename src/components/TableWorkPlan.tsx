@@ -17,7 +17,7 @@ import { FC, useEffect, useMemo, useState } from "react";
 import IssueDisplay from "./IssueDisplay";
 import { useTableTimePlanSelectors } from "@/hooks/useTableTimePlanSelectors";
 import { getPriorityPalette } from "@/helpers/priorityStyles";
-import { isSuperLogin } from "@/helpers";
+import { isSuperLogin, workDaysToDurationInput } from "@/helpers";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import SetIssuePlanTable from "./SetIssuePlanTable";
@@ -35,6 +35,12 @@ const TableWorkPlan: FC = () => {
   } = useTableTimePlanSelectors();
   const { state, dispatch } = useAppContext();
   const { login } = state.auth;
+  const currentTrackerUid =
+    state.state.userId ||
+    state.tableTimePlanState.selectedPatientUid ||
+    (Array.isArray(state.state.users) && state.state.users.length === 1
+      ? state.state.users[0]?.id ?? null
+      : null);
   const [rows, setRows] = useState<WorkPlanItem[]>([]);
   const [filterText, setFilterText] = useState("");
   const [loading, setLoading] = useState(false);
@@ -45,11 +51,15 @@ const TableWorkPlan: FC = () => {
   const [deleteTarget, setDeleteTarget] = useState<WorkPlanItem | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const isAdmin = !!(login && isSuperLogin(login));
+  const effectiveTrackerUids = useMemo(() => {
+    if (isAdmin) return trackerUids;
+    return currentTrackerUid ? [currentTrackerUid] : [];
+  }, [currentTrackerUid, isAdmin, trackerUids]);
 
-  const formatTenths = (value: unknown) => {
+  const formatWorkDays = (value: unknown) => {
     const num = Number(value);
     if (!Number.isFinite(num)) return "";
-    return (Math.round(num * 10) / 10).toFixed(1);
+    return workDaysToDurationInput(num);
   };
 
   useEffect(() => {
@@ -64,7 +74,13 @@ const TableWorkPlan: FC = () => {
     }
 
     setLoading(true);
-    getWorkPlan({ sprintId, trackerUids, projectIds, roleIds, groupIds })
+    getWorkPlan({
+      sprintId,
+      trackerUids: effectiveTrackerUids,
+      projectIds,
+      roleIds,
+      groupIds,
+    })
       .then((data) => {
         if (!isMounted) return;
         setRows(data);
@@ -81,7 +97,7 @@ const TableWorkPlan: FC = () => {
     };
   }, [
     sprintId,
-    trackerUids,
+    effectiveTrackerUids,
     projectIds,
     roleIds,
     groupIds,
@@ -186,7 +202,7 @@ const TableWorkPlan: FC = () => {
         flex: 0.7,
         minWidth: 90,
         valueFormatter: (value: WorkPlanItem["EstimateTimeDays"]) =>
-          formatTenths(value),
+          formatWorkDays(value),
       },
       {
         field: "SpentTimeDays",
@@ -194,7 +210,7 @@ const TableWorkPlan: FC = () => {
         flex: 0.8,
         minWidth: 100,
         valueFormatter: (value: WorkPlanItem["SpentTimeDays"]) =>
-          formatTenths(value),
+          formatWorkDays(value),
       },
       {
         field: "RemainTimeDays",
@@ -202,7 +218,7 @@ const TableWorkPlan: FC = () => {
         flex: 0.8,
         minWidth: 100,
         valueFormatter: (value: WorkPlanItem["RemainTimeDays"]) =>
-          formatTenths(value),
+          formatWorkDays(value),
       },
       {
         field: "Deadline",
@@ -277,14 +293,14 @@ const TableWorkPlan: FC = () => {
       (acc, item) => acc + (Number(item.SpentTimeDays) || 0),
       0,
     );
-    return formatTenths(total);
+    return formatWorkDays(total);
   }, [filteredRows]);
 
   const remainingDays = useMemo(() => {
     if (sprintWorkingDays == null) return null;
     const spent = Number(totalSpentDays);
     if (!Number.isFinite(spent)) return null;
-    return formatTenths(sprintWorkingDays - spent);
+    return formatWorkDays(sprintWorkingDays - spent);
   }, [sprintWorkingDays, totalSpentDays]);
 
   const handleDelete = async () => {

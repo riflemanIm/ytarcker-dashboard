@@ -8,6 +8,8 @@ import { Dayjs } from "dayjs";
 interface TableTimeSpendByPlanProps {
   data: TaskItem[];
   start: Dayjs;
+  rangeStart?: Dayjs;
+  rangeEnd?: Dayjs;
   setData: (args: SetDataArgs) => Promise<void>;
   deleteData: (args: DeleteDataArgs) => void;
   isEditable: boolean;
@@ -16,6 +18,8 @@ interface TableTimeSpendByPlanProps {
 const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
   data,
   start,
+  rangeStart,
+  rangeEnd,
   setData,
   deleteData,
   isEditable,
@@ -105,6 +109,8 @@ const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
     <TableTimeSpend
       data={filteredData}
       start={start}
+      rangeStart={rangeStart}
+      rangeEnd={rangeEnd}
       setData={setData}
       deleteData={deleteData}
       isEditable={isEditable}

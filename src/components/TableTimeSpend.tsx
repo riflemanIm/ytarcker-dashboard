@@ -59,6 +59,8 @@ export const durationComparator = (a: string, b: string): number =>
 interface TableTimeSpendProps {
   data: TaskItem[];
   start: Dayjs; // первый день недели (понедельник)
+  rangeStart?: Dayjs;
+  rangeEnd?: Dayjs;
   setData: (args: SetDataArgs) => Promise<void>;
   deleteData: (args: DeleteDataArgs) => void;
   isEditable: boolean;
@@ -70,72 +72,64 @@ interface RawTransformedRow {
   issueId: string;
   groupIssue: string;
   checklistItemId?: string | null;
-  monday: string[];
-  tuesday: string[];
-  wednesday: string[];
-  thursday: string[];
-  friday: string[];
-  saturday: string[];
-  sunday: string[];
-  total: string;
+  remainTimeDays?: number;
+  fields: Record<string, string[]>;
 }
 
-const transformData = (data: TaskItem[]): TransformedTaskRow[] => {
+const transformData = (
+  data: TaskItem[],
+  issueMeta: Map<
+    string,
+    { checklistItemId?: string | null; remainTimeDays?: number }
+  >,
+  fieldKeys: string[],
+  fieldKeyForDate: (date: Dayjs) => string,
+): TransformedTaskRow[] => {
   const grouped: Record<string, RawTransformedRow> = {} as Record<
     string,
     RawTransformedRow
   >;
+  const fieldSet = new Set(fieldKeys);
 
   data.forEach((item: TaskItem) => {
-    const dayName: DayOfWeek = dayOfWeekNameByDate(
-      dayjs(item.start),
-    ) as DayOfWeek;
+    const fieldKey = fieldKeyForDate(dayjs(item.start));
+    if (!fieldSet.has(fieldKey)) return;
 
     if (!grouped[item.key]) {
+      const meta = issueMeta.get(item.issueId);
+      const fields: Record<string, string[]> = {};
+      fieldKeys.forEach((key) => {
+        fields[key] = [];
+      });
       grouped[item.key] = {
         id: item.key,
         issue: item.issue,
         issueId: item.issueId,
         groupIssue: item.groupIssue,
-        checklistItemId: item.checklistItemId ?? null,
-        monday: [],
-        tuesday: [],
-        wednesday: [],
-        thursday: [],
-        friday: [],
-        saturday: [],
-        sunday: [],
-        total: "",
+        checklistItemId: item.checklistItemId ?? meta?.checklistItemId ?? null,
+        remainTimeDays: item.remainTimeDays ?? meta?.remainTimeDays,
+        fields,
       };
     }
 
-    (
-      grouped[item.key][
-        dayName as keyof Omit<
-          RawTransformedRow,
-          "id" | "issue" | "issueId" | "groupIssue" | "total"
-        >
-      ] as string[]
-    ).push(item.duration);
+    if (!grouped[item.key].checklistItemId && item.checklistItemId) {
+      grouped[item.key].checklistItemId = item.checklistItemId;
+    }
+    if (grouped[item.key].remainTimeDays == null && item.remainTimeDays != null) {
+      grouped[item.key].remainTimeDays = item.remainTimeDays;
+    }
+
+    grouped[item.key].fields[fieldKey].push(item.duration);
   });
 
   return Object.values(grouped).map((rawRow) => {
-    const monday = sumDurations(rawRow.monday);
-    const tuesday = sumDurations(rawRow.tuesday);
-    const wednesday = sumDurations(rawRow.wednesday);
-    const thursday = sumDurations(rawRow.thursday);
-    const friday = sumDurations(rawRow.friday);
-    const saturday = sumDurations(rawRow.saturday);
-    const sunday = sumDurations(rawRow.sunday);
-    const combined = [
-      monday,
-      tuesday,
-      wednesday,
-      thursday,
-      friday,
-      saturday,
-      sunday,
-    ];
+    const totalsVals: string[] = [];
+    const result: Record<string, string> = {};
+    fieldKeys.forEach((key) => {
+      const summed = sumDurations(rawRow.fields[key]);
+      result[key] = summed;
+      totalsVals.push(summed);
+    });
 
     return {
       id: rawRow.id,
@@ -143,14 +137,9 @@ const transformData = (data: TaskItem[]): TransformedTaskRow[] => {
       issueId: rawRow.issueId,
       groupIssue: rawRow.groupIssue,
       checklistItemId: rawRow.checklistItemId ?? null,
-      monday,
-      tuesday,
-      wednesday,
-      thursday,
-      friday,
-      saturday,
-      sunday,
-      total: displayDuration(sumDurations(combined)),
+      remainTimeDays: rawRow.remainTimeDays,
+      ...result,
+      total: displayDuration(sumDurations(totalsVals)),
     } as unknown as TransformedTaskRow;
   });
 };
@@ -158,6 +147,8 @@ const transformData = (data: TaskItem[]): TransformedTaskRow[] => {
 const TableTimeSpend: FC<TableTimeSpendProps> = ({
   data,
   start,
+  rangeStart,
+  rangeEnd,
   setData,
   deleteData,
   isEditable = false,
@@ -170,8 +161,60 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
     (Array.isArray(appState.state.users) && appState.state.users.length === 1
       ? (appState.state.users[0]?.id ?? null)
       : null);
-  // --- 0) Выравниваем «шапку недели» под данные / выбранную неделю ---
+  const issueMeta = useMemo(() => {
+    const map = new Map<
+      string,
+      { checklistItemId?: string | null; remainTimeDays?: number }
+    >();
+    (appState.state.issues ?? []).forEach((issue: any) => {
+      const key = issue?.key ?? issue?.issueId ?? issue?.id;
+      if (!key) return;
+      const checklistItemId =
+        issue?.checklistItemId ??
+        issue?.ChecklistItemId ??
+        issue?.checklist_item_id ??
+        issue?.checklistItem?.id ??
+        null;
+      const remainTimeDays =
+        issue?.remainTimeDays ??
+        issue?.RemainTimeDays ??
+        issue?.remain_time_days;
+      map.set(String(key), { checklistItemId, remainTimeDays });
+    });
+    return map;
+  }, [appState.state.issues]);
+  const rangeMode = Boolean(rangeStart && rangeEnd);
+  const rangeDays = useMemo(() => {
+    if (!rangeMode || !rangeStart || !rangeEnd) return [];
+    const startDay = toTarget(rangeStart).startOf("day");
+    const endDay = toTarget(rangeEnd).startOf("day");
+    const days: string[] = [];
+    for (
+      let cursor = startDay;
+      cursor.isSameOrBefore(endDay, "day");
+      cursor = cursor.add(1, "day")
+    ) {
+      days.push(cursor.format("YYYY-MM-DD"));
+    }
+    return days;
+  }, [rangeEnd, rangeMode, rangeStart]);
+
+  const fieldKeys = rangeMode ? rangeDays : daysMap;
+
+  const fieldKeyForDate = useCallback(
+    (date: Dayjs) => {
+      const targetDate = toTarget(date);
+      return rangeMode
+        ? targetDate.format("YYYY-MM-DD")
+        : (dayOfWeekNameByDate(targetDate) as DayOfWeek);
+    },
+    [rangeMode],
+  );
+
   const viewStart = useMemo(() => {
+    if (rangeMode && rangeStart) {
+      return toTarget(rangeStart).startOf("day");
+    }
     const s = toTarget(start).startOf("isoWeek");
     const e = s.endOf("isoWeek");
 
@@ -191,29 +234,40 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
     }
 
     return s;
-  }, [start, data]);
+  }, [data, rangeMode, rangeStart, start]);
 
-  // --- 1) Берём только записи этой недели (важно для сумм/колонок) ---
-  const dataForWeek = useMemo(() => {
-    const s = viewStart;
-    const e = viewStart.endOf("isoWeek");
+  const getDateForField = useCallback(
+    (field: string) => {
+      if (rangeMode) {
+        const parsed = dayjs(field);
+        return parsed.isValid() ? parsed.startOf("day") : null;
+      }
+      return getDateOfWeekday(viewStart, dayToNumber(field as DayOfWeek));
+    },
+    [rangeMode, viewStart],
+  );
+
+  // --- 1) Берём только записи выбранного диапазона ---
+  const dataForRange = useMemo(() => {
+    const s = rangeMode && rangeStart ? toTarget(rangeStart).startOf("day") : viewStart;
+    const e = rangeMode && rangeEnd ? toTarget(rangeEnd).endOf("day") : viewStart.endOf("isoWeek");
     return data.filter((i) => {
       const d = toTarget(i.start);
       return d.isSameOrAfter(s) && d.isSameOrBefore(e);
     });
-  }, [data, viewStart]);
+  }, [data, rangeEnd, rangeMode, rangeStart, viewStart]);
 
   // --- 2) Проверка тегов для ячейки (внутри этой недели) ---
   const cellHasAllTags = useCallback(
     (rowId: string | number, field: string): boolean => {
-      if (!dataForWeek) return true;
+      if (!dataForRange) return true;
 
       const norm = (s: string) => s.replace(/[\u00A0\u202F]/g, " ");
       const BAD_TAG_RE =
         /\[\s*ProjectControlWT\s*:\s*Временно\s+не\s*определ[её]н\s*\]/i;
 
-      const rawItems = dataForWeek.filter(
-        (r) => r.key === rowId && dayOfWeekNameByDate(dayjs(r.start)) === field,
+      const rawItems = dataForRange.filter(
+        (r) => r.key === rowId && fieldKeyForDate(dayjs(r.start)) === field,
       );
 
       if (rawItems.length === 0) return false;
@@ -237,15 +291,26 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
       }
       return true;
     },
-    [dataForWeek],
+    [dataForRange, fieldKeyForDate],
   );
 
   // --- 3) Строим строки по отфильтрованным данным ---
-  const tableRows = useMemo(() => transformData(dataForWeek), [dataForWeek]);
+  const tableRows = useMemo(
+    () => transformData(dataForRange, issueMeta, fieldKeys, fieldKeyForDate),
+    [dataForRange, fieldKeyForDate, fieldKeys, issueMeta],
+  );
 
-  // --- 4) Определяем «сегодняшний» столбец в рамках viewStart ---
-  const todayKey: DayOfWeek | "" = useMemo(() => {
+  // --- 4) Определяем «сегодняшний» столбец в рамках диапазона ---
+  const todayKey: string | "" = useMemo(() => {
     const today = toTarget(dayjs()).startOf("day");
+    if (rangeMode && rangeStart && rangeEnd) {
+      const startDay = toTarget(rangeStart).startOf("day");
+      const endDay = toTarget(rangeEnd).endOf("day");
+      if (today.isSameOrAfter(startDay) && today.isSameOrBefore(endDay)) {
+        return today.format("YYYY-MM-DD");
+      }
+      return "";
+    }
     for (const day of daysMap) {
       const dateOfThisDay = getDateOfWeekday(
         viewStart,
@@ -254,7 +319,7 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
       if (dateOfThisDay.isSame(today)) return day;
     }
     return "";
-  }, [viewStart]);
+  }, [rangeEnd, rangeMode, rangeStart, viewStart]);
 
   // --- 5) Контекстное меню по клику на ячейку ---
   const [menuState, setMenuState] = useState<MenuState>(createEmptyMenuState);
@@ -294,29 +359,26 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
       clearInfoCloseTimer();
       const anchor = event.currentTarget as HTMLElement;
       const foundRow =
-        dataForWeek != null
-          ? dataForWeek.find(
+        dataForRange != null
+          ? dataForRange.find(
               (row) =>
-                dayOfWeekNameByDate(dayjs(row.start)) === params.field &&
+                fieldKeyForDate(dayjs(row.start)) === params.field &&
                 row.key === params.id,
             )?.durations
           : null;
-
+      console.log("params.row", params.row);
       setMenuState({
         anchorEl: anchor,
         issue: params.row.issue.display,
-        field: params.field as DayOfWeek,
+        field: params.field as string,
         issueId: params.row.issueId,
         checklistItemId: params.row.checklistItemId ?? null,
         remainTimeDays: params.row.remainTimeDays,
         durations: foundRow ?? null,
-        dateField: getDateOfWeekday(
-          viewStart,
-          dayToNumber(params.field as DayOfWeek),
-        ),
+        dateField: getDateForField(params.field as string),
       });
     },
-    [dataForWeek, viewStart, setMenuState],
+    [dataForRange, fieldKeyForDate, getDateForField, setMenuState],
   );
 
   const handleMenuClose = useCallback(() => {
@@ -328,10 +390,10 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
       clearInfoCloseTimer();
       const anchor = event.currentTarget as HTMLElement;
       const foundRow =
-        dataForWeek != null
-          ? dataForWeek.find(
+        dataForRange != null
+          ? dataForRange.find(
               (row) =>
-                dayOfWeekNameByDate(dayjs(row.start)) === params.field &&
+                fieldKeyForDate(dayjs(row.start)) === params.field &&
                 row.key === params.id,
             )?.durations
           : null;
@@ -347,23 +409,21 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
       const nextState: MenuState = {
         anchorEl: anchor,
         issue: params.row.issue.display,
-        field: params.field as DayOfWeek,
+        field: params.field as string,
         issueId: params.row.issueId,
         checklistItemId: params.row.checklistItemId ?? null,
         remainTimeDays: params.row.remainTimeDays,
         durations: foundRow,
-        dateField: getDateOfWeekday(
-          viewStart,
-          dayToNumber(params.field as DayOfWeek),
-        ),
+        dateField: getDateForField(params.field as string),
       };
 
       setInfoState(nextState);
       setInfoOpen(true);
     },
     [
-      dataForWeek,
-      viewStart,
+      dataForRange,
+      fieldKeyForDate,
+      getDateForField,
       closeInfo,
       setInfoState,
       setInfoOpen,
@@ -408,10 +468,10 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
     };
   }, [clearInfoCloseTimer]);
 
-  // --- 6) Сохранение времени в выбранный день текущей (viewStart) недели ---
+  // --- 6) Сохранение времени в выбранный день диапазона ---
   const handleCellEdit = useCallback(
     (
-      field: DayOfWeek,
+      field: string,
       newValue: string,
       issueId: string,
       checklistItemId?: string | null,
@@ -436,7 +496,10 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
         return false;
       }
       try {
-        const dateCell = getDateOfWeekday(viewStart, dayToNumber(field)); // ⬅️ viewStart
+        const dateCell = getDateForField(field);
+        if (!dateCell || !dateCell.isValid()) {
+          return false;
+        }
         setData({
           dateCell,
           dispatch,
@@ -456,10 +519,10 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
         return false;
       }
     },
-    [dispatch, viewStart, setData, token, trackerUid],
+    [dispatch, getDateForField, setData, token, trackerUid],
   );
 
-  // --- 7) Колонки (шапка дат строится от viewStart) ---
+  // --- 7) Колонки (шапка дат строится от viewStart/диапазона) ---
   const columns: GridColDef[] = [
     {
       field: "issue",
@@ -479,14 +542,17 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
     },
     { field: "issueId", headerName: "Key", flex: 1.5, sortable: true },
 
-    ...daysMap.map((day) => {
-      const header = `${headerWeekName[day]} ${getDateOfWeekday(
-        viewStart,
-        dayToNumber(day),
-      ).format("DD.MM")}`;
+    ...fieldKeys.map((field) => {
+      const dateForHeader = getDateForField(field);
+      const header =
+        dateForHeader != null
+          ? `${headerWeekName[
+              dayOfWeekNameByDate(dateForHeader) as keyof typeof headerWeekName
+            ]} ${dateForHeader.format("DD.MM")}`
+          : field;
 
       return {
-        field: day,
+        field,
         headerName: header,
         flex: 1,
         editable: false,
@@ -496,7 +562,7 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
           if (params2.id === "total") return -1;
           return durationComparator(v1, v2);
         },
-        headerClassName: day === todayKey ? "current-column-header" : "",
+        headerClassName: field === todayKey ? "current-column-header" : "",
         cellClassName: (params: GridRenderCellParams) =>
           params.field === todayKey ? "current-column-cell" : "",
         renderCell: (params: GridRenderCellParams) => {
@@ -599,7 +665,7 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
     (rows: TransformedTaskRow[]): TransformedTaskRow => {
       const totals: Record<string, string> = {};
       const totalsVals: Record<string, string> = {};
-      daysMap.forEach((field) => {
+      fieldKeys.forEach((field) => {
         totals[field] = displayDuration(
           sumDurations(rows.map((row) => (row as any)[field] as string)),
         );
@@ -617,7 +683,7 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
         ...totals,
       } as TransformedTaskRow;
     },
-    [],
+    [fieldKeys],
   );
 
   const totalRow = useMemo(
@@ -652,7 +718,7 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
           Затраченное время{" "}
           {appState.state.fetchByLogin ? "по задачам" : "по сотрудникам"}
         </Typography>
-        {appState.state.fetchByLogin && (
+        {isEditable && (
           <AddDurationIssueDialog
             issues={appState.state.issues}
             setData={setData}
@@ -668,7 +734,7 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
           if (
             isEditable &&
             params.row.id !== "total" &&
-            daysMap.includes(params.field as DayOfWeek) &&
+            fieldKeys.includes(params.field as string) &&
             isEmptyDurationValue(params.value) &&
             (event as React.MouseEvent).detail === 1
           ) {
@@ -678,22 +744,19 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
             );
           }
         }}
-        processRowUpdate={(updatedRow, originalRow) =>
-          handleCellEdit(
-            Object.keys(updatedRow).find(
-              (key) => (updatedRow as any)[key] !== (originalRow as any)[key],
-            ) as DayOfWeek,
-            updatedRow[
-              Object.keys(updatedRow).find(
-                (key) => (updatedRow as any)[key] !== (originalRow as any)[key],
-              ) as DayOfWeek
-            ],
+        processRowUpdate={(updatedRow, originalRow) => {
+          const changedField = Object.keys(updatedRow).find(
+            (key) => (updatedRow as any)[key] !== (originalRow as any)[key],
+          ) as string;
+          return handleCellEdit(
+            changedField,
+            (updatedRow as any)[changedField],
             updatedRow.issueId,
             (updatedRow as any).checklistItemId,
           )
             ? updatedRow
-            : originalRow
-        }
+            : originalRow;
+        }}
         getRowClassName={(params) => (params.id === "total" ? "no-hover" : "")}
         sx={{
           "& .no-hover:hover": { backgroundColor: "transparent !important" },

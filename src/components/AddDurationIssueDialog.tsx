@@ -1,5 +1,11 @@
 import { SetDataArgs, getIssueTypeList } from "@/actions/data";
-import { isValidDuration, normalizeDuration } from "@/helpers";
+import {
+  displayDuration,
+  durationToWorkDays,
+  isValidDuration,
+  normalizeDuration,
+  workDaysToDurationInput,
+} from "@/helpers";
 import { buildFinalComment } from "@/helpers/issueTypeComment";
 import AddIcon from "@mui/icons-material/Add";
 import {
@@ -47,7 +53,7 @@ export default function AddDurationIssueDialog({
     state.state.userId ||
     state.tableTimePlanState.selectedPatientUid ||
     (Array.isArray(state.state.users) && state.state.users.length === 1
-      ? state.state.users[0]?.id ?? null
+      ? (state.state.users[0]?.id ?? null)
       : null);
   const [open, setOpen] = useState(false);
   const [riskState, setRiskState] = useState({
@@ -55,6 +61,8 @@ export default function AddDurationIssueDialog({
     needUpgradeEstimate: false,
     makeTaskFaster: false,
   });
+  const [plannedDuration, setPlannedDuration] = useState<string>("");
+  const [plannedDurationError, setPlannedDurationError] = useState<string>("");
 
   // список типов по выбранной задаче
   const [issueTypesState, setIssueTypesState] = useState<{
@@ -118,6 +126,24 @@ export default function AddDurationIssueDialog({
     // не показывать ошибку раньше времени (см. showTypeError ниже)
     return errs;
   };
+
+  const validateDurationValue = useCallback((rawValue: string): string => {
+    const normalized = normalizeDuration(rawValue ?? "");
+    if (
+      normalized.trim() === "" ||
+      normalized === "P" ||
+      !isValidDuration(normalized)
+    ) {
+      return `Значение "${rawValue ?? ""}" не является корректным форматом времени.`;
+    }
+    return "";
+  }, []);
+
+  const formatWorkDays = useCallback((value: number | null | undefined) => {
+    if (value == null || !Number.isFinite(value)) return "-";
+    const sign = value < 0 ? "-" : "";
+    return `${sign}${workDaysToDurationInput(Math.abs(value))}`;
+  }, []);
 
   const submit = () => {
     // Жёсткая проверка на выбранный тип при наличии списка
@@ -196,6 +222,8 @@ export default function AddDurationIssueDialog({
     setErrors({});
     setIssueTypesState({ issue_type_list: [], loaded: true });
     setSelectedIssueType(null);
+    setPlannedDuration("");
+    setPlannedDurationError("");
     setRiskState({
       deadlineOk: true,
       needUpgradeEstimate: false,
@@ -217,6 +245,48 @@ export default function AddDurationIssueDialog({
     !issueTypesState.loaded ||
     Object.keys(errors).length > 0 ||
     (labels.length > 0 && !selectedIssueType);
+
+  const remainTimeDays =
+    (values.issue as any)?.remainTimeDays ??
+    (values.issue as any)?.RemainTimeDays ??
+    null;
+
+  const remainingInfo = useMemo(() => {
+    if (remainTimeDays == null) return null;
+    const normalized = normalizeDuration(plannedDuration ?? "");
+    if (
+      normalized.trim() === "" ||
+      normalized === "P" ||
+      !isValidDuration(normalized)
+    ) {
+      return null;
+    }
+    const planned = durationToWorkDays(normalized);
+    if (!Number.isFinite(planned)) return null;
+    return planned - remainTimeDays;
+  }, [plannedDuration, remainTimeDays]);
+
+  const planningSection = remainTimeDays != null && (
+    <>
+      <Typography variant="subtitle1">Планирование</Typography>
+      <Stack direction="row" spacing={2} alignItems="center" mt={1}>
+        <TextField
+          label="длительность по плану"
+          value={displayDuration(plannedDuration ?? "")}
+          onChange={(event) => {
+            const raw = event.target.value ?? "";
+            setPlannedDuration(raw);
+            setPlannedDurationError(validateDurationValue(raw));
+          }}
+          error={Boolean(plannedDurationError)}
+          helperText={plannedDurationError}
+        />
+        <Typography variant="subtitle2">
+          Осталось времени = {formatWorkDays(remainingInfo)}
+        </Typography>
+      </Stack>
+    </>
+  );
 
   return (
     <>
@@ -359,7 +429,7 @@ export default function AddDurationIssueDialog({
               <Typography variant="subtitle1">Риски по задаче</Typography>
             </Grid>
 
-            <Grid size={12}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <Stack spacing={1} mt={1}>
                 <FormControlLabel
                   control={
@@ -405,6 +475,7 @@ export default function AddDurationIssueDialog({
                 />
               </Stack>
             </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>{planningSection}</Grid>
           </Grid>
         </DialogContent>
 

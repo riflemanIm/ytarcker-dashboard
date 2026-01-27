@@ -5,7 +5,7 @@ import {
   LinearProgress,
 } from "@mui/material";
 import dayjs from "dayjs";
-import { FC, useCallback, useEffect } from "react";
+import { FC, useCallback, useEffect, useMemo } from "react";
 import { deleteData, getData, getUserIssues, setData } from "./actions/data";
 import AppHeader from "./components/AppHeader";
 import DurationAlert from "./components/DurationAlert";
@@ -14,7 +14,7 @@ import TableTimeSpend from "./components/TableTimeSpend";
 import TableTimeSpendByPlan from "./components/TableTimeSpendByPlan";
 import ViewTimePlan from "./components/ViewTimePlan";
 import WorklogWeeklyReport from "./components/WorklogWeeklyReport";
-import { useAppContext } from "./context/AppContext";
+import { debugUserId, useAppContext } from "./context/AppContext";
 import isEmpty, {
   aggregateDurations,
   getWeekRange,
@@ -22,11 +22,37 @@ import isEmpty, {
 } from "./helpers";
 import { DataItem } from "./types/global";
 
+const parseSprintRange = (raw?: string | null) => {
+  if (!raw) return null;
+  const dateMatches = raw.match(/\d{2}\.\d{2}(?:\.\d{4})?/g);
+  if (!dateMatches || dateMatches.length < 2) return null;
+  const left = dateMatches[0]?.trim();
+  const right = dateMatches[1]?.trim();
+  if (!left || !right) return null;
+  const yearMatch = right.match(/(\d{4})/);
+  const fallbackYear = yearMatch ? yearMatch[1] : dayjs().format("YYYY");
+  const parseToIso = (value: string, year: string) => {
+    const match = value.match(/^(\d{2})\.(\d{2})(?:\.(\d{4}))?$/);
+    if (!match) return null;
+    const [, day, month, rawYear] = match;
+    const finalYear = rawYear ?? year;
+    return `${finalYear}-${month}-${day}`;
+  };
+  const startIso = parseToIso(left, fallbackYear);
+  const endIso = parseToIso(right, fallbackYear);
+  if (!startIso || !endIso) return null;
+  const start = dayjs(startIso);
+  const end = dayjs(endIso);
+  if (!start.isValid() || !end.isValid()) return null;
+  return { start: start.startOf("day"), end: end.endOf("day") };
+};
+
 const YandexTracker: FC = () => {
   const { state: appState, dispatch } = useAppContext();
   const { auth, state, alert, viewMode, weekOffset, reportFrom, reportTo } =
     appState;
   const { token, login } = auth;
+  const { selectedSprintId, sprins } = appState.tableTimePlanState;
   const handleCloseAlert = useCallback(
     () =>
       dispatch({
@@ -50,6 +76,17 @@ const YandexTracker: FC = () => {
 
   // НЕДЕЛЬНЫЙ РЕЖИМ (TableTimeSpend)
   const { start, end } = getWeekRange(weekOffset);
+  const sprintLabel = useMemo(() => {
+    if (!selectedSprintId) return null;
+    return (
+      sprins.find((item) => String(item.yt_tl_sprints_id) === selectedSprintId)
+        ?.sprint ?? null
+    );
+  }, [selectedSprintId, sprins]);
+  const sprintRange = useMemo(
+    () => parseSprintRange(sprintLabel),
+    [sprintLabel],
+  );
 
   // РЕЖИМ ОТЧЁТА: произвольный диапазон дат (по умолчанию текущий месяц)
   const handlePrevReportMonth = () => {
@@ -89,8 +126,19 @@ const YandexTracker: FC = () => {
     if (viewMode === "search") return;
     if (!(login || state.userId) || !token) return;
 
-    const rangeStart = viewMode === "report" ? reportFrom : start;
-    const rangeEnd = viewMode === "report" ? reportTo : end;
+    const isPlanRange = viewMode === "table_time_spend_plan" && sprintRange;
+    const rangeStart =
+      viewMode === "report"
+        ? reportFrom
+        : isPlanRange
+          ? sprintRange!.start
+          : start;
+    const rangeEnd =
+      viewMode === "report"
+        ? reportTo
+        : isPlanRange
+          ? sprintRange!.end
+          : end;
 
     dispatch({
       type: "setState",
@@ -112,6 +160,7 @@ const YandexTracker: FC = () => {
     state.fetchByLogin,
     reportFrom,
     reportTo,
+    sprintRange,
     start,
     end,
     viewMode,
@@ -121,7 +170,13 @@ const YandexTracker: FC = () => {
       viewMode === "table_time_spend" ||
       viewMode === "table_time_spend_plan"
     ) {
-      getUserIssues({ dispatch, token, userId: state.userId, login });
+      const issuesUserId = debugUserId || state.userId;
+      getUserIssues({
+        dispatch,
+        token,
+        userId: issuesUserId,
+        login: debugUserId ? null : login,
+      });
     }
   }, [dispatch, login, state.userId, token, viewMode]);
 
@@ -225,6 +280,8 @@ const YandexTracker: FC = () => {
                   <TableTimeSpendByPlan
                     data={aggregateDurations(state.data as DataItem[])}
                     start={start}
+                    rangeStart={sprintRange?.start}
+                    rangeEnd={sprintRange?.end}
                     setData={setData}
                     deleteData={deleteData}
                     isEditable={state.fetchByLogin}

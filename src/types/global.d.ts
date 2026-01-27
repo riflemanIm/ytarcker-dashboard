@@ -231,6 +231,7 @@ export interface TransformedTaskRow {
   issueId: string;
   groupIssue: string;
   checklistItemId?: string | null;
+  remainTimeDays?: number;
   monday: string;
   tuesday: string;
   wednesday: string;
@@ -239,12 +240,13 @@ export interface TransformedTaskRow {
   saturday: string;
   sunday: string;
   total: string;
+  [key: string]: any;
 }
 
 export interface MenuState {
   anchorEl: HTMLElement | null;
   issue: string | null;
-  field: DayOfWeek | null;
+  field: DayOfWeek | string | null;
   issueId: string | null;
   checklistItemId?: string | null;
   remainTimeDays?: number;
