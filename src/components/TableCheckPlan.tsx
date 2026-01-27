@@ -1,6 +1,6 @@
 import { getTaskList } from "@/actions/data";
 import { TaskListItem } from "@/types/global";
-import { Box, Button, Stack, Tooltip } from "@mui/material";
+import { Box, Button, Stack, Tooltip, useMediaQuery } from "@mui/material";
 import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import dayjs from "dayjs";
 import { FC, useEffect, useMemo, useState } from "react";
@@ -8,15 +8,34 @@ import IssueDisplay from "./IssueDisplay";
 import SetIssuePlanTable from "./SetIssuePlanTable";
 import { useTableTimePlanSelectors } from "@/hooks/useTableTimePlanSelectors";
 import FilterTableText from "./FilterTableText";
+import { useTheme } from "@mui/material/styles";
 
 const TableCheckPlan: FC = () => {
-  const { sprintId, trackerUids, projectIds, roleIds, groupIds, workPlanRefreshKey } =
-    useTableTimePlanSelectors();
+  const {
+    sprintId,
+    trackerUids,
+    projectIds,
+    roleIds,
+    groupIds,
+    workPlanRefreshKey,
+  } = useTableTimePlanSelectors();
   const [rows, setRows] = useState<TaskListItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedIssue, setSelectedIssue] = useState<TaskListItem | null>(null);
   const [filterText, setFilterText] = useState("");
+  const theme = useTheme();
+  const isXlUp = useMediaQuery(theme.breakpoints.up("xl"));
+  const isLgUp = useMediaQuery(theme.breakpoints.up("lg"));
+  const isMdUp = useMediaQuery(theme.breakpoints.up("md"));
+  const isSmUp = useMediaQuery(theme.breakpoints.up("sm"));
+  const nameMinWidth = useMemo(() => {
+    if (isXlUp) return 620;
+    if (isLgUp) return 380;
+    if (isMdUp) return 620;
+    if (isSmUp) return 480;
+    return 400;
+  }, [isLgUp, isMdUp, isSmUp, isXlUp]);
   const isSprintReady = sprintId != null;
   useEffect(() => {
     let isMounted = true;
@@ -44,14 +63,16 @@ const TableCheckPlan: FC = () => {
         field: "TaskName",
         headerName: "Название",
         flex: 1,
-        minWidth: 480,
+        minWidth: nameMinWidth,
         sortable: false,
         filterable: false,
         disableColumnMenu: true,
         renderCell: (params: GridRenderCellParams) => {
           const workName = params.row.WorkName ?? "";
           const workType = params.row.WorkNameDict ?? "";
-          const title = [workName, workType].filter(Boolean).join(" / ") || "-";
+          const title =
+            [params.value, workName, workType].filter(Boolean).join(" / ") ||
+            "-";
           return (
             <Tooltip title={title}>
               <span>
@@ -69,7 +90,7 @@ const TableCheckPlan: FC = () => {
         field: "TaskKey",
         headerName: "В План",
         minWidth: 100,
-        flex: 0.2,
+        flex: 1,
         sortable: false,
         filterable: false,
         disableColumnMenu: true,
@@ -95,20 +116,22 @@ const TableCheckPlan: FC = () => {
         field: "WorkDays",
         headerName: "Трудозатраты, дн.",
         flex: 1,
-        minWidth: 40,
+        minWidth: 60,
+        disableColumnMenu: true,
       },
       {
         field: "Deadline",
         headerName: "Дедлайн",
         flex: 1,
-        minWidth: 40,
+        minWidth: 90,
+        disableColumnMenu: true,
         valueFormatter: (value: TaskListItem["Deadline"]) =>
           value && dayjs(value).isValid()
             ? dayjs(value).format("DD.MM.YYYY")
             : "-",
       },
     ],
-    [sprintId],
+    [nameMinWidth, sprintId],
   );
 
   const rowsWithId = useMemo(

@@ -38,14 +38,12 @@ const VIEW_MODE_OPTIONS: Array<{
     icon: TodayIcon,
     tooltip: "Показать списания времени по плану задач",
     menuLabel: "Списания по плану",
-    isAdminOnly: true,
   },
   {
     mode: "table_time_plan",
     icon: EventNoteIcon,
     tooltip: "Показать планирования времени",
     menuLabel: "Планирование",
-    isAdminOnly: true,
   },
   {
     mode: "report",
