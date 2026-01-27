@@ -1,6 +1,7 @@
 import { DeleteDataArgs, SetDataArgs, getWorkPlan } from "@/actions/data";
 import { useTableTimePlanSelectors } from "@/hooks/useTableTimePlanSelectors";
 import { TaskItem } from "@/types/global";
+import { Alert } from "@mui/material";
 import { FC, useEffect, useMemo, useState } from "react";
 import TableTimeSpend from "./TableTimeSpend";
 import { Dayjs } from "dayjs";
@@ -36,17 +37,21 @@ const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
   const [planMeta, setPlanMeta] = useState<
     Record<string, { checklistItemId?: string | null; remainTimeDays?: number }>
   >({});
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
 
     if (!sprintId) {
       setPlanKeys(new Set());
+      setPlanMeta({});
+      setLoading(false);
       return () => {
         isMounted = false;
       };
     }
 
+    setLoading(true);
     getWorkPlan({ sprintId, trackerUids, projectIds, roleIds, groupIds })
       .then((items) => {
         if (!isMounted) return;
@@ -68,6 +73,7 @@ const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
         });
         setPlanKeys(next);
         setPlanMeta(meta);
+        setLoading(false);
       })
       .catch((error: Error) => {
         console.error(
@@ -77,6 +83,7 @@ const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
         if (!isMounted) return;
         setPlanKeys(new Set());
         setPlanMeta({});
+        setLoading(false);
       });
 
     return () => {
@@ -105,12 +112,21 @@ const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
       });
   }, [data, planKeys, planMeta]);
 
+  if (!loading && filteredData.length === 0) {
+    return (
+      <Alert severity="warning">
+        Нет ни одной отметки времени за выбранный период
+      </Alert>
+    );
+  }
+
   return (
     <TableTimeSpend
       data={filteredData}
       start={start}
       rangeStart={rangeStart}
       rangeEnd={rangeEnd}
+      title="Затраченное время по плану"
       setData={setData}
       deleteData={deleteData}
       isEditable={isEditable}

@@ -134,11 +134,7 @@ const YandexTracker: FC = () => {
           ? sprintRange!.start
           : start;
     const rangeEnd =
-      viewMode === "report"
-        ? reportTo
-        : isPlanRange
-          ? sprintRange!.end
-          : end;
+      viewMode === "report" ? reportTo : isPlanRange ? sprintRange!.end : end;
 
     dispatch({
       type: "setState",
@@ -266,6 +262,24 @@ const YandexTracker: FC = () => {
               <SearchIssues token={token} />
             ) : viewMode === "table_time_plan" ? (
               <ViewTimePlan />
+            ) : viewMode === "table_time_spend_plan" ? (
+              <>
+                <TableTimeSpendByPlan
+                  data={aggregateDurations(state.data as DataItem[])}
+                  start={start}
+                  rangeStart={sprintRange?.start}
+                  rangeEnd={sprintRange?.end}
+                  setData={setData}
+                  deleteData={deleteData}
+                  isEditable={state.fetchByLogin}
+                />
+                <DurationAlert
+                  open={alert.open}
+                  message={alert.message}
+                  severity={alert.severity as AlertColor | undefined}
+                  onClose={handleCloseAlert}
+                />
+              </>
             ) : !isEmpty(state.data) ? (
               <>
                 {viewMode === "table_time_spend" ? (
@@ -275,16 +289,9 @@ const YandexTracker: FC = () => {
                     setData={setData}
                     deleteData={deleteData}
                     isEditable={state.fetchByLogin}
-                  />
-                ) : viewMode === "table_time_spend_plan" ? (
-                  <TableTimeSpendByPlan
-                    data={aggregateDurations(state.data as DataItem[])}
-                    start={start}
-                    rangeStart={sprintRange?.start}
-                    rangeEnd={sprintRange?.end}
-                    setData={setData}
-                    deleteData={deleteData}
-                    isEditable={state.fetchByLogin}
+                    title={`Затраченное время ${
+                      state.fetchByLogin ? "по задачам" : "по сотрудникам"
+                    }`}
                   />
                 ) : (
                   <WorklogWeeklyReport

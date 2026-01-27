@@ -61,6 +61,7 @@ interface TableTimeSpendProps {
   start: Dayjs; // первый день недели (понедельник)
   rangeStart?: Dayjs;
   rangeEnd?: Dayjs;
+  title?: string;
   setData: (args: SetDataArgs) => Promise<void>;
   deleteData: (args: DeleteDataArgs) => void;
   isEditable: boolean;
@@ -115,7 +116,10 @@ const transformData = (
     if (!grouped[item.key].checklistItemId && item.checklistItemId) {
       grouped[item.key].checklistItemId = item.checklistItemId;
     }
-    if (grouped[item.key].remainTimeDays == null && item.remainTimeDays != null) {
+    if (
+      grouped[item.key].remainTimeDays == null &&
+      item.remainTimeDays != null
+    ) {
       grouped[item.key].remainTimeDays = item.remainTimeDays;
     }
 
@@ -149,6 +153,7 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
   start,
   rangeStart,
   rangeEnd,
+  title,
   setData,
   deleteData,
   isEditable = false,
@@ -249,8 +254,12 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
 
   // --- 1) Берём только записи выбранного диапазона ---
   const dataForRange = useMemo(() => {
-    const s = rangeMode && rangeStart ? toTarget(rangeStart).startOf("day") : viewStart;
-    const e = rangeMode && rangeEnd ? toTarget(rangeEnd).endOf("day") : viewStart.endOf("isoWeek");
+    const s =
+      rangeMode && rangeStart ? toTarget(rangeStart).startOf("day") : viewStart;
+    const e =
+      rangeMode && rangeEnd
+        ? toTarget(rangeEnd).endOf("day")
+        : viewStart.endOf("isoWeek");
     return data.filter((i) => {
       const d = toTarget(i.start);
       return d.isSameOrAfter(s) && d.isSameOrBefore(e);
@@ -546,9 +555,13 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
       const dateForHeader = getDateForField(field);
       const header =
         dateForHeader != null
-          ? `${headerWeekName[
-              dayOfWeekNameByDate(dateForHeader) as keyof typeof headerWeekName
-            ]} ${dateForHeader.format("DD.MM")}`
+          ? `${
+              headerWeekName[
+                dayOfWeekNameByDate(
+                  dateForHeader,
+                ) as keyof typeof headerWeekName
+              ]
+            } ${dateForHeader.format("DD.MM")}`
           : field;
 
       return {
@@ -714,10 +727,7 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
         justifyContent="center"
         mb={2}
       >
-        <Typography variant="h5">
-          Затраченное время{" "}
-          {appState.state.fetchByLogin ? "по задачам" : "по сотрудникам"}
-        </Typography>
+        <Typography variant="h5">{title}</Typography>
         {isEditable && (
           <AddDurationIssueDialog
             issues={appState.state.issues}
