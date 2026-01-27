@@ -1,6 +1,7 @@
 import { displayDuration, displayStartTime } from "@/helpers";
 import {
   parseFirstIssueTypeLabel,
+  stripRiskBlock,
   stripIssueTypeTags,
 } from "@/helpers/issueTypeComment";
 import type { BaseCellMenuProps } from "@/types/menu";
@@ -34,7 +35,7 @@ const TableCellInfoPopover: FC<BaseCellMenuProps> = ({
 
   const titleDate = useMemo(
     () => dateField?.format("DD.MM.YYYY") ?? "",
-    [dateField]
+    [dateField],
   );
 
   return (
@@ -78,18 +79,29 @@ const TableCellInfoPopover: FC<BaseCellMenuProps> = ({
           <List dense disablePadding>
             {items.map(({ id, duration, comment, start }) => {
               const tag = parseFirstIssueTypeLabel(comment ?? "");
-              const cleanComment = stripIssueTypeTags(comment ?? "");
+              const cleanComment = stripIssueTypeTags(
+                stripRiskBlock(comment ?? ""),
+              );
               const startLabel = displayStartTime(start);
               return (
                 <ListItem key={id} alignItems="flex-start" disableGutters>
                   <ListItemText
                     primary={
-                      <Stack spacing={0.25}>
-                        <Typography variant="body1" fontWeight={600}>
+                      <Stack
+                        direction="row"
+                        spacing={1}
+                        alignItems="center"
+                        flexWrap="wrap"
+                      >
+                        <Typography variant="h5">
                           {displayDuration(duration)}
                         </Typography>
                         {startLabel && (
-                          <Typography variant="caption" color="text.secondary">
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            component="div"
+                          >
                             {startLabel}
                           </Typography>
                         )}
@@ -99,14 +111,14 @@ const TableCellInfoPopover: FC<BaseCellMenuProps> = ({
                       <Stack component="div" spacing={0.5}>
                         {cleanComment && (
                           <Typography
-                            variant="body2"
+                            variant="h6"
                             sx={{ whiteSpace: "pre-wrap" }}
                           >
                             {cleanComment}
                           </Typography>
                         )}
                         {tag && (
-                          <Typography variant="caption" color="primary">
+                          <Typography variant="caption" color="text.secondary">
                             {tag}
                           </Typography>
                         )}

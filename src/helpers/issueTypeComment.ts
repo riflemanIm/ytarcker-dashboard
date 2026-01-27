@@ -23,6 +23,37 @@ export function extractIssueTypeLabel(comment: string): string | null {
   return match ? match[1] : null;
 }
 
+export function parseRiskBlock(comment: string): {
+  deadlineOk: boolean;
+  needUpgradeEstimate: boolean;
+  makeTaskFaster: boolean;
+} {
+  const match = (comment ?? "").match(/\[Risks:\s*\{\s*([\s\S]*?)\}\s*\]/m);
+  if (!match) {
+    return {
+      deadlineOk: true,
+      needUpgradeEstimate: false,
+      makeTaskFaster: false,
+    };
+  }
+  const body = match[1] ?? "";
+  const readFlag = (key: string, fallback: boolean) => {
+    const re = new RegExp(`${key}\\s*:\\s*(true|false)`, "i");
+    const m = body.match(re);
+    if (!m) return fallback;
+    return m[1].toLowerCase() === "true";
+  };
+  return {
+    deadlineOk: readFlag("deadlineOk", true),
+    needUpgradeEstimate: readFlag("needUpgradeEstimate", false),
+    makeTaskFaster: readFlag("makeTaskFaster", false),
+  };
+}
+
+export function stripRiskBlock(comment: string): string {
+  return (comment ?? "").replace(/\n?\[Risks:\s*\{[\s\S]*?\}\s*\]/m, "").trimEnd();
+}
+
 // ✅ Алиас для совместимости с существующими импортами
 export const parseFirstIssueTypeLabel = extractIssueTypeLabel;
 

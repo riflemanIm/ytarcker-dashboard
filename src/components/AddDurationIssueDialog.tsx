@@ -6,7 +6,7 @@ import {
   normalizeDuration,
   workDaysToDurationInput,
 } from "@/helpers";
-import { buildFinalComment } from "@/helpers/issueTypeComment";
+import { buildFinalComment, stripRiskBlock } from "@/helpers/issueTypeComment";
 import useForm from "@/hooks/useForm";
 import AddIcon from "@mui/icons-material/Add";
 import CloseIcon from "@mui/icons-material/Close";
@@ -115,9 +115,7 @@ export default function AddDurationIssueDialog({
     `[Risks: { deadlineOk: ${riskState.deadlineOk}, needUpgradeEstimate: ${riskState.needUpgradeEstimate}, makeTaskFaster: ${riskState.makeTaskFaster} }]`;
 
   const appendRisksToComment = (comment: string) => {
-    const cleaned = (comment ?? "")
-      .replace(/\n?\[Risks:\s*\{[\s\S]*?\}\s*\]/m, "")
-      .trimEnd();
+    const cleaned = stripRiskBlock(comment);
     const riskBlock = buildRiskBlock();
     return cleaned ? `${cleaned}\n${riskBlock}` : riskBlock;
   };

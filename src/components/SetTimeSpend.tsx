@@ -46,7 +46,9 @@ import isEmpty, {
 } from "@/helpers";
 import {
   buildFinalComment,
+  parseRiskBlock,
   parseFirstIssueTypeLabel,
+  stripRiskBlock,
   stripIssueTypeTags,
 } from "@/helpers/issueTypeComment";
 
@@ -126,29 +128,6 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
     [recentIssueTypes, issueTypes],
   );
 
-  const parseRiskBlock = (comment: string) => {
-    const match = (comment ?? "").match(/\[Risks:\s*\{\s*([\s\S]*?)\}\s*\]/m);
-    if (!match) {
-      return {
-        deadlineOk: true,
-        needUpgradeEstimate: false,
-        makeTaskFaster: false,
-      };
-    }
-    const body = match[1] ?? "";
-    const readFlag = (key: string, fallback: boolean) => {
-      const re = new RegExp(`${key}\\s*:\\s*(true|false)`, "i");
-      const m = body.match(re);
-      if (!m) return fallback;
-      return m[1].toLowerCase() === "true";
-    };
-    return {
-      deadlineOk: readFlag("deadlineOk", true),
-      needUpgradeEstimate: readFlag("needUpgradeEstimate", false),
-      makeTaskFaster: readFlag("makeTaskFaster", false),
-    };
-  };
-
   useEffect(() => {
     if (!open) return;
     const first = (menuState.durations ?? [])[0];
@@ -168,9 +147,6 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
       `[Risks: { deadlineOk: ${riskState.deadlineOk}, needUpgradeEstimate: ${riskState.needUpgradeEstimate}, makeTaskFaster: ${riskState.makeTaskFaster} }]`,
     [riskState],
   );
-
-  const stripRiskBlock = (comment: string) =>
-    (comment ?? "").replace(/\n?\[Risks:\s*\{[\s\S]*?\}\s*\]/m, "").trimEnd();
 
   const appendRisksToComment = useCallback(
     (comment: string) => {
