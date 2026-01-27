@@ -4,7 +4,6 @@ import TableCheckPlan from "./TableCheckPlan";
 import TableWorkPlan from "./TableWorkPlan";
 import TableWorkPlanCapacity from "./TableWorkPlanCapacity";
 import { useAppContext } from "@/context/AppContext";
-import { isSuperLogin } from "@/helpers";
 import TableTimeSpendByPlan from "./TableTimeSpendByPlan";
 import { DeleteDataArgs, SetDataArgs, getWorkPlan } from "@/actions/data";
 import { TaskItem, WorkPlanItem } from "@/types/global";
@@ -18,7 +17,6 @@ interface ViewTimePlanProps {
   rangeEnd?: Dayjs;
   setData: (args: SetDataArgs) => Promise<void>;
   deleteData: (args: DeleteDataArgs) => void;
-  isEditable: boolean;
 }
 
 const ViewTimePlan: FC<ViewTimePlanProps> = ({
@@ -28,11 +26,10 @@ const ViewTimePlan: FC<ViewTimePlanProps> = ({
   rangeEnd,
   setData,
   deleteData,
-  isEditable,
 }) => {
   const { state } = useAppContext();
-  const { login } = state.auth;
-  const isAdmin = !!(login && isSuperLogin(login));
+  const fetchByLogin = state.state.fetchByLogin;
+
   const {
     sprintId,
     trackerUids,
@@ -48,9 +45,9 @@ const ViewTimePlan: FC<ViewTimePlanProps> = ({
       ? (state.state.users[0]?.id ?? null)
       : null);
   const effectiveTrackerUids = useMemo(() => {
-    if (isAdmin) return trackerUids;
+    if (fetchByLogin) return trackerUids;
     return currentTrackerUid ? [currentTrackerUid] : [];
-  }, [currentTrackerUid, isAdmin, trackerUids]);
+  }, [currentTrackerUid, fetchByLogin, trackerUids]);
   const [workPlanRows, setWorkPlanRows] = useState<WorkPlanItem[]>([]);
   const [workPlanLoading, setWorkPlanLoading] = useState(false);
 
@@ -105,7 +102,7 @@ const ViewTimePlan: FC<ViewTimePlanProps> = ({
         alignItems="stretch"
         sx={{ width: "100%" }}
       >
-        {isAdmin && (
+        {!fetchByLogin && (
           <Paper
             variant="elevation"
             sx={(theme) => ({
@@ -125,7 +122,7 @@ const ViewTimePlan: FC<ViewTimePlanProps> = ({
             <TableCheckPlan />
           </Paper>
         )}
-        {isAdmin && (
+        {!fetchByLogin && (
           <Paper
             variant="elevation"
             sx={(theme) => ({
@@ -164,7 +161,7 @@ const ViewTimePlan: FC<ViewTimePlanProps> = ({
           rows={workPlanRows}
           loading={workPlanLoading}
           setData={setData}
-          isEditable={isEditable}
+          isEditable={fetchByLogin}
         />
         <Divider sx={{ my: 2 }} />
         <Typography variant="h5" textAlign="center" my={2}>
@@ -177,7 +174,7 @@ const ViewTimePlan: FC<ViewTimePlanProps> = ({
           rangeEnd={rangeEnd}
           setData={setData}
           deleteData={deleteData}
-          isEditable={isEditable}
+          isEditable={fetchByLogin}
           planItems={workPlanRows}
         />
       </Paper>

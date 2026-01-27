@@ -53,7 +53,7 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
   const [addTimeOpen, setAddTimeOpen] = useState(false);
   const [addTimeIssue, setAddTimeIssue] = useState<Issue | null>(null);
   const isAdmin = !!(login && isSuperLogin(login));
-  const canAddTime = isEditable;
+  const canAddTime = state.state.fetchByLogin;
 
   const formatWorkDays = (value: unknown) => {
     const num = Number(value);

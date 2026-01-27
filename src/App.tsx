@@ -261,7 +261,6 @@ const YandexTracker: FC = () => {
                   rangeEnd={sprintRange?.end}
                   setData={setData}
                   deleteData={deleteData}
-                  isEditable={state.fetchByLogin}
                 />
                 <DurationAlert
                   open={alert.open}

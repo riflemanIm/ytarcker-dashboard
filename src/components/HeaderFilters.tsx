@@ -58,6 +58,7 @@ const HeaderFilters: FC<HeaderFiltersProps> = ({
   userId,
   handleSelectedUsersChange,
 }) => {
+  console.log("fetchByLogin-", fetchByLogin);
   const rangeFilters =
     viewMode === "table_time_spend" ? (
       <WeekNavigator
@@ -86,24 +87,24 @@ const HeaderFilters: FC<HeaderFiltersProps> = ({
         <Box sx={{ flex: "1 1 160px", minWidth: 0 }}>
           <SelectSprintList />
         </Box>
-        {showAdminControls && (
+        {!fetchByLogin && (
           <Box sx={{ flex: "1 1 160px", minWidth: 0 }}>
-            <AutocompleteGroupList disabled={!showAdminControls} />
+            <AutocompleteGroupList />
           </Box>
         )}
-        {showAdminControls && (
+        {!fetchByLogin && (
           <Box sx={{ flex: "1 0 210px", minWidth: 0 }}>
             <AutocompleteGroupPatientsList />
           </Box>
         )}
-        {showAdminControls && (
+        {!fetchByLogin && (
           <Box sx={{ flex: "0 0 220px", minWidth: 0 }}>
-            <AutocompleteRoleList disabled={!showAdminControls} />
+            <AutocompleteRoleList />
           </Box>
         )}
-        {showAdminControls && (
+        {!fetchByLogin && (
           <Box sx={{ flex: "0 0 260px", minWidth: 0 }}>
-            <AutocompleteProjectList disabled={!showAdminControls} />
+            <AutocompleteProjectList />
           </Box>
         )}
       </Stack>
@@ -120,7 +121,7 @@ const HeaderFilters: FC<HeaderFiltersProps> = ({
       flexWrap="nowrap"
       sx={{ overflowX: "auto", width: "100%", minWidth: 0, flex: "1 1 auto" }}
     >
-      {showAdminControls && viewMode !== "table_time_plan" && (
+      {showAdminControls && (
         <Stack
           direction="row"
           spacing={2}
@@ -136,20 +137,21 @@ const HeaderFilters: FC<HeaderFiltersProps> = ({
             />
           </Box>
 
-          {isEmpty(users) && !fetchByLogin ? (
-            <Alert severity="info" sx={{ flex: 1, minWidth: 260 }}>
-              Нет сотрудников за этот период
-            </Alert>
-          ) : (
-            <Box sx={{ flex: "1 1 260px", minWidth: 260 }}>
-              <AutocompleteUsers
-                userId={userId}
-                handleSelectedUsersChange={handleSelectedUsersChange}
-                users={users}
-                disabled={!loaded || fetchByLogin}
-              />
-            </Box>
-          )}
+          {viewMode !== "table_time_plan" &&
+            (isEmpty(users) && !fetchByLogin ? (
+              <Alert severity="info" sx={{ flex: 1, minWidth: 260 }}>
+                Нет сотрудников за этот период
+              </Alert>
+            ) : (
+              <Box sx={{ flex: "1 1 260px", minWidth: 260 }}>
+                <AutocompleteUsers
+                  userId={userId}
+                  handleSelectedUsersChange={handleSelectedUsersChange}
+                  users={users}
+                  disabled={!loaded || fetchByLogin}
+                />
+              </Box>
+            ))}
         </Stack>
       )}
 

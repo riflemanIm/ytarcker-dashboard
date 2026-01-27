@@ -4,19 +4,24 @@ import { useAppContext } from "@/context/AppContext";
 export const useTableTimePlanSelectors = () => {
   const { state } = useAppContext();
   const { tableTimePlanState } = state;
+  const { fetchByLogin, userId, users } = state.state;
 
   const sprintId = useMemo(() => {
     const parsed = Number(tableTimePlanState.selectedSprintId);
     return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
   }, [tableTimePlanState.selectedSprintId]);
 
-  const trackerUids = useMemo(
-    () =>
-      tableTimePlanState.selectedPatientUid
-        ? [tableTimePlanState.selectedPatientUid]
-        : [],
-    [tableTimePlanState.selectedPatientUid]
-  );
+  const currentTrackerUid =
+    userId ||
+    tableTimePlanState.selectedPatientUid ||
+    (Array.isArray(users) && users.length === 1 ? users[0]?.id ?? null : null);
+
+  const trackerUids = useMemo(() => {
+    if (fetchByLogin && currentTrackerUid) return [currentTrackerUid];
+    return tableTimePlanState.selectedPatientUid
+      ? [tableTimePlanState.selectedPatientUid]
+      : [];
+  }, [fetchByLogin, currentTrackerUid, tableTimePlanState.selectedPatientUid]);
 
   const projectIds = useMemo(
     () =>
