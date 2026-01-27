@@ -13,6 +13,7 @@ import AutocompleteProjectList from "./AutocompleteProjectList";
 import AutocompleteRoleList from "./AutocompleteRoleList";
 import SelectSprintList from "./SelectSprintList";
 import WeekNavigator from "./WeekNavigator";
+import DateRangeSprint from "./DateRangeSprint";
 
 export interface WeekNavigationProps {
   start: dayjs.Dayjs;
@@ -76,27 +77,27 @@ const HeaderFilters: FC<HeaderFiltersProps> = ({
         disableNext={weekNavigation.disableNext}
       />
     ) : viewMode === "table_time_spend_plan" ? (
-        <Stack
-          direction="row"
-          gap={1}
-          alignItems="center"
-          flexWrap="wrap"
-          sx={{ width: "100%", minWidth: 0 }}
-        >
-          <Box sx={{ flex: "0 0 220px", minWidth: 0 }}>
-            <SelectSprintList />
-          </Box>
-          {hasSprint && (
-            <WeekNavigator
-              start={weekNavigation.start}
-              end={weekNavigation.end}
-              onPrevious={weekNavigation.onPrevious}
-              onNext={weekNavigation.onNext}
-              disableNext={weekNavigation.disableNext}
-              sprint={sprintLabel}
-            />
-          )}
-        </Stack>
+      <Stack
+        direction="row"
+        gap={1}
+        alignItems="center"
+        flexWrap="wrap"
+        sx={{ width: "100%", minWidth: 0 }}
+      >
+        <Box sx={{ flex: "0 0 220px", minWidth: 0 }}>
+          <SelectSprintList />
+        </Box>
+        {hasSprint && (
+          <DateRangeSprint
+            start={weekNavigation.start}
+            end={weekNavigation.end}
+            onPrevious={weekNavigation.onPrevious}
+            onNext={weekNavigation.onNext}
+            disableNext={weekNavigation.disableNext}
+            sprint={sprintLabel}
+          />
+        )}
+      </Stack>
     ) : viewMode === "report" ? (
       <ReportDateRange
         from={reportRange.from}
