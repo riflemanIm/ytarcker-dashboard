@@ -17,6 +17,7 @@ interface AutocompleteGroupListProps {
   required?: boolean;
   error?: boolean;
   helperText?: string;
+  disabled?: boolean;
 }
 
 const AutocompleteGroupList: React.FC<AutocompleteGroupListProps> = ({
@@ -25,6 +26,7 @@ const AutocompleteGroupList: React.FC<AutocompleteGroupListProps> = ({
   required = false,
   error = false,
   helperText,
+  disabled: forceDisabled = false,
 }) => {
   const { state: appState, dispatch } = useAppContext();
   const { groups, groupsLoaded, loadingGroups, selectedGroupIds } =
@@ -33,6 +35,7 @@ const AutocompleteGroupList: React.FC<AutocompleteGroupListProps> = ({
 
   useEffect(() => {
     let isMounted = true;
+    if (forceDisabled) return;
     if (groupsLoaded || groups.length > 0) return;
     if (hasFetchedRef.current) return;
     hasFetchedRef.current = true;
@@ -78,7 +81,7 @@ const AutocompleteGroupList: React.FC<AutocompleteGroupListProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [dispatch, groups.length, groupsLoaded]);
+  }, [dispatch, forceDisabled, groups.length, groupsLoaded]);
 
   const handleChange = (
     event: React.SyntheticEvent,
@@ -95,7 +98,7 @@ const AutocompleteGroupList: React.FC<AutocompleteGroupListProps> = ({
     });
   };
 
-  const disabled = loadingGroups || !groups || groups.length === 0;
+  const disabled = forceDisabled || loadingGroups || !groups || groups.length === 0;
   const options = (groups || []).map((item) => item);
   const value = (groups || []).filter((item) =>
     selectedGroupIds.includes(String(item.yt_tl_group_id)),

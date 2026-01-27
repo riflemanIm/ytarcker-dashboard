@@ -88,7 +88,7 @@ const HeaderFilters: FC<HeaderFiltersProps> = ({
           <SelectSprintList />
         </Box>
         {hasSprint && (
-          <DateRangeSprint
+          <WeekNavigator
             start={weekNavigation.start}
             end={weekNavigation.end}
             onPrevious={weekNavigation.onPrevious}
@@ -117,18 +117,24 @@ const HeaderFilters: FC<HeaderFiltersProps> = ({
         <Box sx={{ flex: "1 1 160px", minWidth: 0 }}>
           <SelectSprintList />
         </Box>
-        <Box sx={{ flex: "1 1 160px", minWidth: 0 }}>
-          <AutocompleteGroupList />
-        </Box>
+        {showAdminControls && (
+          <Box sx={{ flex: "1 1 160px", minWidth: 0 }}>
+            <AutocompleteGroupList disabled={!showAdminControls} />
+          </Box>
+        )}
         <Box sx={{ flex: "1 0 210px", minWidth: 0 }}>
           <AutocompleteGroupPatientsList />
         </Box>
-        <Box sx={{ flex: "0 0 220px", minWidth: 0 }}>
-          <AutocompleteRoleList />
-        </Box>
-        <Box sx={{ flex: "0 0 260px", minWidth: 0 }}>
-          <AutocompleteProjectList />
-        </Box>
+        {showAdminControls && (
+          <Box sx={{ flex: "0 0 220px", minWidth: 0 }}>
+            <AutocompleteRoleList disabled={!showAdminControls} />
+          </Box>
+        )}
+        {showAdminControls && (
+          <Box sx={{ flex: "0 0 260px", minWidth: 0 }}>
+            <AutocompleteProjectList disabled={!showAdminControls} />
+          </Box>
+        )}
       </Stack>
     ) : (
       <Box sx={{ width: "auto" }}></Box>

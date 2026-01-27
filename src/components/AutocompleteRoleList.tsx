@@ -17,6 +17,7 @@ interface AutocompleteRoleListProps {
   required?: boolean;
   error?: boolean;
   helperText?: string;
+  disabled?: boolean;
 }
 
 const AutocompleteRoleList: React.FC<AutocompleteRoleListProps> = ({
@@ -25,6 +26,7 @@ const AutocompleteRoleList: React.FC<AutocompleteRoleListProps> = ({
   required = false,
   error = false,
   helperText,
+  disabled: forceDisabled = false,
 }) => {
   const { state: appState, dispatch } = useAppContext();
   const { roles, rolesLoaded, loadingRoles, selectedRoleIds } =
@@ -33,6 +35,7 @@ const AutocompleteRoleList: React.FC<AutocompleteRoleListProps> = ({
 
   useEffect(() => {
     let isMounted = true;
+    if (forceDisabled) return;
     if (rolesLoaded || roles.length > 0) return;
     if (hasFetchedRef.current) return;
     hasFetchedRef.current = true;
@@ -78,7 +81,7 @@ const AutocompleteRoleList: React.FC<AutocompleteRoleListProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [dispatch, roles.length, rolesLoaded]);
+  }, [dispatch, forceDisabled, roles.length, rolesLoaded]);
 
   const handleChange = (
     event: React.SyntheticEvent,
@@ -95,7 +98,7 @@ const AutocompleteRoleList: React.FC<AutocompleteRoleListProps> = ({
     });
   };
 
-  const disabled = loadingRoles || !roles || roles.length === 0;
+  const disabled = forceDisabled || loadingRoles || !roles || roles.length === 0;
   const options = (roles || []).map((item) => item);
   const value = (roles || []).filter((item) =>
     selectedRoleIds.includes(String(item.yt_dict_roles_id)),

@@ -20,6 +20,7 @@ interface DateRangeSprintProps {
   onNext: () => void;
   disableNext: boolean;
   sprint?: string;
+  onRangeChange?: (start: Dayjs | null, end: Dayjs | null) => void;
 }
 
 const parseSprintRange = (raw?: string) => {
@@ -46,6 +47,7 @@ const DateRangeSprint: React.FC<DateRangeSprintProps> = ({
   onNext,
   disableNext,
   sprint,
+  onRangeChange,
 }) => {
   const sprintRange = useMemo(() => parseSprintRange(sprint), [sprint]);
   const [value, setValue] = useState<[Dayjs | null, Dayjs | null]>(() =>
@@ -61,7 +63,8 @@ const DateRangeSprint: React.FC<DateRangeSprintProps> = ({
     if (lastSprintKeyRef.current === sprintKey) return;
     lastSprintKeyRef.current = sprintKey;
     setValue([sprintRange.start, sprintRange.end]);
-  }, [sprintKey, sprintRange]);
+    onRangeChange?.(sprintRange.start, sprintRange.end);
+  }, [onRangeChange, sprintKey, sprintRange]);
 
   useEffect(() => {
     if (sprintRange) return;
@@ -71,6 +74,11 @@ const DateRangeSprint: React.FC<DateRangeSprintProps> = ({
   const handleRangeChange = useCallback(
     (newValue: [Dayjs | null, Dayjs | null]) => {
       setValue(newValue);
+      if (onRangeChange) {
+        const [newStart, newEnd] = newValue;
+        onRangeChange(newStart, newEnd);
+        return;
+      }
       const [newStart] = newValue;
       if (!newStart) return;
       const targetWeekStart = newStart.startOf("isoWeek");
@@ -82,7 +90,7 @@ const DateRangeSprint: React.FC<DateRangeSprintProps> = ({
         for (let i = 0; i < Math.abs(diffWeeks); i += 1) onNext();
       }
     },
-    [onNext, onPrevious],
+    [onNext, onPrevious, onRangeChange, start],
   );
 
   return (

@@ -4,9 +4,9 @@ import { useTableTimePlanSelectors } from "@/hooks/useTableTimePlanSelectors";
 import { WorkPlanCapacityItem } from "@/types/global";
 import { Box } from "@mui/material";
 import { DataGrid, GridColDef } from "@mui/x-data-grid";
-import { FC, useEffect, useMemo } from "react";
-import ReportDateRange from "./ReportDateRange";
-import dayjs from "dayjs";
+import { FC, useCallback, useEffect, useMemo } from "react";
+import DateRangeSprint from "./DateRangeSprint";
+import type { Dayjs } from "dayjs";
 
 const TableWorkPlanCapacity: FC = () => {
   const { state: appState, dispatch } = useAppContext();
@@ -16,38 +16,25 @@ const TableWorkPlanCapacity: FC = () => {
   const { rows, loading, refreshKey, capacityFrom, capacityTo } =
     workPlanCapacityState;
 
-  const handlePrevReportMonth = () => {
-    dispatch({
-      type: "setWorkPlanCapacityState",
-      payload: (prev) => ({
-        ...prev,
-        capacityFrom: prev.capacityFrom.add(-1, "month").startOf("month"),
-        capacityTo: prev.capacityTo.add(-1, "month").endOf("month"),
-      }),
-    });
-  };
+  const { selectedSprintId, sprins } = appState.tableTimePlanState;
+  const sprintLabel = selectedSprintId
+    ? sprins.find((item) => String(item.yt_tl_sprints_id) === selectedSprintId)
+        ?.sprint
+    : undefined;
 
-  const handleThisReportMonth = () => {
-    dispatch({
-      type: "setWorkPlanCapacityState",
-      payload: (prev) => ({
-        ...prev,
-        capacityFrom: dayjs().startOf("month"),
-        capacityTo: dayjs().endOf("month"),
-      }),
-    });
-  };
-
-  const handleNextReportMonth = () => {
-    dispatch({
-      type: "setWorkPlanCapacityState",
-      payload: (prev) => ({
-        ...prev,
-        capacityFrom: prev.capacityFrom.add(1, "month").startOf("month"),
-        capacityTo: prev.capacityTo.add(1, "month").endOf("month"),
-      }),
-    });
-  };
+  const handleRangeChange = useCallback(
+    (newStart: Dayjs | null, newEnd: Dayjs | null) => {
+      dispatch({
+        type: "setWorkPlanCapacityState",
+        payload: (prev) => ({
+          ...prev,
+          capacityFrom: newStart ? newStart.startOf("day") : prev.capacityFrom,
+          capacityTo: newEnd ? newEnd.endOf("day") : prev.capacityTo,
+        }),
+      });
+    },
+    [dispatch],
+  );
 
   useEffect(() => {
     let isMounted = true;
@@ -147,12 +134,14 @@ const TableWorkPlanCapacity: FC = () => {
   return (
     <Box sx={{ mt: 2 }}>
       <Box sx={{ display: "flex", justifyContent: "center" }}>
-        <ReportDateRange
-          from={capacityFrom}
-          to={capacityTo}
-          onPrevMonth={handlePrevReportMonth}
-          onThisMonth={handleThisReportMonth}
-          onNextMonth={handleNextReportMonth}
+        <DateRangeSprint
+          start={capacityFrom}
+          end={capacityTo}
+          onPrevious={() => {}}
+          onNext={() => {}}
+          disableNext={false}
+          sprint={sprintLabel}
+          onRangeChange={handleRangeChange}
         />
       </Box>
       <Box sx={{ mt: 2, height: 360 }}>

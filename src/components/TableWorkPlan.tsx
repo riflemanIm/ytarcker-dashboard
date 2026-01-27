@@ -17,6 +17,7 @@ import { FC, useEffect, useMemo, useState } from "react";
 import IssueDisplay from "./IssueDisplay";
 import { useTableTimePlanSelectors } from "@/hooks/useTableTimePlanSelectors";
 import { getPriorityPalette } from "@/helpers/priorityStyles";
+import { isSuperLogin } from "@/helpers";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import SetIssuePlanTable from "./SetIssuePlanTable";
@@ -33,6 +34,7 @@ const TableWorkPlan: FC = () => {
     workPlanRefreshKey,
   } = useTableTimePlanSelectors();
   const { state, dispatch } = useAppContext();
+  const { login } = state.auth;
   const [rows, setRows] = useState<WorkPlanItem[]>([]);
   const [filterText, setFilterText] = useState("");
   const [loading, setLoading] = useState(false);
@@ -42,6 +44,7 @@ const TableWorkPlan: FC = () => {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<WorkPlanItem | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const isAdmin = !!(login && isSuperLogin(login));
 
   const formatTenths = (value: unknown) => {
     const num = Number(value);
@@ -85,8 +88,8 @@ const TableWorkPlan: FC = () => {
     workPlanRefreshKey,
   ]);
 
-  const columns = useMemo<GridColDef<WorkPlanItem | { id: string }>[]>(
-    () => [
+  const columns = useMemo<GridColDef<WorkPlanItem | { id: string }>[]>(() => {
+    const baseColumns: GridColDef<WorkPlanItem | { id: string }>[] = [
       {
         field: "TaskName",
         headerName: "Название",
@@ -106,7 +109,6 @@ const TableWorkPlan: FC = () => {
             />
           ),
       },
-
       {
         field: "TaskKey",
         headerName: "Key",
@@ -116,42 +118,45 @@ const TableWorkPlan: FC = () => {
         filterable: false,
         disableColumnMenu: true,
       },
+    ];
 
-      {
-        field: "actions",
-        headerName: "Действия",
-        minWidth: 120,
-        sortable: false,
-        filterable: false,
-        disableColumnMenu: true,
-        renderCell: (
-          params: GridRenderCellParams<WorkPlanItem | { id: string }>,
-        ) =>
-          (params.row as any).id === "__total__" ? null : (
-            <Stack direction="row" spacing={1}>
-              <IconButton
-                size="small"
-                sx={(theme) => ({ color: theme.palette.primary.main })}
-                onClick={() => {
-                  setSelectedRow(params.row as WorkPlanItem);
-                  setEditOpen(true);
-                }}
-              >
-                <EditIcon fontSize="small" />
-              </IconButton>
-              <IconButton
-                size="small"
-                sx={(theme) => ({ color: theme.palette.warning.main })}
-                onClick={() => {
-                  setDeleteTarget(params.row as WorkPlanItem);
-                  setDeleteOpen(true);
-                }}
-              >
-                <DeleteIcon fontSize="small" />
-              </IconButton>
-            </Stack>
-          ),
-      },
+    const actionColumn: GridColDef<WorkPlanItem | { id: string }> = {
+      field: "actions",
+      headerName: "Действия",
+      minWidth: 120,
+      sortable: false,
+      filterable: false,
+      disableColumnMenu: true,
+      renderCell: (
+        params: GridRenderCellParams<WorkPlanItem | { id: string }>,
+      ) =>
+        (params.row as any).id === "__total__" ? null : (
+          <Stack direction="row" spacing={1}>
+            <IconButton
+              size="small"
+              sx={(theme) => ({ color: theme.palette.primary.main })}
+              onClick={() => {
+                setSelectedRow(params.row as WorkPlanItem);
+                setEditOpen(true);
+              }}
+            >
+              <EditIcon fontSize="small" />
+            </IconButton>
+            <IconButton
+              size="small"
+              sx={(theme) => ({ color: theme.palette.warning.main })}
+              onClick={() => {
+                setDeleteTarget(params.row as WorkPlanItem);
+                setDeleteOpen(true);
+              }}
+            >
+              <DeleteIcon fontSize="small" />
+            </IconButton>
+          </Stack>
+        ),
+    };
+
+    const tailColumns: GridColDef<WorkPlanItem | { id: string }>[] = [
       { field: "WorkName", headerName: "Работа", flex: 1, minWidth: 120 },
       {
         field: "WorkDone",
@@ -199,7 +204,6 @@ const TableWorkPlan: FC = () => {
         valueFormatter: (value: WorkPlanItem["RemainTimeDays"]) =>
           formatTenths(value),
       },
-
       {
         field: "Deadline",
         headerName: "Дедлайн",
@@ -210,9 +214,12 @@ const TableWorkPlan: FC = () => {
             ? dayjs(value).format("DD.MM.YYYY")
             : "-",
       },
-    ],
-    [],
-  );
+    ];
+
+    return isAdmin
+      ? [...baseColumns, actionColumn, ...tailColumns]
+      : [...baseColumns, ...tailColumns];
+  }, [isAdmin]);
 
   const filteredRows = useMemo(() => {
     const query = filterText.trim().toLowerCase();

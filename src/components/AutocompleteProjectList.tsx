@@ -18,6 +18,7 @@ interface AutocompleteProjectListProps {
   required?: boolean;
   error?: boolean;
   helperText?: string;
+  disabled?: boolean;
 }
 
 const AutocompleteProjectList: React.FC<AutocompleteProjectListProps> = ({
@@ -26,6 +27,7 @@ const AutocompleteProjectList: React.FC<AutocompleteProjectListProps> = ({
   required = false,
   error = false,
   helperText,
+  disabled: forceDisabled = false,
 }) => {
   const { state: appState, dispatch } = useAppContext();
   const { projects, projectsLoaded, loadingProjects, selectedProjectIds } =
@@ -34,6 +36,7 @@ const AutocompleteProjectList: React.FC<AutocompleteProjectListProps> = ({
 
   useEffect(() => {
     let isMounted = true;
+    if (forceDisabled) return;
     if (projectsLoaded || projects.length > 0) return;
     if (hasFetchedRef.current) return;
     hasFetchedRef.current = true;
@@ -79,7 +82,7 @@ const AutocompleteProjectList: React.FC<AutocompleteProjectListProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [dispatch, projects.length, projectsLoaded]);
+  }, [dispatch, forceDisabled, projects.length, projectsLoaded]);
 
   const handleChange = (
     event: React.SyntheticEvent,
@@ -94,7 +97,8 @@ const AutocompleteProjectList: React.FC<AutocompleteProjectListProps> = ({
     });
   };
 
-  const disabled = loadingProjects || !projects || projects.length === 0;
+  const disabled =
+    forceDisabled || loadingProjects || !projects || projects.length === 0;
   const options = (projects || []).map((item) => item);
   const value = (projects || []).filter((item) =>
     selectedProjectIds.includes(String(item.projectId)),

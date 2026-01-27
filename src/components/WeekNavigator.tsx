@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import { IconButton, Stack, Tooltip, Typography } from "@mui/material";
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
@@ -15,17 +15,25 @@ interface WeekNavigatorProps {
 
 const parseSprintRange = (raw?: string) => {
   if (!raw) return null;
-  const parts = raw.split("-");
-  if (parts.length !== 2) return null;
-  const left = parts[0]?.trim();
-  const right = parts[1]?.trim();
+  const dateMatches = raw.match(/\d{2}\.\d{2}(?:\.\d{4})?/g);
+  if (!dateMatches || dateMatches.length < 2) return null;
+  const left = dateMatches[0]?.trim();
+  const right = dateMatches[1]?.trim();
   if (!left || !right) return null;
   const yearMatch = right.match(/(\d{4})/);
-  if (!yearMatch) return null;
-  const year = yearMatch[1];
-  const startStr = left.includes(year) ? left : `${left}.${year}`;
-  const start = dayjs(startStr, "DD.MM.YYYY", true);
-  const end = dayjs(right, "DD.MM.YYYY", true);
+  const fallbackYear = yearMatch ? yearMatch[1] : dayjs().format("YYYY");
+  const parseToIso = (value: string, year: string) => {
+    const match = value.match(/^(\d{2})\.(\d{2})(?:\.(\d{4}))?$/);
+    if (!match) return null;
+    const [, day, month, rawYear] = match;
+    const finalYear = rawYear ?? year;
+    return `${finalYear}-${month}-${day}`;
+  };
+  const startIso = parseToIso(left, fallbackYear);
+  const endIso = parseToIso(right, fallbackYear);
+  if (!startIso || !endIso) return null;
+  const start = dayjs(startIso);
+  const end = dayjs(endIso);
   if (!start.isValid() || !end.isValid()) return null;
   return { start: start.startOf("day"), end: end.endOf("day") };
 };
@@ -38,7 +46,43 @@ const WeekNavigator: React.FC<WeekNavigatorProps> = ({
   disableNext,
   sprint,
 }) => {
+  console.log("sprint", sprint);
   const sprintRange = parseSprintRange(sprint);
+  const sprintKey = sprint?.trim() ?? null;
+  const lastAppliedSprintKeyRef = useRef<string | null>(null);
+  const targetWeekStart = useMemo(() => {
+    if (!sprintRange) return null;
+    const now = dayjs();
+    if (
+      now.isSameOrAfter(sprintRange.start) &&
+      now.isSameOrBefore(sprintRange.end)
+    ) {
+      return now.startOf("isoWeek");
+    }
+    return sprintRange.start.startOf("isoWeek");
+  }, [sprintRange]);
+
+  useEffect(() => {
+    console.log("targetWeekStart", targetWeekStart);
+    if (!targetWeekStart) return;
+    const currentWeekStart = start.startOf("isoWeek");
+    if (
+      lastAppliedSprintKeyRef.current === sprintKey &&
+      currentWeekStart.isSame(targetWeekStart, "day")
+    ) {
+      return;
+    }
+    if (currentWeekStart.isSame(targetWeekStart, "day")) {
+      lastAppliedSprintKeyRef.current = sprintKey;
+      return;
+    }
+    const diffWeeks = currentWeekStart.diff(targetWeekStart, "week");
+    if (diffWeeks > 0) {
+      for (let i = 0; i < diffWeeks; i += 1) onPrevious();
+    } else if (diffWeeks < 0) {
+      for (let i = 0; i < Math.abs(diffWeeks); i += 1) onNext();
+    }
+  }, [onNext, onPrevious, sprintKey, start, targetWeekStart]);
   const prevStart = start.subtract(1, "week");
   const prevEnd = end.subtract(1, "week");
   const nextStart = start.add(1, "week");
