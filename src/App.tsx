@@ -3,15 +3,17 @@ import {
   AlertColor,
   Grid2 as Grid,
   LinearProgress,
+  Stack,
+  Typography,
 } from "@mui/material";
 import dayjs from "dayjs";
 import { FC, useCallback, useEffect, useMemo } from "react";
 import { deleteData, getData, getUserIssues, setData } from "./actions/data";
 import AppHeader from "./components/AppHeader";
 import DurationAlert from "./components/DurationAlert";
+import AddDurationIssueDialog from "./components/AddDurationIssueDialog";
 import SearchIssues from "./components/SearchIssues";
 import TableTimeSpend from "./components/TableTimeSpend";
-import TableTimeSpendByPlan from "./components/TableTimeSpendByPlan";
 import ViewTimePlan from "./components/ViewTimePlan";
 import WorklogWeeklyReport from "./components/WorklogWeeklyReport";
 import { debugUserId, useAppContext } from "./context/AppContext";
@@ -126,15 +128,8 @@ const YandexTracker: FC = () => {
     if (viewMode === "search") return;
     if (!(login || state.userId) || !token) return;
 
-    const isPlanRange = viewMode === "table_time_spend_plan" && sprintRange;
-    const rangeStart =
-      viewMode === "report"
-        ? reportFrom
-        : isPlanRange
-          ? sprintRange!.start
-          : start;
-    const rangeEnd =
-      viewMode === "report" ? reportTo : isPlanRange ? sprintRange!.end : end;
+    const rangeStart = viewMode === "report" ? reportFrom : start;
+    const rangeEnd = viewMode === "report" ? reportTo : end;
 
     dispatch({
       type: "setState",
@@ -162,10 +157,7 @@ const YandexTracker: FC = () => {
     viewMode,
   ]);
   useEffect(() => {
-    if (
-      viewMode === "table_time_spend" ||
-      viewMode === "table_time_spend_plan"
-    ) {
+    if (viewMode === "table_time_spend") {
       const issuesUserId = debugUserId || state.userId;
       getUserIssues({
         dispatch,
@@ -261,10 +253,8 @@ const YandexTracker: FC = () => {
             {viewMode === "search" ? (
               <SearchIssues token={token} />
             ) : viewMode === "table_time_plan" ? (
-              <ViewTimePlan />
-            ) : viewMode === "table_time_spend_plan" ? (
               <>
-                <TableTimeSpendByPlan
+                <ViewTimePlan
                   data={aggregateDurations(state.data as DataItem[])}
                   start={start}
                   rangeStart={sprintRange?.start}
@@ -283,16 +273,34 @@ const YandexTracker: FC = () => {
             ) : !isEmpty(state.data) ? (
               <>
                 {viewMode === "table_time_spend" ? (
-                  <TableTimeSpend
-                    data={aggregateDurations(state.data as DataItem[])}
-                    start={start}
-                    setData={setData}
-                    deleteData={deleteData}
-                    isEditable={state.fetchByLogin}
-                    title={`Затраченное время ${
-                      state.fetchByLogin ? "по задачам" : "по сотрудникам"
-                    }`}
-                  />
+                  <>
+                    <Stack
+                      spacing={2}
+                      direction="row"
+                      alignItems="center"
+                      justifyContent="center"
+                      mb={2}
+                    >
+                      <Typography variant="h5">
+                        {`Затраченное время ${
+                          state.fetchByLogin ? "по задачам" : "по сотрудникам"
+                        }`}
+                      </Typography>
+                      {state.fetchByLogin && (
+                        <AddDurationIssueDialog
+                          issues={appState.state.issues}
+                          setData={setData}
+                        />
+                      )}
+                    </Stack>
+                    <TableTimeSpend
+                      data={aggregateDurations(state.data as DataItem[])}
+                      start={start}
+                      setData={setData}
+                      deleteData={deleteData}
+                      isEditable={state.fetchByLogin}
+                    />
+                  </>
                 ) : (
                   <WorklogWeeklyReport
                     from={reportFrom.toDate()}

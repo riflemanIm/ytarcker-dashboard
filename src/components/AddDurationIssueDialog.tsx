@@ -1,15 +1,16 @@
 import { SetDataArgs, getIssueTypeList } from "@/actions/data";
+import { useAppContext } from "@/context/AppContext";
 import {
-  displayDuration,
   durationToWorkDays,
   isValidDuration,
   normalizeDuration,
   workDaysToDurationInput,
 } from "@/helpers";
 import { buildFinalComment } from "@/helpers/issueTypeComment";
+import useForm from "@/hooks/useForm";
 import AddIcon from "@mui/icons-material/Add";
+import CloseIcon from "@mui/icons-material/Close";
 import {
-  Box,
   Button,
   Checkbox,
   Dialog,
@@ -27,17 +28,25 @@ import {
 } from "@mui/material";
 import Autocomplete from "@mui/material/Autocomplete";
 import dayjs, { Dayjs } from "dayjs";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { useAppContext } from "@/context/AppContext";
-import useForm from "@/hooks/useForm";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Issue } from "../types/global";
 import MuiUIPicker from "./MUIDatePicker";
 import SelectIssueTypeList from "./SelectIssueTypeList";
-
 interface AddDurationIssueDialogProps {
   issues: Issue[];
   setData: (args: SetDataArgs) => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  initialIssue?: Issue | null;
+  hideTrigger?: boolean;
 }
+
+type FormValues = {
+  issue: Issue | null;
+  dateTime: Dayjs | null;
+  duration: string;
+  comment: string;
+};
 
 type IssueType = { label: string; hint: string };
 
@@ -46,23 +55,26 @@ const MAX_COMMENT_LENGTH = 200;
 export default function AddDurationIssueDialog({
   issues,
   setData,
+  open: openProp,
+  onOpenChange,
+  initialIssue,
+  hideTrigger,
 }: AddDurationIssueDialogProps) {
   const { state, dispatch } = useAppContext();
   const { token } = state.auth;
+  const { tableTimePlanState } = state;
   const trackerUid =
     state.state.userId ||
     state.tableTimePlanState.selectedPatientUid ||
     (Array.isArray(state.state.users) && state.state.users.length === 1
       ? (state.state.users[0]?.id ?? null)
       : null);
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
   const [riskState, setRiskState] = useState({
     deadlineOk: true,
     needUpgradeEstimate: false,
     makeTaskFaster: false,
   });
-  const [plannedDuration, setPlannedDuration] = useState<string>("");
-  const [plannedDurationError, setPlannedDurationError] = useState<string>("");
 
   // список типов по выбранной задаче
   const [issueTypesState, setIssueTypesState] = useState<{
@@ -75,17 +87,29 @@ export default function AddDurationIssueDialog({
     null,
   );
 
-  const initialValues = {
-    issue: null as Issue | null,
-    dateTime: dayjs() as Dayjs | null,
-    duration: "",
-    comment: "", // ВСЕГДА чистый текст, без тегов
-  };
+  const createInitialValues = useCallback(
+    (issue: Issue | null = null): FormValues => ({
+      issue,
+      dateTime: dayjs() as Dayjs | null,
+      duration: "",
+      comment: "", // ВСЕГДА чистый текст, без тегов
+    }),
+    [],
+  );
 
   const labels = useMemo(
     () => (issueTypesState.issue_type_list ?? []).map((t) => t.label),
     [issueTypesState.issue_type_list],
   );
+  const sprintName = useMemo(() => {
+    const targetId = Number(tableTimePlanState.selectedSprintId);
+    if (!Number.isFinite(targetId)) return "-";
+    return (
+      tableTimePlanState.sprins.find(
+        (item) => item.yt_tl_sprints_id === targetId,
+      )?.sprint ?? "-"
+    );
+  }, [tableTimePlanState.selectedSprintId, tableTimePlanState.sprins]);
 
   const buildRiskBlock = () =>
     `[Risks: { deadlineOk: ${riskState.deadlineOk}, needUpgradeEstimate: ${riskState.needUpgradeEstimate}, makeTaskFaster: ${riskState.makeTaskFaster} }]`;
@@ -99,8 +123,8 @@ export default function AddDurationIssueDialog({
   };
 
   // валидация формы (без тегов в comment)
-  const validate = (values: typeof initialValues) => {
-    const errs: Partial<Record<keyof typeof initialValues, string>> = {};
+  const validate = (values: FormValues) => {
+    const errs: Partial<Record<keyof FormValues, string>> = {};
 
     if (!values.issue) {
       errs.issue = "Выберите задачу";
@@ -127,18 +151,6 @@ export default function AddDurationIssueDialog({
     return errs;
   };
 
-  const validateDurationValue = useCallback((rawValue: string): string => {
-    const normalized = normalizeDuration(rawValue ?? "");
-    if (
-      normalized.trim() === "" ||
-      normalized === "P" ||
-      !isValidDuration(normalized)
-    ) {
-      return `Значение "${rawValue ?? ""}" не является корректным форматом времени.`;
-    }
-    return "";
-  }, []);
-
   const formatWorkDays = useCallback((value: number | null | undefined) => {
     if (value == null || !Number.isFinite(value)) return "-";
     const sign = value < 0 ? "-" : "";
@@ -149,6 +161,9 @@ export default function AddDurationIssueDialog({
     // Жёсткая проверка на выбранный тип при наличии списка
     if (labels.length > 0 && !selectedIssueType) return;
 
+    const issueKey =
+      (values.issue as any)?.TaskKey ?? values.issue?.key ?? null;
+    if (!issueKey) return;
     const dateCell = dayjs(values.dateTime);
     const finalComment = buildFinalComment(
       values.comment ?? "",
@@ -160,9 +175,10 @@ export default function AddDurationIssueDialog({
       dateCell,
       dispatch,
       token,
-      issueId: values.issue!.key,
+      issueId: issueKey,
       duration: normalizeDuration(values.duration ?? ""),
       comment: finalWithRisks, // тег и риски добавляются здесь
+      checklistItemId: (values.issue as any)?.checklistItemId ?? undefined,
       deadlineOk: riskState.deadlineOk,
       needUpgradeEstimate: riskState.needUpgradeEstimate,
       makeTaskFaster: riskState.makeTaskFaster,
@@ -179,7 +195,7 @@ export default function AddDurationIssueDialog({
       },
     });
 
-    setOpen(false);
+    handleClose();
   };
 
   const {
@@ -193,7 +209,7 @@ export default function AddDurationIssueDialog({
 
   // загрузка типов при выборе задачи
   useEffect(() => {
-    const key = values.issue?.key;
+    const key = (values.issue as any)?.TaskKey ?? values.issue?.key;
     if (key) {
       setIssueTypesState((prev) => ({ ...prev, loaded: false }));
       getIssueTypeList({
@@ -217,23 +233,47 @@ export default function AddDurationIssueDialog({
     }
   }, [issueTypesState.loaded, labels, selectedIssueType]);
 
-  const handleOpen = () => {
-    setValues(initialValues);
-    setErrors({});
-    setIssueTypesState({ issue_type_list: [], loaded: true });
-    setSelectedIssueType(null);
-    setPlannedDuration("");
-    setPlannedDurationError("");
-    setRiskState({
-      deadlineOk: true,
-      needUpgradeEstimate: false,
-      makeTaskFaster: false,
-    });
+  const isControlled = openProp != null;
+  const resolvedOpen = isControlled ? openProp : internalOpen;
 
-    setOpen(true);
+  const initializeDialog = useCallback(
+    (issue: Issue | null = null) => {
+      setValues(createInitialValues(issue));
+      setErrors({});
+      setIssueTypesState({ issue_type_list: [], loaded: true });
+      setSelectedIssueType(null);
+      setRiskState({
+        deadlineOk: true,
+        needUpgradeEstimate: false,
+        makeTaskFaster: false,
+      });
+    },
+    [createInitialValues, setValues, setErrors],
+  );
+
+  const handleOpen = () => {
+    initializeDialog(initialIssue ?? null);
+    if (isControlled) {
+      onOpenChange?.(true);
+    } else {
+      setInternalOpen(true);
+    }
   };
 
-  const handleClose = () => setOpen(false);
+  const handleClose = () => {
+    if (isControlled) {
+      onOpenChange?.(false);
+    } else {
+      setInternalOpen(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!isControlled) return;
+    if (openProp) {
+      initializeDialog(initialIssue ?? null);
+    }
+  }, [openProp, initialIssue, initializeDialog, isControlled]);
 
   // Ошибка под селектом показывается, если:
   //  - список типов не пуст, и
@@ -246,6 +286,15 @@ export default function AddDurationIssueDialog({
     Object.keys(errors).length > 0 ||
     (labels.length > 0 && !selectedIssueType);
 
+  const hasTaskKey = Boolean(
+    (values.issue as any)?.TaskKey ?? (values.issue as any)?.taskKey,
+  );
+  const planTask = values.issue as any;
+  const headerTaskName = planTask?.TaskName ?? planTask?.summary ?? "-";
+  const headerTaskKey =
+    planTask?.taskKey ?? planTask?.TaskKey ?? planTask?.key ?? "-";
+  const headerWorkName = planTask?.workName ?? planTask?.WorkName ?? "-";
+
   const remainTimeDays =
     (values.issue as any)?.remainTimeDays ??
     (values.issue as any)?.RemainTimeDays ??
@@ -253,7 +302,7 @@ export default function AddDurationIssueDialog({
 
   const remainingInfo = useMemo(() => {
     if (remainTimeDays == null) return null;
-    const normalized = normalizeDuration(plannedDuration ?? "");
+    const normalized = normalizeDuration(values.duration ?? "");
     if (
       normalized.trim() === "" ||
       normalized === "P" ||
@@ -264,23 +313,12 @@ export default function AddDurationIssueDialog({
     const planned = durationToWorkDays(normalized);
     if (!Number.isFinite(planned)) return null;
     return planned - remainTimeDays;
-  }, [plannedDuration, remainTimeDays]);
+  }, [values.duration, remainTimeDays]);
 
   const planningSection = remainTimeDays != null && (
     <>
       <Typography variant="subtitle1">Планирование</Typography>
       <Stack direction="row" spacing={2} alignItems="center" mt={1}>
-        <TextField
-          label="длительность по плану"
-          value={displayDuration(plannedDuration ?? "")}
-          onChange={(event) => {
-            const raw = event.target.value ?? "";
-            setPlannedDuration(raw);
-            setPlannedDurationError(validateDurationValue(raw));
-          }}
-          error={Boolean(plannedDurationError)}
-          helperText={plannedDurationError}
-        />
         <Typography variant="subtitle2">
           Осталось времени = {formatWorkDays(remainingInfo)}
         </Typography>
@@ -288,76 +326,162 @@ export default function AddDurationIssueDialog({
     </>
   );
 
+  const riskSection = (
+    <>
+      <Typography variant="subtitle1">Риски по задаче</Typography>
+      <Stack spacing={1} mt={1}>
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={riskState.deadlineOk}
+              onChange={(e) =>
+                setRiskState((prev) => ({
+                  ...prev,
+                  deadlineOk: e.target.checked,
+                }))
+              }
+            />
+          }
+          label="Подтверждаю выполнение в срок"
+        />
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={riskState.needUpgradeEstimate}
+              onChange={(e) =>
+                setRiskState((prev) => ({
+                  ...prev,
+                  needUpgradeEstimate: e.target.checked,
+                }))
+              }
+            />
+          }
+          label="Требуется увеличить оценку времени"
+        />
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={riskState.makeTaskFaster}
+              onChange={(e) =>
+                setRiskState((prev) => ({
+                  ...prev,
+                  makeTaskFaster: e.target.checked,
+                }))
+              }
+            />
+          }
+          label="Сделаю быстрее (оценка)"
+        />
+      </Stack>
+    </>
+  );
+
   return (
     <>
-      <Tooltip title="Добавить затраченное время по задаче">
-        <IconButton
-          onClick={handleOpen}
-          sx={(theme) => ({
-            borderRadius: "50%",
-            p: 3,
-            border: 1,
-            color: theme.palette.primary.main,
-            borderColor: theme.palette.primary.main,
-            "&:hover": {
-              color: theme.palette.success.main,
-              borderColor: theme.palette.success.main,
-            },
-          })}
-        >
-          <AddIcon />
-        </IconButton>
-      </Tooltip>
+      {!hideTrigger && (
+        <Tooltip title="Добавить затраченное время по задаче">
+          <IconButton
+            onClick={handleOpen}
+            sx={(theme) => ({
+              borderRadius: "50%",
+              p: 3,
+              border: 1,
+              color: theme.palette.primary.main,
+              borderColor: theme.palette.primary.main,
+              "&:hover": {
+                color: theme.palette.success.main,
+                borderColor: theme.palette.success.main,
+              },
+            })}
+          >
+            <AddIcon />
+          </IconButton>
+        </Tooltip>
+      )}
 
-      <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+      <Dialog open={resolvedOpen} onClose={handleClose} maxWidth="sm" fullWidth>
         <DialogTitle>
-          <Typography variant="h5" color="success">
-            Добавить затраченное время по задаче
-          </Typography>
+          <Stack
+            direction="row"
+            alignItems="center"
+            justifyContent="space-between"
+          >
+            <Typography variant="h5" color="success">
+              Добавить затраченное время по задаче
+            </Typography>
+            {hasTaskKey && (
+              <Stack spacing={0.5}>
+                <Typography variant="subtitle2">
+                  {headerTaskName} • {headerTaskKey} • {headerWorkName}
+                </Typography>
+                <Typography variant="subtitle2">
+                  Спринт: {sprintName}
+                </Typography>
+              </Stack>
+            )}
+            <IconButton
+              onClick={handleClose}
+              sx={(theme) => ({
+                borderRadius: "50%",
+                p: 2,
+                ml: 2,
+                color: theme.palette.background.default,
+                background: theme.palette.primary.light,
+                "&:hover": {
+                  color: theme.palette.background.default,
+                  background: theme.palette.primary.main,
+                },
+              })}
+            >
+              <CloseIcon />
+            </IconButton>
+          </Stack>
         </DialogTitle>
 
         <DialogContent>
           <Grid container spacing={2}>
-            <Grid size={12}>
-              <Autocomplete
-                options={issues}
-                getOptionLabel={(opt) => `[${opt.key}] ${opt.summary}`}
-                value={values.issue}
-                onChange={(_, val) => {
-                  // при смене задачи сбросим комментарий и ошибки по нему
-                  setValues((prev) => ({ ...prev, issue: val, comment: "" }));
-                  setErrors((prev) => {
-                    const next = { ...prev };
-                    delete next.comment;
-                    return next;
-                  });
-                }}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="Задача"
-                    error={Boolean(errors.issue)}
-                    helperText={errors.issue}
-                    fullWidth
-                  />
-                )}
-                renderOption={(props, option) => (
-                  // ВАЖНО: props должны быть на li, а не на Grid
-                  <Grid container spacing={2} component="li" {...props}>
-                    <Grid size={3} component="div">
-                      <Typography variant="subtitle2" color="text.secondary">
-                        [{option.key}]
-                      </Typography>
+            {!hasTaskKey && (
+              <Grid size={12}>
+                <Autocomplete
+                  options={issues}
+                  getOptionLabel={(opt) => `[${opt.key}] ${opt.summary}`}
+                  value={values.issue}
+                  onChange={(_, val) => {
+                    // при смене задачи сбросим комментарий и ошибки по нему
+                    setValues((prev) => ({ ...prev, issue: val, comment: "" }));
+                    setErrors((prev) => {
+                      const next = { ...prev };
+                      delete next.comment;
+                      return next;
+                    });
+                  }}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Задача"
+                      error={Boolean(errors.issue)}
+                      helperText={errors.issue}
+                      fullWidth
+                    />
+                  )}
+                  renderOption={(props, option) => (
+                    // ВАЖНО: props должны быть на li, а не на Grid
+                    <Grid container spacing={2} component="li" {...props}>
+                      <Grid size={3} component="div">
+                        <Typography variant="subtitle2" color="text.secondary">
+                          [{option.key}]
+                        </Typography>
+                      </Grid>
+                      <Grid size={9} component="div">
+                        <Typography variant="subtitle1">
+                          {option.summary}
+                        </Typography>
+                      </Grid>
                     </Grid>
-                    <Grid size={9} component="div">
-                      <Typography variant="subtitle1">
-                        {option.summary}
-                      </Typography>
-                    </Grid>
-                  </Grid>
-                )}
-              />
-            </Grid>
+                  )}
+                />
+              </Grid>
+            )}
 
             <Grid size={6}>
               <MuiUIPicker
@@ -424,58 +548,15 @@ export default function AddDurationIssueDialog({
               </Grid>
             )}
 
-            <Grid size={12}>
-              <Divider sx={{ my: 1 }} />
-              <Typography variant="subtitle1">Риски по задаче</Typography>
-            </Grid>
-
-            <Grid size={{ xs: 12, md: 6 }}>
-              <Stack spacing={1} mt={1}>
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={riskState.deadlineOk}
-                      onChange={(e) =>
-                        setRiskState((prev) => ({
-                          ...prev,
-                          deadlineOk: e.target.checked,
-                        }))
-                      }
-                    />
-                  }
-                  label="Подтверждаю выполнение в срок"
-                />
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={riskState.needUpgradeEstimate}
-                      onChange={(e) =>
-                        setRiskState((prev) => ({
-                          ...prev,
-                          needUpgradeEstimate: e.target.checked,
-                        }))
-                      }
-                    />
-                  }
-                  label="Требуется увеличить оценку времени"
-                />
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={riskState.makeTaskFaster}
-                      onChange={(e) =>
-                        setRiskState((prev) => ({
-                          ...prev,
-                          makeTaskFaster: e.target.checked,
-                        }))
-                      }
-                    />
-                  }
-                  label="Сделаю быстрее (оценка)"
-                />
-              </Stack>
-            </Grid>
-            <Grid size={{ xs: 12, md: 6 }}>{planningSection}</Grid>
+            {remainTimeDays != null && (
+              <>
+                <Grid size={12}>
+                  <Divider sx={{ my: 1 }} />
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>{riskSection}</Grid>
+                <Grid size={{ xs: 12, md: 6 }}>{planningSection}</Grid>
+              </>
+            )}
           </Grid>
         </DialogContent>
 

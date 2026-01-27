@@ -15,7 +15,7 @@ import {
 } from "@/helpers";
 import { parseFirstIssueTypeLabel } from "@/helpers/issueTypeComment";
 import AddIcon from "@mui/icons-material/Add";
-import { Box, Chip, IconButton, Paper, Stack, Typography } from "@mui/material";
+import { Box, Chip, IconButton, Paper, Typography } from "@mui/material";
 import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import dayjs, { Dayjs } from "dayjs";
 import utc from "dayjs/plugin/utc";
@@ -34,7 +34,6 @@ import {
   TaskItemIssue,
   TransformedTaskRow,
 } from "../types/global";
-import AddDurationIssueDialog from "./AddDurationIssueDialog";
 import IssueDisplay from "./IssueDisplay";
 import TableCellInfoPopover from "./TableCellInfoPopover";
 import SetTimeSpend from "./SetTimeSpend";
@@ -720,21 +719,6 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
         boxShadow: "0px 10px 15px rgba(15, 23, 42, 0.04)",
       })}
     >
-      <Stack
-        spacing={2}
-        direction="row"
-        alignItems="center"
-        justifyContent="center"
-        mb={2}
-      >
-        <Typography variant="h5">{title}</Typography>
-        {isEditable && (
-          <AddDurationIssueDialog
-            issues={appState.state.issues}
-            setData={setData}
-          />
-        )}
-      </Stack>
       <DataGrid
         rows={[...tableRows, totalRow]}
         columns={columns}

@@ -1,15 +1,101 @@
-import { Box, Paper, Stack, Typography } from "@mui/material";
-import { FC } from "react";
+import { Box, Divider, Paper, Stack, Typography } from "@mui/material";
+import { FC, useEffect, useMemo, useState } from "react";
 import TableCheckPlan from "./TableCheckPlan";
 import TableWorkPlan from "./TableWorkPlan";
 import TableWorkPlanCapacity from "./TableWorkPlanCapacity";
 import { useAppContext } from "@/context/AppContext";
 import { isSuperLogin } from "@/helpers";
+import TableTimeSpendByPlan from "./TableTimeSpendByPlan";
+import { DeleteDataArgs, SetDataArgs, getWorkPlan } from "@/actions/data";
+import { TaskItem, WorkPlanItem } from "@/types/global";
+import { Dayjs } from "dayjs";
+import { useTableTimePlanSelectors } from "@/hooks/useTableTimePlanSelectors";
 
-const ViewTimePlan: FC = () => {
+interface ViewTimePlanProps {
+  data: TaskItem[];
+  start: Dayjs;
+  rangeStart?: Dayjs;
+  rangeEnd?: Dayjs;
+  setData: (args: SetDataArgs) => Promise<void>;
+  deleteData: (args: DeleteDataArgs) => void;
+  isEditable: boolean;
+}
+
+const ViewTimePlan: FC<ViewTimePlanProps> = ({
+  data,
+  start,
+  rangeStart,
+  rangeEnd,
+  setData,
+  deleteData,
+  isEditable,
+}) => {
   const { state } = useAppContext();
   const { login } = state.auth;
   const isAdmin = !!(login && isSuperLogin(login));
+  const {
+    sprintId,
+    trackerUids,
+    projectIds,
+    roleIds,
+    groupIds,
+    workPlanRefreshKey,
+  } = useTableTimePlanSelectors();
+  const currentTrackerUid =
+    state.state.userId ||
+    state.tableTimePlanState.selectedPatientUid ||
+    (Array.isArray(state.state.users) && state.state.users.length === 1
+      ? (state.state.users[0]?.id ?? null)
+      : null);
+  const effectiveTrackerUids = useMemo(() => {
+    if (isAdmin) return trackerUids;
+    return currentTrackerUid ? [currentTrackerUid] : [];
+  }, [currentTrackerUid, isAdmin, trackerUids]);
+  const [workPlanRows, setWorkPlanRows] = useState<WorkPlanItem[]>([]);
+  const [workPlanLoading, setWorkPlanLoading] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    if (!sprintId) {
+      setWorkPlanRows([]);
+      setWorkPlanLoading(false);
+      return () => {
+        isMounted = false;
+      };
+    }
+
+    setWorkPlanLoading(true);
+    getWorkPlan({
+      sprintId,
+      trackerUids: effectiveTrackerUids,
+      projectIds,
+      roleIds,
+      groupIds,
+    })
+      .then((items) => {
+        if (!isMounted) return;
+        setWorkPlanRows(items as WorkPlanItem[]);
+        setWorkPlanLoading(false);
+      })
+      .catch((error) => {
+        console.error("[ViewTimePlan] getWorkPlan error:", error.message);
+        if (!isMounted) return;
+        setWorkPlanRows([]);
+        setWorkPlanLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [
+    sprintId,
+    effectiveTrackerUids,
+    projectIds,
+    roleIds,
+    groupIds,
+    workPlanRefreshKey,
+  ]);
 
   return (
     <Box sx={{ px: 2, pb: 2 }}>
@@ -74,7 +160,26 @@ const ViewTimePlan: FC = () => {
         <Typography variant="h5" textAlign="center" my={2}>
           План работ
         </Typography>
-        <TableWorkPlan />
+        <TableWorkPlan
+          rows={workPlanRows}
+          loading={workPlanLoading}
+          setData={setData}
+          isEditable={isEditable}
+        />
+        <Divider sx={{ my: 2 }} />
+        <Typography variant="h5" textAlign="center" my={2}>
+          Затраченное время по плану
+        </Typography>
+        <TableTimeSpendByPlan
+          data={data}
+          start={start}
+          rangeStart={rangeStart}
+          rangeEnd={rangeEnd}
+          setData={setData}
+          deleteData={deleteData}
+          isEditable={isEditable}
+          planItems={workPlanRows}
+        />
       </Paper>
     </Box>
   );

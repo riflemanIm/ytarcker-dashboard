@@ -1,6 +1,6 @@
 import { DeleteDataArgs, SetDataArgs, getWorkPlan } from "@/actions/data";
 import { useTableTimePlanSelectors } from "@/hooks/useTableTimePlanSelectors";
-import { TaskItem } from "@/types/global";
+import { TaskItem, WorkPlanItem } from "@/types/global";
 import { Alert } from "@mui/material";
 import { FC, useEffect, useMemo, useState } from "react";
 import TableTimeSpend from "./TableTimeSpend";
@@ -14,6 +14,7 @@ interface TableTimeSpendByPlanProps {
   setData: (args: SetDataArgs) => Promise<void>;
   deleteData: (args: DeleteDataArgs) => void;
   isEditable: boolean;
+  planItems?: WorkPlanItem[];
 }
 
 const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
@@ -24,6 +25,7 @@ const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
   setData,
   deleteData,
   isEditable,
+  planItems,
 }) => {
   const {
     sprintId,
@@ -33,18 +35,22 @@ const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
     groupIds,
     workPlanRefreshKey,
   } = useTableTimePlanSelectors();
-  const [planKeys, setPlanKeys] = useState<Set<string>>(new Set());
-  const [planMeta, setPlanMeta] = useState<
-    Record<string, { checklistItemId?: string | null; remainTimeDays?: number }>
-  >({});
+  const [planItemsState, setPlanItemsState] = useState<WorkPlanItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const effectivePlanItems = planItems ?? planItemsState;
 
   useEffect(() => {
     let isMounted = true;
 
+    if (planItems) {
+      setLoading(false);
+      return () => {
+        isMounted = false;
+      };
+    }
+
     if (!sprintId) {
-      setPlanKeys(new Set());
-      setPlanMeta({});
+      setPlanItemsState([]);
       setLoading(false);
       return () => {
         isMounted = false;
@@ -55,24 +61,7 @@ const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
     getWorkPlan({ sprintId, trackerUids, projectIds, roleIds, groupIds })
       .then((items) => {
         if (!isMounted) return;
-        const next = new Set(items.map((item) => String(item.TaskKey)));
-        const meta: Record<
-          string,
-          { checklistItemId?: string | null; remainTimeDays?: number }
-        > = {};
-        items.forEach((item) => {
-          const key = String(item.TaskKey);
-          if (!meta[key]) {
-            meta[key] = {
-              checklistItemId: item.checklistItemId ?? null,
-              remainTimeDays: item.RemainTimeDays,
-            };
-          } else if (!meta[key].checklistItemId && item.checklistItemId) {
-            meta[key].checklistItemId = item.checklistItemId;
-          }
-        });
-        setPlanKeys(next);
-        setPlanMeta(meta);
+        setPlanItemsState(items as WorkPlanItem[]);
         setLoading(false);
       })
       .catch((error: Error) => {
@@ -81,8 +70,7 @@ const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
           error.message,
         );
         if (!isMounted) return;
-        setPlanKeys(new Set());
-        setPlanMeta({});
+        setPlanItemsState([]);
         setLoading(false);
       });
 
@@ -90,6 +78,7 @@ const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
       isMounted = false;
     };
   }, [
+    planItems,
     sprintId,
     trackerUids,
     projectIds,
@@ -97,6 +86,27 @@ const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
     groupIds,
     workPlanRefreshKey,
   ]);
+
+  const { planKeys, planMeta } = useMemo(() => {
+    const next = new Set<string>();
+    const meta: Record<
+      string,
+      { checklistItemId?: string | null; remainTimeDays?: number }
+    > = {};
+    effectivePlanItems.forEach((item) => {
+      const key = String(item.TaskKey);
+      next.add(key);
+      if (!meta[key]) {
+        meta[key] = {
+          checklistItemId: item.checklistItemId ?? null,
+          remainTimeDays: item.RemainTimeDays,
+        };
+      } else if (!meta[key].checklistItemId && item.checklistItemId) {
+        meta[key].checklistItemId = item.checklistItemId;
+      }
+    });
+    return { planKeys: next, planMeta: meta };
+  }, [effectivePlanItems]);
 
   const filteredData = useMemo(() => {
     if (!planKeys.size) return [];
@@ -129,7 +139,7 @@ const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
       title="Затраченное время по плану"
       setData={setData}
       deleteData={deleteData}
-      isEditable={isEditable}
+      isEditable={true}
     />
   );
 };

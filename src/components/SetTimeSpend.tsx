@@ -476,9 +476,6 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
     return false;
   }, [loaded, durations, rows, issueTypes, validateDurationValue]);
 
-  const [plannedDuration, setPlannedDuration] = useState<string>("");
-  const [plannedDurationError, setPlannedDurationError] = useState<string>("");
-
   const formatWorkDays = useCallback((value: number | null | undefined) => {
     if (value == null || !Number.isFinite(value)) return "-";
     const sign = value < 0 ? "-" : "";
@@ -487,7 +484,7 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
 
   const remainingInfo = useMemo(() => {
     if (menuState.remainTimeDays == null) return null;
-    const normalized = normalizeDuration(plannedDuration ?? "");
+    const normalized = normalizeDuration(newEntry.duration ?? "");
     if (
       normalized.trim() === "" ||
       normalized === "P" ||
@@ -498,28 +495,15 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
     const planned = durationToWorkDays(normalized);
     if (!Number.isFinite(planned)) return null;
     return planned - menuState.remainTimeDays;
-  }, [plannedDuration, menuState.remainTimeDays]);
+  }, [newEntry.duration, menuState.remainTimeDays]);
 
-  const planningSection = menuState.remainTimeDays != null && (
-    <>
-      <Typography variant="subtitle1">Планирование</Typography>
-      <Stack direction="row" spacing={2} alignItems="center" mt={1}>
-        <TextField
-          label="длительность по плану"
-          value={displayDuration(plannedDuration ?? "")}
-          onChange={(event) => {
-            const raw = event.target.value ?? "";
-            setPlannedDuration(raw);
-            setPlannedDurationError(validateDurationValue(raw));
-          }}
-          error={Boolean(plannedDurationError)}
-          helperText={plannedDurationError}
-        />
-        <Typography variant="subtitle2">
-          Осталось времени = {formatWorkDays(remainingInfo)}
-        </Typography>
-      </Stack>
-    </>
+  const planningSection = (
+    <Typography variant="body1" noWrap>
+      Осталось времени:
+      <Typography variant="body1" color="warning" component="span" noWrap>
+        {formatWorkDays(remainingInfo)}
+      </Typography>
+    </Typography>
   );
 
   const riskSection = (
@@ -713,7 +697,9 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
             <Typography variant="subtitle2" color="success">
               {menuState.dateField &&
                 headerWeekName[
-                  dayOfWeekNameByDate(menuState.dateField) as keyof typeof headerWeekName
+                  dayOfWeekNameByDate(
+                    menuState.dateField,
+                  ) as keyof typeof headerWeekName
                 ]}{" "}
               {menuState.dateField && menuState.dateField.format("DD.MM")}
             </Typography>
@@ -887,12 +873,6 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
                 );
               })}
 
-              <Grid size={12}>
-                <Divider sx={{ my: 1 }} />
-              </Grid>
-              <Grid size={{ xs: 12, md: 6 }}>{riskSection}</Grid>
-              <Grid size={{ xs: 12, md: 6 }}>{planningSection}</Grid>
-
               {/* Общая кнопка сохранить изменения */}
               <Grid size={12} display="flex" justifyContent="flex-end" mt={1}>
                 <Button
@@ -1002,8 +982,14 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
                 )}
               </Grid>
 
+              {menuState.remainTimeDays != null && (
+                <>
+                  <Grid size={{ xs: 12, md: 6 }}>{riskSection}</Grid>
+                  <Grid size={{ xs: 12, md: 6 }}>{planningSection}</Grid>
+                </>
+              )}
               <Grid
-                size={2}
+                size={12}
                 display="flex"
                 alignItems="center"
                 justifyContent="flex-end"

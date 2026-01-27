@@ -1,5 +1,5 @@
-import { getWorkPlan, setWorkPlan } from "@/actions/data";
-import { WorkPlanItem } from "@/types/global";
+import { SetDataArgs, setWorkPlan } from "@/actions/data";
+import { Issue, WorkPlanItem } from "@/types/global";
 import {
   Box,
   Button,
@@ -9,100 +9,57 @@ import {
   DialogTitle,
   IconButton,
   Stack,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import dayjs from "dayjs";
-import { FC, useEffect, useMemo, useState } from "react";
+import { FC, useMemo, useState } from "react";
 import IssueDisplay from "./IssueDisplay";
-import { useTableTimePlanSelectors } from "@/hooks/useTableTimePlanSelectors";
 import { getPriorityPalette } from "@/helpers/priorityStyles";
 import { isSuperLogin, workDaysToDurationInput } from "@/helpers";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import AddAlarmIcon from "@mui/icons-material/AddAlarm";
 import SetIssuePlanTable from "./SetIssuePlanTable";
 import { useAppContext } from "@/context/AppContext";
 import FilterTableText from "./FilterTableText";
+import AddDurationIssueDialog from "./AddDurationIssueDialog";
+import { useTableTimePlanSelectors } from "@/hooks/useTableTimePlanSelectors";
 
-const TableWorkPlan: FC = () => {
-  const {
-    sprintId,
-    trackerUids,
-    projectIds,
-    roleIds,
-    groupIds,
-    workPlanRefreshKey,
-  } = useTableTimePlanSelectors();
+interface TableWorkPlanProps {
+  rows: WorkPlanItem[];
+  loading?: boolean;
+  setData?: (args: SetDataArgs) => Promise<void>;
+  isEditable?: boolean;
+}
+
+const TableWorkPlan: FC<TableWorkPlanProps> = ({
+  rows,
+  loading = false,
+  setData,
+  isEditable,
+}) => {
+  const { sprintId } = useTableTimePlanSelectors();
   const { state, dispatch } = useAppContext();
   const { login } = state.auth;
-  const currentTrackerUid =
-    state.state.userId ||
-    state.tableTimePlanState.selectedPatientUid ||
-    (Array.isArray(state.state.users) && state.state.users.length === 1
-      ? state.state.users[0]?.id ?? null
-      : null);
-  const [rows, setRows] = useState<WorkPlanItem[]>([]);
   const [filterText, setFilterText] = useState("");
-  const [loading, setLoading] = useState(false);
   const isSprintReady = sprintId != null;
   const [editOpen, setEditOpen] = useState(false);
   const [selectedRow, setSelectedRow] = useState<WorkPlanItem | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<WorkPlanItem | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [addTimeOpen, setAddTimeOpen] = useState(false);
+  const [addTimeIssue, setAddTimeIssue] = useState<Issue | null>(null);
   const isAdmin = !!(login && isSuperLogin(login));
-  const effectiveTrackerUids = useMemo(() => {
-    if (isAdmin) return trackerUids;
-    return currentTrackerUid ? [currentTrackerUid] : [];
-  }, [currentTrackerUid, isAdmin, trackerUids]);
+  const canAddTime = isEditable;
 
   const formatWorkDays = (value: unknown) => {
     const num = Number(value);
     if (!Number.isFinite(num)) return "";
     return workDaysToDurationInput(num);
   };
-
-  useEffect(() => {
-    let isMounted = true;
-
-    if (!sprintId) {
-      setRows([]);
-      setLoading(false);
-      return () => {
-        isMounted = false;
-      };
-    }
-
-    setLoading(true);
-    getWorkPlan({
-      sprintId,
-      trackerUids: effectiveTrackerUids,
-      projectIds,
-      roleIds,
-      groupIds,
-    })
-      .then((data) => {
-        if (!isMounted) return;
-        setRows(data);
-        setLoading(false);
-      })
-      .catch((error) => {
-        console.error("[TableWorkPlan] getWorkPlan error:", error.message);
-        if (!isMounted) return;
-        setLoading(false);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [
-    sprintId,
-    effectiveTrackerUids,
-    projectIds,
-    roleIds,
-    groupIds,
-    workPlanRefreshKey,
-  ]);
 
   const columns = useMemo<GridColDef<WorkPlanItem | { id: string }>[]>(() => {
     const baseColumns: GridColDef<WorkPlanItem | { id: string }>[] = [
@@ -139,7 +96,7 @@ const TableWorkPlan: FC = () => {
     const actionColumn: GridColDef<WorkPlanItem | { id: string }> = {
       field: "actions",
       headerName: "Действия",
-      minWidth: 120,
+      minWidth: canAddTime ? 160 : 120,
       sortable: false,
       filterable: false,
       disableColumnMenu: true,
@@ -148,6 +105,29 @@ const TableWorkPlan: FC = () => {
       ) =>
         (params.row as any).id === "__total__" ? null : (
           <Stack direction="row" spacing={1}>
+            {canAddTime && (
+              <Tooltip title="Добавить отметку времени">
+                <IconButton
+                  size="small"
+                  sx={(theme) => ({ color: theme.palette.success.main })}
+                  onClick={() => {
+                    const row = params.row as WorkPlanItem;
+                    setAddTimeIssue({
+                      key: row.TaskKey,
+                      summary: row.TaskName,
+                      remainTimeDays: row.RemainTimeDays,
+                      checklistItemId: row.checklistItemId ?? null,
+                      TaskName: row.TaskName,
+                      TaskKey: row.TaskKey,
+                      WorkName: row.WorkName,
+                    });
+                    setAddTimeOpen(true);
+                  }}
+                >
+                  <AddAlarmIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
             <IconButton
               size="small"
               sx={(theme) => ({ color: theme.palette.primary.main })}
@@ -235,7 +215,7 @@ const TableWorkPlan: FC = () => {
     return isAdmin
       ? [...baseColumns, actionColumn, ...tailColumns]
       : [...baseColumns, ...tailColumns];
-  }, [isAdmin]);
+  }, [isAdmin, canAddTime]);
 
   const filteredRows = useMemo(() => {
     const query = filterText.trim().toLowerCase();
@@ -255,6 +235,20 @@ const TableWorkPlan: FC = () => {
       return values.some((value) => value.includes(query));
     });
   }, [rows, filterText]);
+
+  const dialogIssues = useMemo<Issue[]>(
+    () =>
+      rows.map((item) => ({
+        key: item.TaskKey,
+        summary: item.TaskName,
+        remainTimeDays: item.RemainTimeDays,
+        checklistItemId: item.checklistItemId ?? null,
+        TaskName: item.TaskName,
+        TaskKey: item.TaskKey,
+        WorkName: item.WorkName,
+      })),
+    [rows],
+  );
 
   const rowsWithTotal = useMemo(() => {
     if (filteredRows.length === 0) return filteredRows;
@@ -440,6 +434,19 @@ const TableWorkPlan: FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+      {canAddTime && setData && (
+        <AddDurationIssueDialog
+          issues={dialogIssues}
+          setData={setData}
+          open={addTimeOpen}
+          onOpenChange={(open) => {
+            setAddTimeOpen(open);
+            if (!open) setAddTimeIssue(null);
+          }}
+          initialIssue={addTimeIssue}
+          hideTrigger
+        />
+      )}
     </Box>
   );
 };

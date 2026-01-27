@@ -67,18 +67,6 @@ const HeaderFilters: FC<HeaderFiltersProps> = ({
         onNext={weekNavigation.onNext}
         disableNext={weekNavigation.disableNext}
       />
-    ) : viewMode === "table_time_spend_plan" ? (
-      <Stack
-        direction="row"
-        gap={1}
-        alignItems="center"
-        flexWrap="wrap"
-        sx={{ width: "100%", minWidth: 0 }}
-      >
-        <Box sx={{ flex: "0 0 220px", minWidth: 0 }}>
-          <SelectSprintList />
-        </Box>
-      </Stack>
     ) : viewMode === "report" ? (
       <ReportDateRange
         from={reportRange.from}

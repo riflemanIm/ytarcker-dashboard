@@ -34,12 +34,6 @@ const VIEW_MODE_OPTIONS: Array<{
     menuLabel: "Списания",
   },
   {
-    mode: "table_time_spend_plan",
-    icon: TodayIcon,
-    tooltip: "Показать списания времени по плану задач",
-    menuLabel: "Списания по плану",
-  },
-  {
     mode: "table_time_plan",
     icon: EventNoteIcon,
     tooltip: "Показать планирования времени",

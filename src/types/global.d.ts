@@ -174,7 +174,6 @@ export interface TableTimePlanState {
 
 export type ViewMode =
   | "table_time_spend"
-  | "table_time_spend_plan"
   | "table_time_plan"
   | "report"
   | "search";
