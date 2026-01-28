@@ -758,6 +758,8 @@ export interface SetWorkPlanArgs {
   estimateTimeMinutes?: number;
   priority?: "Red" | "Orange" | "Green";
   workPlanId?: number;
+  StatusName?: string;
+  Comment?: string;
 }
 
 export const setWorkPlan = async (

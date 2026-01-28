@@ -1,6 +1,6 @@
 import { setWorkPlan } from "@/actions/data";
 import {
-  durationToWorkDays,
+  durationToWorkMinutes,
   isValidDuration,
   normalizeDuration,
   workMinutesToDurationInput,
@@ -42,6 +42,8 @@ type FormState = {
   deadline: Dayjs | null;
   estimateTimeMinutes: string;
   priority: "Red" | "Orange" | "Green";
+  statusName: string;
+  comment: string;
 };
 
 const isWorkPlanItem = (
@@ -84,6 +86,8 @@ const SetIssuePlanTable: FC<SetIssuePlanTableProps> = ({
       ? workMinutesToDurationInput(issue.EstimateTimeMinutes)
       : workMinutesToDurationInput(issue?.WorkMinutes),
     priority: getPriorityValue(issue),
+    statusName: (issue as WorkPlanItem | null)?.StatusName ?? "",
+    comment: (issue as WorkPlanItem | null)?.Comment ?? "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
@@ -103,6 +107,8 @@ const SetIssuePlanTable: FC<SetIssuePlanTableProps> = ({
         ? workMinutesToDurationInput(issue.EstimateTimeMinutes)
         : workMinutesToDurationInput(issue?.WorkMinutes),
       priority: getPriorityValue(issue),
+      statusName: (issue as WorkPlanItem | null)?.StatusName ?? "",
+      comment: (issue as WorkPlanItem | null)?.Comment ?? "",
     });
     setErrors({});
   }, [issue, sprintId, open]);
@@ -186,9 +192,9 @@ const SetIssuePlanTable: FC<SetIssuePlanTableProps> = ({
     const normalizedEstimate = normalizeDuration(
       form.estimateTimeMinutes ?? "",
     );
-    const estimateDays =
+    const estimateMinutes =
       normalizedEstimate !== ""
-        ? durationToWorkDays(normalizedEstimate)
+        ? durationToWorkMinutes(normalizedEstimate)
         : undefined;
     const action: 0 | 1 = mode === "edit" ? 1 : 0;
     if (action === 1 && !isWorkPlanItem(issue)) {
@@ -208,8 +214,10 @@ const SetIssuePlanTable: FC<SetIssuePlanTableProps> = ({
       deadline: form.deadline
         ? dayjs(form.deadline).format("YYYY-MM-DD")
         : null,
-      estimateTimeMinutes: estimateDays,
+      estimateTimeMinutes: estimateMinutes,
       priority: form.priority,
+      StatusName: form.statusName || undefined,
+      Comment: form.comment || undefined,
     };
 
     try {
@@ -307,93 +315,102 @@ const SetIssuePlanTable: FC<SetIssuePlanTableProps> = ({
               </MenuItem>
             ))}
           </TextField>
-          {/* <TextField
-            label="Название работы"
-            value={form.workName}
-            onChange={handleChange("workName")}
-            error={Boolean(errors.workName)}
-            helperText={errors.workName}
-            fullWidth
-          /> */}
-          <MuiUIPicker
-            value={form.deadline ?? null}
-            handleDateChange={(date) => handleDeadlineChange(date)}
-            label="Дедлайн"
-            errorText={errors.deadline}
-            name="deadline"
-            view="day"
-          />
-          <TextField
-            label="Оценка времени (d h m), "
-            value={form.estimateTimeMinutes}
-            onChange={handleEstimateChange}
-            margin="normal"
-            error={Boolean(errors.estimateTimeMinutes)}
-            helperText={errors.estimateTimeMinutes}
-            fullWidth
-          />
-          <TextField
-            label="Приоритет"
-            select
-            value={form.priority}
-            onChange={handleChange("priority")}
-            fullWidth
-          >
-            <MenuItem
-              value="Green"
-              sx={(theme) => ({
-                backgroundColor: getPriorityPalette(theme).Green.main,
-                color: getPriorityPalette(theme).Green.text,
-                "&:hover": {
-                  backgroundColor: getPriorityPalette(theme).Green.hover,
-                },
-                "&.Mui-selected": {
+
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+            <MuiUIPicker
+              value={form.deadline ?? null}
+              handleDateChange={(date) => handleDeadlineChange(date)}
+              label="Дедлайн"
+              errorText={errors.deadline}
+              name="deadline"
+              view="day"
+            />
+            <TextField
+              label="Оценка времени (d h m), "
+              value={form.estimateTimeMinutes}
+              onChange={handleEstimateChange}
+              margin="normal"
+              error={Boolean(errors.estimateTimeMinutes)}
+              helperText={errors.estimateTimeMinutes}
+              fullWidth
+            />
+            <TextField
+              label="Приоритет"
+              select
+              value={form.priority}
+              onChange={handleChange("priority")}
+              fullWidth
+            >
+              <MenuItem
+                value="Green"
+                sx={(theme) => ({
                   backgroundColor: getPriorityPalette(theme).Green.main,
-                },
-                "&.Mui-selected:hover": {
-                  backgroundColor: getPriorityPalette(theme).Green.hover,
-                },
-              })}
-            >
-              Green
-            </MenuItem>
-            <MenuItem
-              value="Orange"
-              sx={(theme) => ({
-                backgroundColor: getPriorityPalette(theme).Orange.main,
-                color: getPriorityPalette(theme).Orange.text,
-                "&:hover": {
-                  backgroundColor: getPriorityPalette(theme).Orange.hover,
-                },
-                "&.Mui-selected": {
+                  color: getPriorityPalette(theme).Green.text,
+                  "&:hover": {
+                    backgroundColor: getPriorityPalette(theme).Green.hover,
+                  },
+                  "&.Mui-selected": {
+                    backgroundColor: getPriorityPalette(theme).Green.main,
+                  },
+                  "&.Mui-selected:hover": {
+                    backgroundColor: getPriorityPalette(theme).Green.hover,
+                  },
+                })}
+              >
+                Green
+              </MenuItem>
+              <MenuItem
+                value="Orange"
+                sx={(theme) => ({
                   backgroundColor: getPriorityPalette(theme).Orange.main,
-                },
-                "&.Mui-selected:hover": {
-                  backgroundColor: getPriorityPalette(theme).Orange.hover,
-                },
-              })}
-            >
-              Orange
-            </MenuItem>
-            <MenuItem
-              value="Red"
-              sx={(theme) => ({
-                backgroundColor: getPriorityPalette(theme).Red.main,
-                color: getPriorityPalette(theme).Red.text,
-                "&:hover": {
-                  backgroundColor: getPriorityPalette(theme).Red.hover,
-                },
-                "&.Mui-selected": {
+                  color: getPriorityPalette(theme).Orange.text,
+                  "&:hover": {
+                    backgroundColor: getPriorityPalette(theme).Orange.hover,
+                  },
+                  "&.Mui-selected": {
+                    backgroundColor: getPriorityPalette(theme).Orange.main,
+                  },
+                  "&.Mui-selected:hover": {
+                    backgroundColor: getPriorityPalette(theme).Orange.hover,
+                  },
+                })}
+              >
+                Orange
+              </MenuItem>
+              <MenuItem
+                value="Red"
+                sx={(theme) => ({
                   backgroundColor: getPriorityPalette(theme).Red.main,
-                },
-                "&.Mui-selected:hover": {
-                  backgroundColor: getPriorityPalette(theme).Red.hover,
-                },
-              })}
-            >
-              Red
-            </MenuItem>
-          </TextField>
+                  color: getPriorityPalette(theme).Red.text,
+                  "&:hover": {
+                    backgroundColor: getPriorityPalette(theme).Red.hover,
+                  },
+                  "&.Mui-selected": {
+                    backgroundColor: getPriorityPalette(theme).Red.main,
+                  },
+                  "&.Mui-selected:hover": {
+                    backgroundColor: getPriorityPalette(theme).Red.hover,
+                  },
+                })}
+              >
+                Red
+              </MenuItem>
+            </TextField>
+          </Stack>
+          <TextField
+            label="Статус"
+            value={form.statusName}
+            onChange={handleChange("statusName")}
+            fullWidth
+          />
+          <TextField
+            label="Комментарий"
+            value={form.comment}
+            onChange={handleChange("comment")}
+            fullWidth
+            multiline
+            minRows={2}
+          />
         </Stack>
       </DialogContent>
       <DialogActions>

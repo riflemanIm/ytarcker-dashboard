@@ -392,7 +392,6 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
             },
             "& .priority-red:hover .MuiDataGrid-cell": {
               backgroundColor: palette.Red.hover,
-              color: palette.Red.text,
             },
             "& .MuiDataGrid-row.Mui-selected .MuiDataGrid-cell": {
               backgroundColor: "inherit",

@@ -140,6 +140,7 @@ const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
       setData={setData}
       deleteData={deleteData}
       isEditable={isEditable}
+      isAddable={false}
     />
   );
 };

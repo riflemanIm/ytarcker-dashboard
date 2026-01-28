@@ -64,6 +64,7 @@ interface TableTimeSpendProps {
   setData: (args: SetDataArgs) => Promise<void>;
   deleteData: (args: DeleteDataArgs) => void;
   isEditable: boolean;
+  isAddable?: boolean;
 }
 
 interface RawTransformedRow {
@@ -156,6 +157,7 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
   setData,
   deleteData,
   isEditable = false,
+  isAddable = true,
 }) => {
   const { state: appState, dispatch } = useAppContext();
   const { token } = appState.auth;
@@ -580,8 +582,10 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
         renderCell: (params: GridRenderCellParams) => {
           const val = displayDuration(params.value);
           if (params.row.id === "total") return val;
-
-          if (val === "" && isEditable) {
+          if (val === "" && isEditable && !isAddable) {
+            return "";
+          }
+          if (val === "" && isEditable && isAddable) {
             return (
               <div
                 style={{
@@ -614,6 +618,10 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
                 </IconButton>
               </div>
             );
+          }
+
+          if (val === "" && isEditable && !isAddable) {
+            return <Typography variant="body2">{val}</Typography>;
           }
 
           const allTagged = cellHasAllTags(params.id, params.field);
@@ -727,6 +735,7 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
         onCellClick={(params, event) => {
           if (
             isEditable &&
+            isAddable &&
             params.row.id !== "total" &&
             fieldKeys.includes(params.field as string) &&
             isEmptyDurationValue(params.value) &&
