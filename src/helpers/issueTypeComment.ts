@@ -2,24 +2,52 @@
 
 import type { IssueType } from "@/types/global";
 
+export type RiskState = {
+  deadlineOk: boolean;
+  needUpgradeEstimate: boolean;
+  makeTaskFaster: boolean;
+};
+
+const ISSUE_TYPE_TAG = "ProjectControlWT";
+const WORKLOG_ID_TAG = "YT_TL_WORKLOG_ID";
+
 export function buildFinalComment(
   comment: string,
   label?: string | null
 ): string {
   const base = (comment ?? "").trimEnd();
-  const tag = label ? `[ProjectControlWT:${label}]` : "";
+  const tag = label ? `[${ISSUE_TYPE_TAG}:${label}]` : "";
   if (!tag) return base;
   return base ? `${base}\n${tag}` : tag;
 }
 
+export function buildWorklogIdTag(worklogId?: string | number | null): string {
+  if (worklogId == null || worklogId === "") return "";
+  return `[${WORKLOG_ID_TAG}:${worklogId}]`;
+}
+
+const appendTag = (base: string, tag: string): string => {
+  if (!tag) return base;
+  return base ? `${base}\n${tag}` : tag;
+};
+
 export function stripIssueTypeTags(comment: string): string {
   if (!comment) return "";
-  return comment.replace(/\[ProjectControlWT:[^\]]+\]/g, "").trim();
+  return comment
+    .replace(/\[ProjectControlWT:[^\]]+\]/g, "")
+    .replace(/\[YT_TL_WORKLOG_ID:[^\]]+\]/g, "")
+    .trim();
 }
 
 export function extractIssueTypeLabel(comment: string): string | null {
   if (!comment) return null;
   const match = comment.match(/\[ProjectControlWT:([^\]]+)\]/);
+  return match ? match[1] : null;
+}
+
+export function extractWorklogId(comment: string): string | null {
+  if (!comment) return null;
+  const match = comment.match(/\[YT_TL_WORKLOG_ID:([^\]]+)\]/);
   return match ? match[1] : null;
 }
 
@@ -50,6 +78,31 @@ export function parseRiskBlock(comment: string): {
   };
 }
 
+export function buildRiskBlock(riskState: RiskState): string {
+  return `[Risks: { deadlineOk: ${riskState.deadlineOk}, needUpgradeEstimate: ${riskState.needUpgradeEstimate}, makeTaskFaster: ${riskState.makeTaskFaster} }]`;
+}
+
+export function appendRisksToComment(
+  comment: string,
+  riskState: RiskState
+): string {
+  const cleaned = stripRiskBlock(comment);
+  const riskBlock = buildRiskBlock(riskState);
+  return cleaned ? `${cleaned}\n${riskBlock}` : riskBlock;
+}
+
+export function buildCommentWithTags(
+  comment: string,
+  label?: string | null,
+  riskState?: RiskState | null,
+  worklogId?: string | number | null
+): string {
+  const withType = buildFinalComment(comment, label ?? undefined);
+  const withWorklog = appendTag(withType, buildWorklogIdTag(worklogId));
+  if (!riskState) return withWorklog;
+  return appendRisksToComment(withWorklog, riskState);
+}
+
 export function stripRiskBlock(comment: string): string {
   return (comment ?? "").replace(/\n?\[Risks:\s*\{[\s\S]*?\}\s*\]/m, "").trimEnd();
 }
@@ -70,7 +123,22 @@ export function commentHasAnyIssueType(
   if (!comment || !list?.length) return false;
   return list.some((t) =>
     new RegExp(
-      `\\[ProjectControlWT:${t.label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\]`
+      `\\[${ISSUE_TYPE_TAG}:${t.label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\]`
     ).test(comment)
   );
+}
+
+export function parseCommentForEditing(
+  comment: string,
+  issueTypes?: IssueType[]
+): { cleanComment: string; selectedLabel: string | null } {
+  const parsedLabel = extractIssueTypeLabel(comment ?? "") ?? null;
+  const cleanComment = stripRiskBlock(stripIssueTypeTags(comment ?? ""));
+  if (!issueTypes || issueTypes.length === 0) {
+    return { cleanComment, selectedLabel: parsedLabel };
+  }
+  const selectedLabel = issueTypes.some((t) => t.label === parsedLabel)
+    ? parsedLabel
+    : null;
+  return { cleanComment, selectedLabel };
 }

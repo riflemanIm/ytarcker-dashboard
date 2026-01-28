@@ -71,6 +71,7 @@ export interface TaskListItem {
 
 export interface WorkPlanItem {
   YT_TL_WORKPLAN_ID: number;
+  YT_TL_WORKLOG_ID?: number | null;
   IsPlan: string;
   Deadline: string | null;
   Priority: string;

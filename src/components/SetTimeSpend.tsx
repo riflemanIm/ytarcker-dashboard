@@ -41,14 +41,11 @@ import isEmpty, {
   headerWeekName,
   isValidDuration,
   normalizeDuration,
-  workMinutesToDurationInput,
 } from "@/helpers";
 import {
-  buildFinalComment,
-  parseFirstIssueTypeLabel,
+  buildCommentWithTags,
+  parseCommentForEditing,
   parseRiskBlock,
-  stripIssueTypeTags,
-  stripRiskBlock,
 } from "@/helpers/issueTypeComment";
 
 import { EditableCellMenuProps } from "@/types/menu";
@@ -142,20 +139,6 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
     }
   }, [open, menuState.durations]);
 
-  const riskBlock = useMemo(
-    () =>
-      `[Risks: { deadlineOk: ${riskState.deadlineOk}, needUpgradeEstimate: ${riskState.needUpgradeEstimate}, makeTaskFaster: ${riskState.makeTaskFaster} }]`,
-    [riskState],
-  );
-
-  const appendRisksToComment = useCallback(
-    (comment: string) => {
-      const cleaned = stripRiskBlock(comment);
-      return cleaned ? `${cleaned}\n${riskBlock}` : riskBlock;
-    },
-    [riskBlock],
-  );
-
   const rememberRecentIssueType = useCallback((label: string | null) => {
     if (!label || typeof window === "undefined") return;
     setRecentIssueTypes((prev) => {
@@ -201,22 +184,29 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
     }
   }, [menuState.issueId, token]);
 
+  const getRowFromItem = useCallback(
+    (item: DurationItem) => {
+      const parsed = parseCommentForEditing(item.comment ?? "", issueTypes);
+      return {
+        durationRaw: item.duration,
+        cleanComment: parsed.cleanComment,
+        selectedLabel: parsed.selectedLabel,
+      };
+    },
+    [issueTypes],
+  );
+
   // Синк rows при изменении durations/issueTypes
   useEffect(() => {
     setRows((prev) => {
       const next: Record<string, RowUI> = {};
       for (const d of durations) {
         const id = String(d.id);
-        const parsedLabel = parseFirstIssueTypeLabel(d.comment ?? "") ?? null;
-        const clean = stripRiskBlock(stripIssueTypeTags(d.comment ?? ""));
+        const parsed = parseCommentForEditing(d.comment ?? "", issueTypes);
         next[id] = {
           durationRaw: prev[id]?.durationRaw ?? d.duration,
-          cleanComment: prev[id]?.cleanComment ?? clean,
-          selectedLabel:
-            prev[id]?.selectedLabel ??
-            (issueTypes.find((t) => t.label === parsedLabel)
-              ? parsedLabel
-              : null),
+          cleanComment: prev[id]?.cleanComment ?? parsed.cleanComment,
+          selectedLabel: prev[id]?.selectedLabel ?? parsed.selectedLabel,
         };
       }
       return next;
@@ -335,17 +325,7 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
 
     for (const item of durations) {
       const id = String(item.id);
-      const row = rows[id] ?? {
-        durationRaw: item.duration,
-        cleanComment: stripRiskBlock(stripIssueTypeTags(item.comment ?? "")),
-        selectedLabel:
-          parseFirstIssueTypeLabel(item.comment ?? "") &&
-          issueTypes.find(
-            (t) => t.label === parseFirstIssueTypeLabel(item.comment ?? ""),
-          )
-            ? parseFirstIssueTypeLabel(item.comment ?? "")
-            : null,
-      };
+      const row = rows[id] ?? getRowFromItem(item);
 
       const durErr = validateDurationValue(
         row.durationRaw ?? item.duration ?? "",
@@ -365,7 +345,7 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
 
     setValidationErrors((prev) => ({ ...prev, ...nextErrors }));
     return !anyInvalid;
-  }, [durations, rows, issueTypes, validateDurationValue]);
+  }, [durations, rows, issueTypes, validateDurationValue, getRowFromItem]);
 
   const handleSaveAllEdits = useCallback(() => {
     if (!validateAllEditRows()) return;
@@ -373,23 +353,14 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
     // Всё валидно — отправляем все строки
     for (const item of durations) {
       const id = String(item.id);
-      const row = rows[id] ?? {
-        durationRaw: item.duration,
-        cleanComment: stripRiskBlock(stripIssueTypeTags(item.comment ?? "")),
-        selectedLabel:
-          parseFirstIssueTypeLabel(item.comment ?? "") &&
-          issueTypes.find(
-            (t) => t.label === parseFirstIssueTypeLabel(item.comment ?? ""),
-          )
-            ? parseFirstIssueTypeLabel(item.comment ?? "")
-            : null,
-      };
+      const row = rows[id] ?? getRowFromItem(item);
 
-      const finalComment = buildFinalComment(
+      const finalWithRisks = buildCommentWithTags(
         row.cleanComment,
         row.selectedLabel ?? undefined,
+        riskState,
+        item.id,
       );
-      const finalWithRisks = appendRisksToComment(finalComment);
 
       setData({
         dateCell: menuState.dateField || undefined,
@@ -413,8 +384,8 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
     durations,
     rows,
     issueTypes,
-    appendRisksToComment,
     riskState,
+    getRowFromItem,
     setData,
     dispatch,
     token,
@@ -432,17 +403,7 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
     // предварительная быстрая проверка перед submit (не заменяет validateAllEditRows)
     for (const item of durations) {
       const id = String(item.id);
-      const row = rows[id] ?? {
-        durationRaw: item.duration,
-        cleanComment: stripRiskBlock(stripIssueTypeTags(item.comment ?? "")),
-        selectedLabel:
-          parseFirstIssueTypeLabel(item.comment ?? "") &&
-          issueTypes.find(
-            (t) => t.label === parseFirstIssueTypeLabel(item.comment ?? ""),
-          )
-            ? parseFirstIssueTypeLabel(item.comment ?? "")
-            : null,
-      };
+      const row = rows[id] ?? getRowFromItem(item);
 
       const dur = row.durationRaw ?? "";
       if (!dur || dur === "P" || dur === "PT0S") return true;
@@ -450,7 +411,7 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
       if (issueTypes.length > 0 && !row.selectedLabel) return true;
     }
     return false;
-  }, [loaded, durations, rows, issueTypes, validateDurationValue]);
+  }, [loaded, durations, rows, issueTypes, validateDurationValue, getRowFromItem]);
 
   const riskSection = (
     <>
@@ -543,11 +504,11 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
       return;
     }
 
-    const finalComment = buildFinalComment(
+    const finalWithRisks = buildCommentWithTags(
       newEntry.comment ?? "",
       selectedIssueTypeLabelNew ?? undefined,
+      riskState,
     );
-    const finalWithRisks = appendRisksToComment(finalComment);
 
     setData({
       dateCell: menuState.dateField || undefined,
@@ -570,7 +531,6 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
     validateDurationValue,
     issueTypes.length,
     selectedIssueTypeLabelNew,
-    appendRisksToComment,
     riskState,
     setData,
     menuState.dateField,
@@ -688,21 +648,7 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
 
               {durations.map((item) => {
                 const id = String(item.id);
-                const row = rows[id] ?? {
-                  durationRaw: item.duration,
-                  cleanComment: stripRiskBlock(
-                    stripIssueTypeTags(item.comment ?? ""),
-                  ),
-                  selectedLabel:
-                    parseFirstIssueTypeLabel(item.comment ?? "") &&
-                    issueTypes.find(
-                      (t) =>
-                        t.label ===
-                        parseFirstIssueTypeLabel(item.comment ?? ""),
-                    )
-                      ? parseFirstIssueTypeLabel(item.comment ?? "")
-                      : null,
-                };
+                const row = rows[id] ?? getRowFromItem(item);
                 const itemError = validationErrors[id];
                 const typeRequired =
                   issueTypes.length > 0 && !row.selectedLabel;
