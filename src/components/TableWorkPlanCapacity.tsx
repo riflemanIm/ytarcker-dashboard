@@ -7,7 +7,7 @@ import { DataGrid, GridColDef } from "@mui/x-data-grid";
 import { FC, useCallback, useEffect, useMemo } from "react";
 import DateRangeSprint from "./DateRangeSprint";
 import type { Dayjs } from "dayjs";
-import { workDaysToDurationInput } from "@/helpers";
+import { workMinutesToDurationInput } from "@/helpers";
 
 const TableWorkPlanCapacity: FC = () => {
   const { state: appState, dispatch } = useAppContext();
@@ -107,7 +107,7 @@ const TableWorkPlanCapacity: FC = () => {
         flex: 1.5,
         minWidth: 160,
         valueFormatter: (value: WorkPlanCapacityItem["EstimateTimeDays"]) =>
-          workDaysToDurationInput(value),
+          workMinutesToDurationInput(value),
       },
       {
         field: "SpentTimeDays",
@@ -115,7 +115,7 @@ const TableWorkPlanCapacity: FC = () => {
         flex: 1,
         minWidth: 60,
         valueFormatter: (value: WorkPlanCapacityItem["SpentTimeDays"]) =>
-          workDaysToDurationInput(value),
+          workMinutesToDurationInput(value),
       },
       {
         field: "RemainTimeDays",
@@ -123,7 +123,7 @@ const TableWorkPlanCapacity: FC = () => {
         flex: 1,
         minWidth: 140,
         valueFormatter: (value: WorkPlanCapacityItem["RemainTimeDays"]) =>
-          workDaysToDurationInput(value),
+          workMinutesToDurationInput(value),
       },
     ],
     [],

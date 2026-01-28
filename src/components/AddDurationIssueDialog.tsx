@@ -4,7 +4,7 @@ import {
   durationToWorkDays,
   isValidDuration,
   normalizeDuration,
-  workDaysToDurationInput,
+  workMinutesToDurationInput,
 } from "@/helpers";
 import { buildFinalComment, stripRiskBlock } from "@/helpers/issueTypeComment";
 import useForm from "@/hooks/useForm";
@@ -152,7 +152,7 @@ export default function AddDurationIssueDialog({
   const formatWorkDays = useCallback((value: number | null | undefined) => {
     if (value == null || !Number.isFinite(value)) return "-";
     const sign = value < 0 ? "-" : "";
-    return `${sign}${workDaysToDurationInput(Math.abs(value))}`;
+    return `${sign}${workMinutesToDurationInput(Math.abs(value))}`;
   }, []);
 
   const submit = () => {

@@ -9,7 +9,7 @@ import SetIssuePlanTable from "./SetIssuePlanTable";
 import { useTableTimePlanSelectors } from "@/hooks/useTableTimePlanSelectors";
 import FilterTableText from "./FilterTableText";
 import { useTheme } from "@mui/material/styles";
-import { workDaysToDurationInput } from "@/helpers";
+import { workMinutesToDurationInput } from "@/helpers";
 
 const TableCheckPlan: FC = () => {
   const {
@@ -33,7 +33,7 @@ const TableCheckPlan: FC = () => {
   const formatWorkDays = (value: unknown) => {
     const num = Number(value);
     if (!Number.isFinite(num)) return "";
-    return workDaysToDurationInput(num);
+    return workMinutesToDurationInput(num);
   };
   const nameMinWidth = useMemo(() => {
     if (isXlUp) return 620;

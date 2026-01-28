@@ -17,7 +17,7 @@ import dayjs from "dayjs";
 import { FC, useMemo, useState } from "react";
 import IssueDisplay from "./IssueDisplay";
 import { getPriorityPalette } from "@/helpers/priorityStyles";
-import { isSuperLogin, workDaysToDurationInput } from "@/helpers";
+import { isSuperLogin, workMinutesToDurationInput } from "@/helpers";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddAlarmIcon from "@mui/icons-material/AddAlarm";
@@ -58,7 +58,7 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
   const formatWorkDays = (value: unknown) => {
     const num = Number(value);
     if (!Number.isFinite(num)) return "";
-    return workDaysToDurationInput(num);
+    return workMinutesToDurationInput(num);
   };
 
   const columns = useMemo<GridColDef<WorkPlanItem | { id: string }>[]>(() => {

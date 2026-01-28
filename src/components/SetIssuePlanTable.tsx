@@ -3,7 +3,7 @@ import {
   durationToWorkDays,
   isValidDuration,
   normalizeDuration,
-  workDaysToDurationInput,
+  workMinutesToDurationInput,
 } from "@/helpers";
 import { TaskListItem, WorkPlanItem } from "@/types/global";
 import {
@@ -81,8 +81,8 @@ const SetIssuePlanTable: FC<SetIssuePlanTableProps> = ({
         ? dayjs(issue.Deadline)
         : null,
     estimateTimeDays: isWorkPlanItem(issue)
-      ? workDaysToDurationInput(issue.EstimateTimeDays)
-      : workDaysToDurationInput(issue?.WorkDays),
+      ? workMinutesToDurationInput(issue.EstimateTimeDays)
+      : workMinutesToDurationInput(issue?.WorkDays),
     priority: getPriorityValue(issue),
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -100,8 +100,8 @@ const SetIssuePlanTable: FC<SetIssuePlanTableProps> = ({
           ? dayjs(issue.Deadline)
           : null,
       estimateTimeDays: isWorkPlanItem(issue)
-        ? workDaysToDurationInput(issue.EstimateTimeDays)
-        : workDaysToDurationInput(issue?.WorkDays),
+        ? workMinutesToDurationInput(issue.EstimateTimeDays)
+        : workMinutesToDurationInput(issue?.WorkDays),
       priority: getPriorityValue(issue),
     });
     setErrors({});

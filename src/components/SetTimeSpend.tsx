@@ -42,7 +42,7 @@ import isEmpty, {
   headerWeekName,
   isValidDuration,
   normalizeDuration,
-  workDaysToDurationInput,
+  workMinutesToDurationInput,
 } from "@/helpers";
 import {
   buildFinalComment,
@@ -455,7 +455,7 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
   const formatWorkDays = useCallback((value: number | null | undefined) => {
     if (value == null || !Number.isFinite(value)) return "-";
     const sign = value < 0 ? "-" : "";
-    return `${sign}${workDaysToDurationInput(Math.abs(value))}`;
+    return `${sign}${workMinutesToDurationInput(Math.abs(value))}`;
   }, []);
 
   const remainingInfo = useMemo(() => {
