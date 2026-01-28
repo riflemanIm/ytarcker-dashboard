@@ -47,7 +47,7 @@ const createEmptyMenuState = (): MenuState => ({
   field: null,
   issueId: null,
   checklistItemId: null,
-  remainTimeDays: undefined,
+  remainTimeMinutes: undefined,
   durations: null,
   dateField: null,
 });
@@ -72,7 +72,7 @@ interface RawTransformedRow {
   issueId: string;
   groupIssue: string;
   checklistItemId?: string | null;
-  remainTimeDays?: number;
+  remainTimeMinutes?: number;
   fields: Record<string, string[]>;
 }
 
@@ -80,7 +80,7 @@ const transformData = (
   data: TaskItem[],
   issueMeta: Map<
     string,
-    { checklistItemId?: string | null; remainTimeDays?: number }
+    { checklistItemId?: string | null; remainTimeMinutes?: number }
   >,
   fieldKeys: string[],
   fieldKeyForDate: (date: Dayjs) => string,
@@ -107,7 +107,7 @@ const transformData = (
         issueId: item.issueId,
         groupIssue: item.groupIssue,
         checklistItemId: item.checklistItemId ?? meta?.checklistItemId ?? null,
-        remainTimeDays: item.remainTimeDays ?? meta?.remainTimeDays,
+        remainTimeMinutes: item.remainTimeMinutes ?? meta?.remainTimeMinutes,
         fields,
       };
     }
@@ -116,10 +116,10 @@ const transformData = (
       grouped[item.key].checklistItemId = item.checklistItemId;
     }
     if (
-      grouped[item.key].remainTimeDays == null &&
-      item.remainTimeDays != null
+      grouped[item.key].remainTimeMinutes == null &&
+      item.remainTimeMinutes != null
     ) {
-      grouped[item.key].remainTimeDays = item.remainTimeDays;
+      grouped[item.key].remainTimeMinutes = item.remainTimeMinutes;
     }
 
     grouped[item.key].fields[fieldKey].push(item.duration);
@@ -140,7 +140,7 @@ const transformData = (
       issueId: rawRow.issueId,
       groupIssue: rawRow.groupIssue,
       checklistItemId: rawRow.checklistItemId ?? null,
-      remainTimeDays: rawRow.remainTimeDays,
+      remainTimeMinutes: rawRow.remainTimeMinutes,
       ...result,
       total: displayDuration(sumDurations(totalsVals)),
     } as unknown as TransformedTaskRow;
@@ -168,7 +168,7 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
   const issueMeta = useMemo(() => {
     const map = new Map<
       string,
-      { checklistItemId?: string | null; remainTimeDays?: number }
+      { checklistItemId?: string | null; remainTimeMinutes?: number }
     >();
     (appState.state.issues ?? []).forEach((issue: any) => {
       const key = issue?.key ?? issue?.issueId ?? issue?.id;
@@ -179,11 +179,11 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
         issue?.checklist_item_id ??
         issue?.checklistItem?.id ??
         null;
-      const remainTimeDays =
-        issue?.remainTimeDays ??
-        issue?.RemainTimeDays ??
+      const remainTimeMinutes =
+        issue?.remainTimeMinutes ??
+        issue?.RemainTimeMinutes ??
         issue?.remain_time_days;
-      map.set(String(key), { checklistItemId, remainTimeDays });
+      map.set(String(key), { checklistItemId, remainTimeMinutes });
     });
     return map;
   }, [appState.state.issues]);
@@ -381,7 +381,7 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
         field: params.field as string,
         issueId: params.row.issueId,
         checklistItemId: params.row.checklistItemId ?? null,
-        remainTimeDays: params.row.remainTimeDays,
+        remainTimeMinutes: params.row.remainTimeMinutes,
         durations: foundRow ?? null,
         dateField: getDateForField(params.field as string),
       });
@@ -420,7 +420,7 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
         field: params.field as string,
         issueId: params.row.issueId,
         checklistItemId: params.row.checklistItemId ?? null,
-        remainTimeDays: params.row.remainTimeDays,
+        remainTimeMinutes: params.row.remainTimeMinutes,
         durations: foundRow,
         dateField: getDateForField(params.field as string),
       };

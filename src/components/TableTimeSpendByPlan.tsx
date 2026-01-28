@@ -91,7 +91,7 @@ const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
     const next = new Set<string>();
     const meta: Record<
       string,
-      { checklistItemId?: string | null; remainTimeDays?: number }
+      { checklistItemId?: string | null; remainTimeMinutes?: number }
     > = {};
     effectivePlanItems.forEach((item) => {
       const key = String(item.TaskKey);
@@ -99,7 +99,7 @@ const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
       if (!meta[key]) {
         meta[key] = {
           checklistItemId: item.checklistItemId ?? null,
-          remainTimeDays: item.RemainTimeDays,
+          remainTimeMinutes: item.RemainTimeMinutes,
         };
       } else if (!meta[key].checklistItemId && item.checklistItemId) {
         meta[key].checklistItemId = item.checklistItemId;
@@ -117,7 +117,7 @@ const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
         return {
           ...item,
           checklistItemId: meta?.checklistItemId ?? null,
-          remainTimeDays: meta?.remainTimeDays,
+          remainTimeMinutes: meta?.remainTimeMinutes,
         };
       });
   }, [data, planKeys, planMeta]);

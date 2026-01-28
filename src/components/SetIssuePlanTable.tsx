@@ -40,7 +40,7 @@ type FormState = {
   checklistItemId: string;
   workName: string;
   deadline: Dayjs | null;
-  estimateTimeDays: string;
+  estimateTimeMinutes: string;
   priority: "Red" | "Orange" | "Green";
 };
 
@@ -80,9 +80,9 @@ const SetIssuePlanTable: FC<SetIssuePlanTableProps> = ({
       issue?.Deadline && dayjs(issue.Deadline).isValid()
         ? dayjs(issue.Deadline)
         : null,
-    estimateTimeDays: isWorkPlanItem(issue)
-      ? workMinutesToDurationInput(issue.EstimateTimeDays)
-      : workMinutesToDurationInput(issue?.WorkDays),
+    estimateTimeMinutes: isWorkPlanItem(issue)
+      ? workMinutesToDurationInput(issue.EstimateTimeMinutes)
+      : workMinutesToDurationInput(issue?.WorkMinutes),
     priority: getPriorityValue(issue),
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -99,9 +99,9 @@ const SetIssuePlanTable: FC<SetIssuePlanTableProps> = ({
         issue?.Deadline && dayjs(issue.Deadline).isValid()
           ? dayjs(issue.Deadline)
           : null,
-      estimateTimeDays: isWorkPlanItem(issue)
-        ? workMinutesToDurationInput(issue.EstimateTimeDays)
-        : workMinutesToDurationInput(issue?.WorkDays),
+      estimateTimeMinutes: isWorkPlanItem(issue)
+        ? workMinutesToDurationInput(issue.EstimateTimeMinutes)
+        : workMinutesToDurationInput(issue?.WorkMinutes),
       priority: getPriorityValue(issue),
     });
     setErrors({});
@@ -119,14 +119,14 @@ const SetIssuePlanTable: FC<SetIssuePlanTableProps> = ({
       nextErrors.deadline = "Укажите корректную дату";
     }
 
-    const normalized = normalizeDuration(values.estimateTimeDays ?? "");
+    const normalized = normalizeDuration(values.estimateTimeMinutes ?? "");
     if (
       normalized.trim() === "" ||
       normalized === "P" ||
       !isValidDuration(normalized)
     ) {
-      nextErrors.estimateTimeDays = `Значение "${
-        values.estimateTimeDays ?? ""
+      nextErrors.estimateTimeMinutes = `Значение "${
+        values.estimateTimeMinutes ?? ""
       }" не является корректным форматом времени.`;
     }
     return nextErrors;
@@ -171,7 +171,7 @@ const SetIssuePlanTable: FC<SetIssuePlanTableProps> = ({
 
   const handleEstimateChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const raw = event.target.value ?? "";
-    updateForm({ ...form, estimateTimeDays: raw });
+    updateForm({ ...form, estimateTimeMinutes: raw });
   };
 
   const handleDeadlineChange = (date: Dayjs | null) => {
@@ -183,7 +183,9 @@ const SetIssuePlanTable: FC<SetIssuePlanTableProps> = ({
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 
-    const normalizedEstimate = normalizeDuration(form.estimateTimeDays ?? "");
+    const normalizedEstimate = normalizeDuration(
+      form.estimateTimeMinutes ?? "",
+    );
     const estimateDays =
       normalizedEstimate !== ""
         ? durationToWorkDays(normalizedEstimate)
@@ -206,7 +208,7 @@ const SetIssuePlanTable: FC<SetIssuePlanTableProps> = ({
       deadline: form.deadline
         ? dayjs(form.deadline).format("YYYY-MM-DD")
         : null,
-      estimateTimeDays: estimateDays,
+      estimateTimeMinutes: estimateDays,
       priority: form.priority,
     };
 
@@ -323,11 +325,11 @@ const SetIssuePlanTable: FC<SetIssuePlanTableProps> = ({
           />
           <TextField
             label="Оценка времени (d h m), "
-            value={form.estimateTimeDays}
+            value={form.estimateTimeMinutes}
             onChange={handleEstimateChange}
             margin="normal"
-            error={Boolean(errors.estimateTimeDays)}
-            helperText={errors.estimateTimeDays}
+            error={Boolean(errors.estimateTimeMinutes)}
+            helperText={errors.estimateTimeMinutes}
             fullWidth
           />
           <TextField

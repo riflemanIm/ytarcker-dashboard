@@ -119,12 +119,12 @@ const TableCheckPlan: FC = () => {
       },
 
       {
-        field: "WorkDays",
-        headerName: "Трудозатраты, дн.",
+        field: "WorkMinutes",
+        headerName: "Трудозатраты, мин.",
         flex: 1,
         minWidth: 60,
         disableColumnMenu: true,
-        valueFormatter: (value: TaskListItem["WorkDays"]) =>
+        valueFormatter: (value: TaskListItem["WorkMinutes"]) =>
           formatWorkDays(value) || "-",
       },
       {

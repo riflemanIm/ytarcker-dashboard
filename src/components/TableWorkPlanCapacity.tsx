@@ -102,27 +102,27 @@ const TableWorkPlanCapacity: FC = () => {
         ),
       },
       {
-        field: "EstimateTimeDays",
-        headerName: "План, дн.",
+        field: "EstimateTimeMinutes",
+        headerName: "План, мин.",
         flex: 1.5,
         minWidth: 160,
-        valueFormatter: (value: WorkPlanCapacityItem["EstimateTimeDays"]) =>
+        valueFormatter: (value: WorkPlanCapacityItem["EstimateTimeMinutes"]) =>
           workMinutesToDurationInput(value),
       },
       {
-        field: "SpentTimeDays",
-        headerName: "Факт, дн.",
+        field: "SpentTimeMinutes",
+        headerName: "Факт, мин.",
         flex: 1,
         minWidth: 60,
-        valueFormatter: (value: WorkPlanCapacityItem["SpentTimeDays"]) =>
+        valueFormatter: (value: WorkPlanCapacityItem["SpentTimeMinutes"]) =>
           workMinutesToDurationInput(value),
       },
       {
-        field: "RemainTimeDays",
-        headerName: "Остаток, дн.",
+        field: "RemainTimeMinutes",
+        headerName: "Остаток, мин.",
         flex: 1,
         minWidth: 140,
-        valueFormatter: (value: WorkPlanCapacityItem["RemainTimeDays"]) =>
+        valueFormatter: (value: WorkPlanCapacityItem["RemainTimeMinutes"]) =>
           workMinutesToDurationInput(value),
       },
     ],

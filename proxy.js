@@ -1173,7 +1173,7 @@ const handleSetWorkPlan = async (req, res) => {
       checklistItemId,
       workName,
       deadline,
-      estimateTimeDays,
+      estimateTimeMinutes,
       priority,
     } = req.body ?? {};
 
@@ -1215,7 +1215,7 @@ const handleSetWorkPlan = async (req, res) => {
         checklistItemId,
         workName,
         deadline,
-        estimateTimeDays,
+        estimateTimeMinutes,
         priority,
       },
       {

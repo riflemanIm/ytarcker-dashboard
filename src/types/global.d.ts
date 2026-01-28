@@ -29,7 +29,7 @@ export interface TlSprint {
   current_sprint: boolean;
   archive: boolean;
   sort_by: number;
-  workingdays?: number;
+  workingminutes?: number;
 }
 
 export interface TlGroup {
@@ -64,7 +64,7 @@ export interface TaskListItem {
   WorkName: string;
   CheckListAssignee: string;
   trackerUid: string;
-  WorkDays: number;
+  WorkMinutes: number;
   Deadline: string | null;
   WorkNameDict: string;
 }
@@ -78,11 +78,11 @@ export interface WorkPlanItem {
   TaskName: string;
   WorkName: string;
   WorkDone: boolean;
-  EstimateTimeDays: number;
-  SpentTimeDays: number;
-  RemainTimeDays: number;
+  EstimateTimeMinutes: number;
+  SpentTimeMinutes: number;
+  RemainTimeMinutes: number;
   Sprint?: string;
-  WorkingDays?: number;
+  WorkingMinutes?: number;
   ProjectName: string;
   checklistItemId?: string | null;
   ProjectId: number;
@@ -94,9 +94,9 @@ export interface WorkPlanItem {
 export interface WorkPlanCapacityItem {
   Sprint: string;
   CheckListAssignee: string;
-  EstimateTimeDays: number;
-  SpentTimeDays: number;
-  RemainTimeDays: number;
+  EstimateTimeMinutes: number;
+  SpentTimeMinutes: number;
+  RemainTimeMinutes: number;
   RoleName: string;
 }
 
@@ -211,7 +211,7 @@ export interface TaskItem {
   comment: string;
   durations?: DurationItem[];
   checklistItemId?: string | null;
-  remainTimeDays?: number;
+  remainTimeMinutes?: number;
 }
 
 export interface TaskItemMenu {
@@ -230,7 +230,7 @@ export interface TransformedTaskRow {
   issueId: string;
   groupIssue: string;
   checklistItemId?: string | null;
-  remainTimeDays?: number;
+  remainTimeMinutes?: number;
   monday: string;
   tuesday: string;
   wednesday: string;
@@ -248,7 +248,7 @@ export interface MenuState {
   field: DayOfWeek | string | null;
   issueId: string | null;
   checklistItemId?: string | null;
-  remainTimeDays?: number;
+  remainTimeMinutes?: number;
   durations: DurationItem[] | null;
   dateField: Dayjs | null;
 }

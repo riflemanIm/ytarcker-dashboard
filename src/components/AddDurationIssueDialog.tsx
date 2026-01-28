@@ -226,10 +226,19 @@ export default function AddDurationIssueDialog({
   // автоселект единственного типа
   useEffect(() => {
     if (!issueTypesState.loaded) return;
-    if (labels.length === 1 && !selectedIssueType) {
+    if (selectedIssueType) return;
+    const presetLabel =
+      (values.issue as any)?.WorkNameDict ??
+      (values.issue as any)?.issueTypeLabel ??
+      null;
+    if (presetLabel && labels.includes(presetLabel)) {
+      setSelectedIssueType(presetLabel);
+      return;
+    }
+    if (labels.length === 1) {
       setSelectedIssueType(labels[0]);
     }
-  }, [issueTypesState.loaded, labels, selectedIssueType]);
+  }, [issueTypesState.loaded, labels, selectedIssueType, values.issue]);
 
   const isControlled = openProp != null;
   const resolvedOpen = isControlled ? openProp : internalOpen;
@@ -293,13 +302,13 @@ export default function AddDurationIssueDialog({
     planTask?.taskKey ?? planTask?.TaskKey ?? planTask?.key ?? "-";
   const headerWorkName = planTask?.workName ?? planTask?.WorkName ?? "-";
 
-  const remainTimeDays =
-    (values.issue as any)?.remainTimeDays ??
-    (values.issue as any)?.RemainTimeDays ??
+  const remainTimeMinutes =
+    (values.issue as any)?.remainTimeMinutes ??
+    (values.issue as any)?.RemainTimeMinutes ??
     null;
 
   const remainingInfo = useMemo(() => {
-    if (remainTimeDays == null) return null;
+    if (remainTimeMinutes == null) return null;
     const normalized = normalizeDuration(values.duration ?? "");
     if (
       normalized.trim() === "" ||
@@ -310,10 +319,10 @@ export default function AddDurationIssueDialog({
     }
     const planned = durationToWorkDays(normalized);
     if (!Number.isFinite(planned)) return null;
-    return planned - remainTimeDays;
-  }, [values.duration, remainTimeDays]);
+    return planned - remainTimeMinutes;
+  }, [values.duration, remainTimeMinutes]);
 
-  const planningSection = remainTimeDays != null && (
+  const planningSection = remainTimeMinutes != null && (
     <>
       <Typography variant="subtitle1">Планирование</Typography>
       <Stack direction="row" spacing={2} alignItems="center" mt={1}>
@@ -546,7 +555,7 @@ export default function AddDurationIssueDialog({
               </Grid>
             )}
 
-            {remainTimeDays != null && (
+            {remainTimeMinutes != null && (
               <>
                 <Grid size={12}>
                   <Divider sx={{ my: 1 }} />

@@ -115,11 +115,12 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
                     setAddTimeIssue({
                       key: row.TaskKey,
                       summary: row.TaskName,
-                      remainTimeDays: row.RemainTimeDays,
+                      remainTimeMinutes: row.RemainTimeMinutes,
                       checklistItemId: row.checklistItemId ?? null,
                       TaskName: row.TaskName,
                       TaskKey: row.TaskKey,
                       WorkName: row.WorkName,
+                      WorkNameDict: row.WorkNameDict,
                     });
                     setAddTimeOpen(true);
                   }}
@@ -177,27 +178,27 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
       },
       { field: "ProjectName", headerName: "Проект", flex: 1.2, minWidth: 150 },
       {
-        field: "EstimateTimeDays",
-        headerName: "Оценка, дн.",
+        field: "EstimateTimeMinutes",
+        headerName: "Оценка, мин.",
         flex: 0.7,
         minWidth: 90,
-        valueFormatter: (value: WorkPlanItem["EstimateTimeDays"]) =>
+        valueFormatter: (value: WorkPlanItem["EstimateTimeMinutes"]) =>
           formatWorkDays(value),
       },
       {
-        field: "SpentTimeDays",
-        headerName: "Потрачено, дн.",
+        field: "SpentTimeMinutes",
+        headerName: "Потрачено, мин.",
         flex: 0.8,
         minWidth: 100,
-        valueFormatter: (value: WorkPlanItem["SpentTimeDays"]) =>
+        valueFormatter: (value: WorkPlanItem["SpentTimeMinutes"]) =>
           formatWorkDays(value),
       },
       {
-        field: "RemainTimeDays",
-        headerName: "Остаток, дн.",
+        field: "RemainTimeMinutes",
+        headerName: "Остаток, мин.",
         flex: 0.8,
         minWidth: 100,
-        valueFormatter: (value: WorkPlanItem["RemainTimeDays"]) =>
+        valueFormatter: (value: WorkPlanItem["RemainTimeMinutes"]) =>
           formatWorkDays(value),
       },
       {
@@ -241,11 +242,12 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
       rows.map((item) => ({
         key: item.TaskKey,
         summary: item.TaskName,
-        remainTimeDays: item.RemainTimeDays,
+        remainTimeMinutes: item.RemainTimeMinutes,
         checklistItemId: item.checklistItemId ?? null,
         TaskName: item.TaskName,
         TaskKey: item.TaskKey,
         WorkName: item.WorkName,
+        WorkNameDict: item.WorkNameDict,
       })),
     [rows],
   );
@@ -266,9 +268,9 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
         WorkNameDict: "",
         CheckListAssignee: "",
         ProjectName: "",
-        EstimateTimeDays: sum(filteredRows, "EstimateTimeDays"),
-        SpentTimeDays: sum(filteredRows, "SpentTimeDays"),
-        RemainTimeDays: sum(filteredRows, "RemainTimeDays"),
+        EstimateTimeMinutes: sum(filteredRows, "EstimateTimeMinutes"),
+        SpentTimeMinutes: sum(filteredRows, "SpentTimeMinutes"),
+        RemainTimeMinutes: sum(filteredRows, "RemainTimeMinutes"),
       } as any,
     ];
   }, [filteredRows]);
@@ -279,12 +281,12 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
     const sprint = sprins.find(
       (item) => String(item.yt_tl_sprints_id) === selectedSprintId,
     );
-    return sprint?.workingdays ?? null;
+    return sprint?.workingminutes ?? null;
   }, [state.tableTimePlanState]);
 
   const totalSpentDays = useMemo(() => {
     const total = filteredRows.reduce(
-      (acc, item) => acc + (Number(item.SpentTimeDays) || 0),
+      (acc, item) => acc + (Number(item.SpentTimeMinutes) || 0),
       0,
     );
     return formatWorkDays(total);

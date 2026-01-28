@@ -755,7 +755,7 @@ export interface SetWorkPlanArgs {
   checklistItemId?: string;
   workName?: string;
   deadline?: string | null;
-  estimateTimeDays?: number;
+  estimateTimeMinutes?: number;
   priority?: "Red" | "Orange" | "Green";
   workPlanId?: number;
 }

@@ -459,7 +459,7 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
   }, []);
 
   const remainingInfo = useMemo(() => {
-    if (menuState.remainTimeDays == null) return null;
+    if (menuState.remainTimeMinutes == null) return null;
     const normalized = normalizeDuration(newEntry.duration ?? "");
     if (
       normalized.trim() === "" ||
@@ -470,8 +470,8 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
     }
     const planned = durationToWorkDays(normalized);
     if (!Number.isFinite(planned)) return null;
-    return planned - menuState.remainTimeDays;
-  }, [newEntry.duration, menuState.remainTimeDays]);
+    return planned - menuState.remainTimeMinutes;
+  }, [newEntry.duration, menuState.remainTimeMinutes]);
 
   const planningSection = (
     <Typography variant="body1" noWrap>
@@ -958,7 +958,7 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
                 )}
               </Grid>
 
-              {menuState.remainTimeDays != null && (
+              {menuState.remainTimeMinutes != null && (
                 <>
                   <Grid size={{ xs: 12, md: 6 }}>{riskSection}</Grid>
                   <Grid size={{ xs: 12, md: 6 }}>{planningSection}</Grid>
