@@ -573,6 +573,25 @@ export const durationToWorkDays = (isoDuration: string): number => {
   return Math.round(totalDays * 100) / 100;
 };
 
+export const durationToWorkMinutes = (isoDuration: string): number => {
+  if (!isoDuration) return 0;
+  const match = isoDuration.match(
+    /^P(?:(\d+)W)?(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?$/i,
+  );
+  if (!match) return 0;
+
+  const [, weeks = "0", days = "0", hours = "0", minutes = "0", seconds = "0"] =
+    match;
+  const totalMinutes =
+    (Number(weeks) * WORK_DAYS_PER_WEEK + Number(days)) *
+      WORK_HOURS_PER_DAY *
+      60 +
+    Number(hours) * 60 +
+    Number(minutes) +
+    Number(seconds) / 60;
+  return Math.round(totalMinutes);
+};
+
 // ==== MSK helpers (UTC+3) ====
 const MSK_OFFSET_MIN = 180; // UTC+3, без DST
 

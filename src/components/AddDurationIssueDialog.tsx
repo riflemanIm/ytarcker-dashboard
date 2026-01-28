@@ -1,11 +1,6 @@
 import { SetDataArgs, getIssueTypeList } from "@/actions/data";
 import { useAppContext } from "@/context/AppContext";
-import {
-  durationToWorkDays,
-  isValidDuration,
-  normalizeDuration,
-  workMinutesToDurationInput,
-} from "@/helpers";
+import { isValidDuration, normalizeDuration } from "@/helpers";
 import { buildFinalComment, stripRiskBlock } from "@/helpers/issueTypeComment";
 import useForm from "@/hooks/useForm";
 import AddIcon from "@mui/icons-material/Add";
@@ -17,7 +12,6 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  Divider,
   FormControlLabel,
   Grid2 as Grid,
   IconButton,
@@ -31,6 +25,7 @@ import dayjs, { Dayjs } from "dayjs";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Issue } from "../types/global";
 import MuiUIPicker from "./MUIDatePicker";
+import PlanningInfoSection from "./PlanningInfoSection";
 import SelectIssueTypeList from "./SelectIssueTypeList";
 interface AddDurationIssueDialogProps {
   issues: Issue[];
@@ -148,12 +143,6 @@ export default function AddDurationIssueDialog({
     // не показывать ошибку раньше времени (см. showTypeError ниже)
     return errs;
   };
-
-  const formatWorkDays = useCallback((value: number | null | undefined) => {
-    if (value == null || !Number.isFinite(value)) return "-";
-    const sign = value < 0 ? "-" : "";
-    return `${sign}${workMinutesToDurationInput(Math.abs(value))}`;
-  }, []);
 
   const submit = () => {
     // Жёсткая проверка на выбранный тип при наличии списка
@@ -306,32 +295,6 @@ export default function AddDurationIssueDialog({
     (values.issue as any)?.remainTimeMinutes ??
     (values.issue as any)?.RemainTimeMinutes ??
     null;
-
-  const remainingInfo = useMemo(() => {
-    if (remainTimeMinutes == null) return null;
-    const normalized = normalizeDuration(values.duration ?? "");
-    if (
-      normalized.trim() === "" ||
-      normalized === "P" ||
-      !isValidDuration(normalized)
-    ) {
-      return null;
-    }
-    const planned = durationToWorkDays(normalized);
-    if (!Number.isFinite(planned)) return null;
-    return planned - remainTimeMinutes;
-  }, [values.duration, remainTimeMinutes]);
-
-  const planningSection = remainTimeMinutes != null && (
-    <>
-      <Typography variant="subtitle1">Планирование</Typography>
-      <Stack direction="row" spacing={2} alignItems="center" mt={1}>
-        <Typography variant="subtitle2">
-          Осталось времени = {formatWorkDays(remainingInfo)}
-        </Typography>
-      </Stack>
-    </>
-  );
 
   const riskSection = (
     <>
@@ -555,15 +518,11 @@ export default function AddDurationIssueDialog({
               </Grid>
             )}
 
-            {remainTimeMinutes != null && (
-              <>
-                <Grid size={12}>
-                  <Divider sx={{ my: 1 }} />
-                </Grid>
-                <Grid size={{ xs: 12, md: 6 }}>{riskSection}</Grid>
-                <Grid size={{ xs: 12, md: 6 }}>{planningSection}</Grid>
-              </>
-            )}
+            <PlanningInfoSection
+              remainTimeMinutes={remainTimeMinutes}
+              duration={values.duration ?? ""}
+              riskSection={riskSection}
+            />
           </Grid>
         </DialogContent>
 

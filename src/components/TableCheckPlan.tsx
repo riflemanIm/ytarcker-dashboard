@@ -30,7 +30,7 @@ const TableCheckPlan: FC = () => {
   const isLgUp = useMediaQuery(theme.breakpoints.up("lg"));
   const isMdUp = useMediaQuery(theme.breakpoints.up("md"));
   const isSmUp = useMediaQuery(theme.breakpoints.up("sm"));
-  const formatWorkDays = (value: unknown) => {
+  const formatWorkMinutes = (value: unknown) => {
     const num = Number(value);
     if (!Number.isFinite(num)) return "";
     return workMinutesToDurationInput(num);
@@ -125,7 +125,7 @@ const TableCheckPlan: FC = () => {
         minWidth: 60,
         disableColumnMenu: true,
         valueFormatter: (value: TaskListItem["WorkMinutes"]) =>
-          formatWorkDays(value) || "-",
+          formatWorkMinutes(value) || "-",
       },
       {
         field: "Deadline",

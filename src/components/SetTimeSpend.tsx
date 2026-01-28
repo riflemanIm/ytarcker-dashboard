@@ -19,8 +19,8 @@ import {
   ListItemText,
   Menu,
   MenuItem,
-  TextField,
   Stack,
+  TextField,
   Typography,
 } from "@mui/material";
 import React, {
@@ -38,7 +38,6 @@ import isEmpty, {
   dayOfWeekNameByDate,
   displayDuration,
   displayStartTime,
-  durationToWorkDays,
   headerWeekName,
   isValidDuration,
   normalizeDuration,
@@ -46,15 +45,16 @@ import isEmpty, {
 } from "@/helpers";
 import {
   buildFinalComment,
-  parseRiskBlock,
   parseFirstIssueTypeLabel,
-  stripRiskBlock,
+  parseRiskBlock,
   stripIssueTypeTags,
+  stripRiskBlock,
 } from "@/helpers/issueTypeComment";
 
 import { EditableCellMenuProps } from "@/types/menu";
 import { DurationItem, TaskItemMenu } from "../types/global";
 import SelectIssueTypeList from "./SelectIssueTypeList";
+import PlanningInfoSection from "./PlanningInfoSection";
 
 type RowUI = {
   durationRaw: string;
@@ -451,36 +451,6 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
     }
     return false;
   }, [loaded, durations, rows, issueTypes, validateDurationValue]);
-
-  const formatWorkDays = useCallback((value: number | null | undefined) => {
-    if (value == null || !Number.isFinite(value)) return "-";
-    const sign = value < 0 ? "-" : "";
-    return `${sign}${workMinutesToDurationInput(Math.abs(value))}`;
-  }, []);
-
-  const remainingInfo = useMemo(() => {
-    if (menuState.remainTimeMinutes == null) return null;
-    const normalized = normalizeDuration(newEntry.duration ?? "");
-    if (
-      normalized.trim() === "" ||
-      normalized === "P" ||
-      !isValidDuration(normalized)
-    ) {
-      return null;
-    }
-    const planned = durationToWorkDays(normalized);
-    if (!Number.isFinite(planned)) return null;
-    return planned - menuState.remainTimeMinutes;
-  }, [newEntry.duration, menuState.remainTimeMinutes]);
-
-  const planningSection = (
-    <Typography variant="body1" noWrap>
-      Осталось времени:
-      <Typography variant="body1" color="warning" component="span" noWrap>
-        {formatWorkDays(remainingInfo)}
-      </Typography>
-    </Typography>
-  );
 
   const riskSection = (
     <>
@@ -958,12 +928,25 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
                 )}
               </Grid>
 
-              {menuState.remainTimeMinutes != null && (
-                <>
-                  <Grid size={{ xs: 12, md: 6 }}>{riskSection}</Grid>
-                  <Grid size={{ xs: 12, md: 6 }}>{planningSection}</Grid>
-                </>
-              )}
+              <PlanningInfoSection
+                remainTimeMinutes={menuState.remainTimeMinutes}
+                duration={newEntry.duration ?? ""}
+                riskSection={riskSection}
+                showDivider={false}
+                renderPlanningContent={(formattedRemaining) => (
+                  <Typography variant="body1" noWrap>
+                    Осталось времени:
+                    <Typography
+                      variant="body1"
+                      color="warning"
+                      component="span"
+                      noWrap
+                    >
+                      {formattedRemaining}
+                    </Typography>
+                  </Typography>
+                )}
+              />
               <Grid
                 size={12}
                 display="flex"

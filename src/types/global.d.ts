@@ -74,6 +74,8 @@ export interface WorkPlanItem {
   IsPlan: string;
   Deadline: string | null;
   Priority: string;
+  StatusName?: string | null;
+  Comment?: string | null;
   TaskKey: string;
   TaskName: string;
   WorkName: string;

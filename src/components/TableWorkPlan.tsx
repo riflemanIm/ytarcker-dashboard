@@ -55,7 +55,7 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
   const isAdmin = !!(login && isSuperLogin(login));
   const canAddTime = state.state.fetchByLogin;
 
-  const formatWorkDays = (value: unknown) => {
+  const formatWorkMinutes = (value: unknown) => {
     const num = Number(value);
     if (!Number.isFinite(num)) return "";
     return workMinutesToDurationInput(num);
@@ -164,6 +164,18 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
           value ? "Да" : "Нет",
       },
       {
+        field: "StatusName",
+        headerName: "Статус",
+        flex: 0.9,
+        minWidth: 120,
+      },
+      {
+        field: "Comment",
+        headerName: "Комментарий",
+        flex: 1.2,
+        minWidth: 160,
+      },
+      {
         field: "WorkNameDict",
         headerName: "Тип работы",
         flex: 0.9,
@@ -183,7 +195,7 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
         flex: 0.7,
         minWidth: 90,
         valueFormatter: (value: WorkPlanItem["EstimateTimeMinutes"]) =>
-          formatWorkDays(value),
+          formatWorkMinutes(value),
       },
       {
         field: "SpentTimeMinutes",
@@ -191,7 +203,7 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
         flex: 0.8,
         minWidth: 100,
         valueFormatter: (value: WorkPlanItem["SpentTimeMinutes"]) =>
-          formatWorkDays(value),
+          formatWorkMinutes(value),
       },
       {
         field: "RemainTimeMinutes",
@@ -199,7 +211,7 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
         flex: 0.8,
         minWidth: 100,
         valueFormatter: (value: WorkPlanItem["RemainTimeMinutes"]) =>
-          formatWorkDays(value),
+          formatWorkMinutes(value),
       },
       {
         field: "Deadline",
@@ -230,6 +242,8 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
         item.WorkNameDict,
         item.ProjectName,
         item.CheckListAssignee,
+        item.StatusName,
+        item.Comment,
       ]
         .filter(Boolean)
         .map((value) => String(value).toLowerCase());
@@ -266,6 +280,8 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
         Sprint: "",
         WorkName: "",
         WorkNameDict: "",
+        StatusName: "",
+        Comment: "",
         CheckListAssignee: "",
         ProjectName: "",
         EstimateTimeMinutes: sum(filteredRows, "EstimateTimeMinutes"),
@@ -289,14 +305,14 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
       (acc, item) => acc + (Number(item.SpentTimeMinutes) || 0),
       0,
     );
-    return formatWorkDays(total);
+    return formatWorkMinutes(total);
   }, [filteredRows]);
 
   const remainingDays = useMemo(() => {
     if (sprintWorkingDays == null) return null;
     const spent = Number(totalSpentDays);
     if (!Number.isFinite(spent)) return null;
-    return formatWorkDays(sprintWorkingDays - spent);
+    return formatWorkMinutes(sprintWorkingDays - spent);
   }, [sprintWorkingDays, totalSpentDays]);
 
   const handleDelete = async () => {
@@ -334,7 +350,7 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
         value={filterText}
         onChange={setFilterText}
         label="Фильтр"
-        placeholder="Название, Key, Работа, Тип работы, Проект, Сотрудник"
+        placeholder="Название, Key, Работа, Тип работы, Проект, Сотрудник, Статус, Комментарий"
         disabled={loading || rows.length === 0}
       />
       <DataGrid
