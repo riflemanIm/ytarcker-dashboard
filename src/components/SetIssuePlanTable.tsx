@@ -42,8 +42,6 @@ type FormState = {
   deadline: Dayjs | null;
   estimateTimeMinutes: string;
   priority: "Red" | "Orange" | "Green";
-  statusName: string;
-  comment: string;
 };
 
 const isWorkPlanItem = (
@@ -86,8 +84,6 @@ const SetIssuePlanTable: FC<SetIssuePlanTableProps> = ({
       ? workMinutesToDurationInput(issue.EstimateTimeMinutes)
       : workMinutesToDurationInput(issue?.WorkMinutes),
     priority: getPriorityValue(issue),
-    statusName: (issue as WorkPlanItem | null)?.StatusName ?? "",
-    comment: (issue as WorkPlanItem | null)?.Comment ?? "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
@@ -107,8 +103,6 @@ const SetIssuePlanTable: FC<SetIssuePlanTableProps> = ({
         ? workMinutesToDurationInput(issue.EstimateTimeMinutes)
         : workMinutesToDurationInput(issue?.WorkMinutes),
       priority: getPriorityValue(issue),
-      statusName: (issue as WorkPlanItem | null)?.StatusName ?? "",
-      comment: (issue as WorkPlanItem | null)?.Comment ?? "",
     });
     setErrors({});
   }, [issue, sprintId, open]);
@@ -216,8 +210,6 @@ const SetIssuePlanTable: FC<SetIssuePlanTableProps> = ({
         : null,
       estimateTimeMinutes: estimateMinutes,
       priority: form.priority,
-      StatusName: form.statusName || undefined,
-      Comment: form.comment || undefined,
     };
 
     try {
@@ -397,20 +389,6 @@ const SetIssuePlanTable: FC<SetIssuePlanTableProps> = ({
               </MenuItem>
             </TextField>
           </Stack>
-          <TextField
-            label="Статус"
-            value={form.statusName}
-            onChange={handleChange("statusName")}
-            fullWidth
-          />
-          <TextField
-            label="Комментарий"
-            value={form.comment}
-            onChange={handleChange("comment")}
-            fullWidth
-            multiline
-            minRows={2}
-          />
         </Stack>
       </DialogContent>
       <DialogActions>
