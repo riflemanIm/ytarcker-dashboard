@@ -68,7 +68,7 @@ const TableCheckPlan: FC = () => {
     return workMinutesToDurationInput(num);
   };
   const nameMinWidth = useMemo(() => {
-    if (isXlUp) return 620;
+    if (isXlUp) return 580;
     if (isLgUp) return 380;
     if (isMdUp) return 620;
     if (isSmUp) return 480;
@@ -120,13 +120,7 @@ const TableCheckPlan: FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [
-    effectiveTrackerUids,
-    projectIds,
-    roleIds,
-    groupIds,
-    workPlanRefreshKey,
-  ]);
+  }, [effectiveTrackerUids, projectIds, roleIds, groupIds, workPlanRefreshKey]);
 
   const columns = useMemo<GridColDef<TaskListItem>[]>(
     () => [
@@ -145,55 +139,61 @@ const TableCheckPlan: FC = () => {
             [params.value, workName, workType].filter(Boolean).join(" / ") ||
             "-";
           return (
-            <Stack direction="row" spacing={1} alignItems="center">
-              <Tooltip title={title}>
-                <span>
-                  <IssueDisplay
-                    display={params.value}
-                    href={`https://tracker.yandex.ru/${params.row.TaskKey}`}
-                    fio={params.row.CheckListAssignee ?? ""}
-                  />
-                </span>
-              </Tooltip>
-              <Tooltip title="Показать информацию по задаче">
-                <IconButton
-                  size="small"
-                  sx={(theme) => ({ color: theme.palette.info.main })}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    handleOpenInfo(params.row as TaskListItem);
-                  }}
-                >
-                  <InfoIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            </Stack>
+            <Tooltip title={title}>
+              <span>
+                <IssueDisplay
+                  display={params.value}
+                  href={`https://tracker.yandex.ru/${params.row.TaskKey}`}
+                  fio={params.row.CheckListAssignee ?? ""}
+                />
+              </span>
+            </Tooltip>
           );
         },
       },
       {
         field: "TaskKey",
         headerName: "В План",
-        minWidth: 100,
+        minWidth: 140,
         flex: 1,
         sortable: false,
         filterable: false,
         disableColumnMenu: true,
         renderCell: (params: GridRenderCellParams) => (
-          <Tooltip title="В План">
-            <Button
-              size="small"
-              variant="outlined"
-              onClick={(event) => {
-                event.stopPropagation();
-                setSelectedIssue(params.row);
-                setDialogOpen(true);
-              }}
-              disabled={!sprintId}
-            >
-              {params.value}
-            </Button>
-          </Tooltip>
+          <Stack
+            direction="row"
+            spacing={1}
+            alignItems="center"
+            justifyContent="space-between"
+            sx={{ height: "100%" }}
+          >
+            <Tooltip title="В План">
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setSelectedIssue(params.row);
+                  setDialogOpen(true);
+                }}
+                disabled={!sprintId}
+              >
+                {params.value}
+              </Button>
+            </Tooltip>
+            <Tooltip title="Показать информацию по задаче">
+              <IconButton
+                size="small"
+                sx={(theme) => ({ color: theme.palette.info.main })}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  handleOpenInfo(params.row as TaskListItem);
+                }}
+              >
+                <InfoIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          </Stack>
         ),
       },
 

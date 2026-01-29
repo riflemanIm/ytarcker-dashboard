@@ -139,7 +139,12 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
         params: GridRenderCellParams<WorkPlanItem | { id: string }>,
       ) =>
         (params.row as any).id === "__total__" ? null : (
-          <Stack direction="row" spacing={1}>
+          <Stack
+            direction="row"
+            spacing={1}
+            alignItems="center"
+            sx={{ height: "100%" }}
+          >
             <Tooltip title="Показать информацию по задаче">
               <IconButton
                 size="small"
