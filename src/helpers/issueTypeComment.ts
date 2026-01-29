@@ -38,7 +38,7 @@ export function stripIssueTypeTags(comment: string): string {
   return comment
     .replace(/\[ProjectControlWT:[^\]]+\]/g, "")
     .replace(/\[YT_TL_WORKPLAN_ID:[^\]]+\]/g, "")
-    .replace(/\[YT_TL_WORKLOG_ID:[^\]]+\]/g, "")
+    .replace(/\[YT_TL_WORKLOG_ID:[^\]]*\]/g, "")
     .trim();
 }
 
