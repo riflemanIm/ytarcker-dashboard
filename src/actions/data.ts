@@ -102,6 +102,8 @@ export interface SetDataArgs {
   needUpgradeEstimate?: boolean;
   makeTaskFaster?: boolean;
   startDate?: string;
+  issueTypeLabel?: string | null;
+  workPlanId?: string | number | null;
 }
 
 export interface TlWorklogUpdateArgs {
@@ -116,6 +118,8 @@ export interface TlWorklogUpdateArgs {
   checklistItemId?: string;
   trackerUid: string;
   worklogId?: number;
+  issueTypeLabel?: string | null;
+  workPlanId?: string | number | null;
 }
 
 export const updateTlWorklog = async (
@@ -148,6 +152,8 @@ const buildTlWorklogPayload = (args: {
   deadlineOk?: boolean;
   needUpgradeEstimate?: boolean;
   makeTaskFaster?: boolean;
+  issueTypeLabel?: string | null;
+  workPlanId?: string | number | null;
 }): TlWorklogUpdateArgs | null => {
   const seconds = parseISODurationToSeconds(args.durationIso);
   const minutes = Math.round(seconds / 60);
@@ -168,6 +174,8 @@ const buildTlWorklogPayload = (args: {
     checklistItemId: args.checklistItemId ?? undefined,
     trackerUid: args.trackerUid,
     worklogId: Number.isFinite(worklogId) ? worklogId : undefined,
+    issueTypeLabel: args.issueTypeLabel ?? null,
+    workPlanId: args.workPlanId ?? null,
   };
 };
 
@@ -187,6 +195,8 @@ export const setData = async ({
   needUpgradeEstimate,
   makeTaskFaster,
   startDate,
+  issueTypeLabel,
+  workPlanId,
 }: SetDataArgs): Promise<void> => {
   if (token == null) {
     return;
@@ -266,6 +276,8 @@ export const setData = async ({
       deadlineOk: deadlineOk ?? true,
       needUpgradeEstimate: needUpgradeEstimate ?? false,
       makeTaskFaster: makeTaskFaster ?? false,
+      issueTypeLabel: issueTypeLabel ?? null,
+      workPlanId: workPlanId ?? null,
     };
 
     const res = await axios.post(`${apiUrl}/api/worklog_update`, payload);

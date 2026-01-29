@@ -43,7 +43,6 @@ import isEmpty, {
   normalizeDuration,
 } from "@/helpers";
 import {
-  buildCommentWithTags,
   extractWorkPlanId,
   parseCommentForEditing,
   parseRiskBlock,
@@ -356,24 +355,19 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
       const id = String(item.id);
       const row = rows[id] ?? getRowFromItem(item);
 
-      const finalWithRisks = buildCommentWithTags(
-        row.cleanComment,
-        row.selectedLabel ?? undefined,
-        riskState,
-        extractWorkPlanId(item.comment ?? "") ?? undefined,
-      );
-
       setData({
         dateCell: menuState.dateField || undefined,
         dispatch,
         token,
         issueId: menuState.issueId,
         duration: normalizeDuration(row.durationRaw ?? ""),
-        comment: finalWithRisks,
+        comment: row.cleanComment,
         worklogId: item.id,
         deadlineOk: riskState.deadlineOk,
         needUpgradeEstimate: riskState.needUpgradeEstimate,
         makeTaskFaster: riskState.makeTaskFaster,
+        issueTypeLabel: row.selectedLabel ?? null,
+        workPlanId: extractWorkPlanId(item.comment ?? "") ?? undefined,
         trackerUid,
         checklistItemId: menuState.checklistItemId ?? undefined,
       });
@@ -512,22 +506,17 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
       return;
     }
 
-    const finalWithRisks = buildCommentWithTags(
-      newEntry.comment ?? "",
-      selectedIssueTypeLabelNew ?? undefined,
-      riskState,
-    );
-
     setData({
       dateCell: menuState.dateField || undefined,
       dispatch,
       token,
       issueId: menuState.issueId,
       duration: normalizeDuration(newEntry.duration ?? ""),
-      comment: finalWithRisks,
+      comment: newEntry.comment ?? "",
       deadlineOk: riskState.deadlineOk,
       needUpgradeEstimate: riskState.needUpgradeEstimate,
       makeTaskFaster: riskState.makeTaskFaster,
+      issueTypeLabel: selectedIssueTypeLabelNew ?? null,
       trackerUid,
       checklistItemId: menuState.checklistItemId ?? undefined,
     });

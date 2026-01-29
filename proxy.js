@@ -94,6 +94,62 @@ const headers = (token) => ({
     Host: "api.tracker.yandex.net",
   },
 });
+
+const ISSUE_TYPE_TAG = "ProjectControlWT";
+const WORKPLAN_TAG = "YT_TL_WORKPLAN_ID";
+const WORKLOG_TAG = "YT_TL_WORKLOG_ID";
+
+const buildFinalComment = (comment, label) => {
+  const base = (comment ?? "").trimEnd();
+  const tag = label ? `[${ISSUE_TYPE_TAG}:${label}]` : "";
+  if (!tag) return base;
+  return base ? `${base}\n${tag}` : tag;
+};
+
+const buildWorkPlanIdTag = (workPlanId) => {
+  //if (workPlanId == null || workPlanId === "") return "";
+  return `[${WORKPLAN_TAG}:${workPlanId ?? "null"}]`;
+};
+
+const buildWorklogIdTag = (worklogId) => {
+  //if (worklogId == null || worklogId === "") return "";
+  return `[${WORKLOG_TAG}:${worklogId ?? "null"}]`;
+};
+
+const appendTag = (base, tag) => {
+  if (!tag) return base;
+  return base ? `${base}\n${tag}` : tag;
+};
+
+const stripRiskBlock = (comment) => {
+  return (comment ?? "")
+    .replace(/\n?\[Risks:\s*\{[\s\S]*?\}\s*\]/m, "")
+    .trimEnd();
+};
+
+const buildRiskBlock = (riskState) => {
+  return `[Risks: { deadlineOk: ${riskState.deadlineOk}, needUpgradeEstimate: ${riskState.needUpgradeEstimate}, makeTaskFaster: ${riskState.makeTaskFaster} }]`;
+};
+
+const appendRisksToComment = (comment, riskState) => {
+  const cleaned = stripRiskBlock(comment);
+  const riskBlock = buildRiskBlock(riskState);
+  return cleaned ? `${cleaned}\n${riskBlock}` : riskBlock;
+};
+
+const buildCommentWithTags = (
+  comment,
+  label,
+  riskState,
+  workPlanId,
+  worklogId,
+) => {
+  const withType = buildFinalComment(comment, label ?? undefined);
+  const withWorkPlan = appendTag(withType, buildWorkPlanIdTag(workPlanId));
+  const withWorklog = appendTag(withWorkPlan, buildWorklogIdTag(worklogId));
+  if (!riskState) return withWorklog;
+  return appendRisksToComment(withWorklog, riskState);
+};
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -279,6 +335,8 @@ app.post("/api/worklog_update", async (req, res) => {
       deadlineOk,
       needUpgradeEstimate,
       makeTaskFaster,
+      issueTypeLabel,
+      workPlanId,
       ids,
       items,
     } = req.body ?? {};
@@ -294,6 +352,20 @@ app.post("/api/worklog_update", async (req, res) => {
     if (![0, 1, 2].includes(action)) {
       return res.status(400).json({
         message: "Field 'action' must be 0 (Add), 1 (Edit), or 2 (Delete).",
+      });
+    }
+    if (issueTypeLabel != null && typeof issueTypeLabel !== "string") {
+      return res.status(400).json({
+        message: "Field 'issueTypeLabel' must be a string when provided.",
+      });
+    }
+    if (
+      workPlanId != null &&
+      typeof workPlanId !== "string" &&
+      typeof workPlanId !== "number"
+    ) {
+      return res.status(400).json({
+        message: "Field 'workPlanId' must be a string or number when provided.",
       });
     }
 
@@ -369,36 +441,93 @@ app.post("/api/worklog_update", async (req, res) => {
         return res.status(400).json({ message: internalError });
       }
 
+      const commentWithTags = buildCommentWithTags(
+        comment,
+        issueTypeLabel ?? undefined,
+        {
+          deadlineOk,
+          needUpgradeEstimate,
+          makeTaskFaster,
+        },
+        workPlanId ?? undefined,
+        undefined,
+      );
+
       const trackerUrl =
         action === 0
           ? `https://api.tracker.yandex.net/v2/issues/${taskKey}/worklog`
           : `https://api.tracker.yandex.net/v2/issues/${taskKey}/worklog/${worklogId}`;
       const trackerPayload =
-        action === 0 ? { start, duration, comment } : { duration, comment };
+        action === 0
+          ? { start, duration, comment: commentWithTags }
+          : { duration, comment: commentWithTags };
 
       const trackerResponse =
         action === 0
           ? await axios.post(trackerUrl, trackerPayload, headers(token))
           : await axios.patch(trackerUrl, trackerPayload, headers(token));
 
-      await sendInternal({
+      const internalResponse = await sendInternal({
         taskKey,
         duration: durationMinutes,
         startDate,
         deadlineOk,
         needUpgradeEstimate,
         makeTaskFaster,
-        comment,
+        comment: commentWithTags,
         action,
         checklistItemId,
         trackerUid,
         worklogId: action === 1 ? Number(worklogId) : undefined,
       });
 
+      const internalWorklogId = internalResponse?.data?.YT_TL_WORKLOG_ID;
+      const trackerWorklogId =
+        action === 1
+          ? Number(worklogId)
+          : Number(
+              trackerResponse?.data?.id ??
+                trackerResponse?.data?.ID ??
+                trackerResponse?.data?.worklogId,
+            );
+
+      if (Number.isFinite(trackerWorklogId)) {
+        const commentWithInternalTag = buildCommentWithTags(
+          comment,
+          issueTypeLabel ?? undefined,
+          {
+            deadlineOk,
+            needUpgradeEstimate,
+            makeTaskFaster,
+          },
+          workPlanId ?? undefined,
+          internalWorklogId,
+        );
+        console.log("commentWithInternalTag\n\n", commentWithInternalTag);
+        console.log("-----------\n\n");
+        if (commentWithInternalTag !== commentWithTags) {
+          await axios.patch(
+            `https://api.tracker.yandex.net/v2/issues/${taskKey}/worklog/${trackerWorklogId}`,
+            { comment: commentWithInternalTag },
+            headers(token),
+          );
+        }
+      } else if (!Number.isFinite(trackerWorklogId)) {
+        console.warn(
+          "[api/worklog_update] missing tracker worklog id in response",
+          {
+            taskKey,
+            action,
+            trackerResponseData: trackerResponse?.data,
+          },
+        );
+      }
+
       return res.json(trackerResponse.data);
     }
 
     const isBatch = Array.isArray(ids) && ids.length > 0;
+
     const deleteIds = isBatch
       ? ids.map((id) => Number(id)).filter((id) => Number.isInteger(id))
       : [];
@@ -451,7 +580,17 @@ app.post("/api/worklog_update", async (req, res) => {
             deadlineOk,
             needUpgradeEstimate,
             makeTaskFaster,
-            comment: item.comment ?? "",
+            comment: buildCommentWithTags(
+              item.comment ?? "",
+              issueTypeLabel ?? undefined,
+              {
+                deadlineOk,
+                needUpgradeEstimate,
+                makeTaskFaster,
+              },
+              workPlanId ?? undefined,
+              item.worklogId,
+            ),
             action: 2,
             checklistItemId: item.checklistItemId ?? checklistItemId,
             trackerUid,
@@ -488,7 +627,17 @@ app.post("/api/worklog_update", async (req, res) => {
       deadlineOk,
       needUpgradeEstimate,
       makeTaskFaster,
-      comment,
+      comment: buildCommentWithTags(
+        comment,
+        issueTypeLabel ?? undefined,
+        {
+          deadlineOk,
+          needUpgradeEstimate,
+          makeTaskFaster,
+        },
+        workPlanId ?? undefined,
+        worklogId,
+      ),
       action: 2,
       checklistItemId,
       trackerUid,
@@ -1287,6 +1436,8 @@ const handleTlWorklogUpdate = async (req, res) => {
       checklistItemId,
       trackerUid,
       worklogId,
+      issueTypeLabel,
+      workPlanId,
     } = req.body ?? {};
 
     if (typeof taskKey !== "string" || taskKey.length === 0) {
@@ -1326,6 +1477,20 @@ const handleTlWorklogUpdate = async (req, res) => {
         message: "Missing or invalid field 'comment'. It must be a string.",
       });
     }
+    if (issueTypeLabel != null && typeof issueTypeLabel !== "string") {
+      return res.status(400).json({
+        message: "Field 'issueTypeLabel' must be a string when provided.",
+      });
+    }
+    if (
+      workPlanId != null &&
+      typeof workPlanId !== "string" &&
+      typeof workPlanId !== "number"
+    ) {
+      return res.status(400).json({
+        message: "Field 'workPlanId' must be a string or number when provided.",
+      });
+    }
     if (![0, 1, 2].includes(action)) {
       return res.status(400).json({
         message: "Field 'action' must be 0 (Add), 1 (Edit), or 2 (Delete).",
@@ -1348,6 +1513,17 @@ const handleTlWorklogUpdate = async (req, res) => {
       });
     }
 
+    const commentWithTags = buildCommentWithTags(
+      comment,
+      issueTypeLabel ?? undefined,
+      {
+        deadlineOk,
+        needUpgradeEstimate,
+        makeTaskFaster,
+      },
+      workPlanId ?? undefined,
+    );
+
     const resp = await axios.post(
       "http://of-srv-apps-001.pmtech.ru:18005/acceptor/yandextracker/tlworklogupdate",
       {
@@ -1357,7 +1533,7 @@ const handleTlWorklogUpdate = async (req, res) => {
         deadlineOk,
         needUpgradeEstimate,
         makeTaskFaster,
-        comment,
+        comment: commentWithTags,
         action,
         checklistItemId,
         trackerUid,

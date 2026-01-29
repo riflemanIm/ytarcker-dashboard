@@ -1,7 +1,6 @@
 import { SetDataArgs, getIssueTypeList } from "@/actions/data";
 import { useAppContext } from "@/context/AppContext";
 import { isValidDuration, normalizeDuration } from "@/helpers";
-import { buildCommentWithTags } from "@/helpers/issueTypeComment";
 import useForm from "@/hooks/useForm";
 import AddIcon from "@mui/icons-material/Add";
 import CloseIcon from "@mui/icons-material/Close";
@@ -143,25 +142,20 @@ export default function AddDurationIssueDialog({
       (values.issue as any)?.TaskKey ?? values.issue?.key ?? null;
     if (!issueKey) return;
     const dateCell = dayjs(values.dateTime);
-    const finalWithRisks = buildCommentWithTags(
-      values.comment ?? "",
-      selectedIssueType ?? undefined,
-      riskState,
-      (values.issue as any)?.YT_TL_WORKPLAN_ID ?? undefined,
-    );
-
     setData({
       dateCell,
       dispatch,
       token,
       issueId: issueKey,
       duration: normalizeDuration(values.duration ?? ""),
-      comment: finalWithRisks, // тег и риски добавляются здесь
+      comment: values.comment ?? "",
       worklogId: (values.issue as any)?.YT_TL_WORKLOG_ID ?? undefined,
       checklistItemId: (values.issue as any)?.checklistItemId ?? undefined,
       deadlineOk: riskState.deadlineOk,
       needUpgradeEstimate: riskState.needUpgradeEstimate,
       makeTaskFaster: riskState.makeTaskFaster,
+      issueTypeLabel: selectedIssueType ?? null,
+      workPlanId: (values.issue as any)?.YT_TL_WORKPLAN_ID ?? undefined,
       addEndWorkDayTime: false,
       trackerUid,
     } as SetDataArgs);
