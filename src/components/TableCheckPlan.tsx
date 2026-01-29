@@ -1,9 +1,14 @@
-import { getTaskList } from "@/actions/data";
-import { TaskListItem } from "@/types/global";
+import { getTaskList, getTaskPlanInfo } from "@/actions/data";
+import { TaskListItem, TaskPlanInfoItem } from "@/types/global";
 import {
   Alert,
   Box,
   Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  IconButton,
   Stack,
   Tooltip,
   useMediaQuery,
@@ -18,6 +23,8 @@ import FilterTableText from "./FilterTableText";
 import { useTheme } from "@mui/material/styles";
 import { workMinutesToDurationInput } from "@/helpers";
 import { useAppContext } from "@/context/AppContext";
+import InfoIcon from "@mui/icons-material/Info";
+import TableTaskPlanInfo from "./TableTaskPlanInfo";
 
 const TableCheckPlan: FC = () => {
   const {
@@ -45,6 +52,11 @@ const TableCheckPlan: FC = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedIssue, setSelectedIssue] = useState<TaskListItem | null>(null);
   const [filterText, setFilterText] = useState("");
+  const [infoOpen, setInfoOpen] = useState(false);
+  const [infoLoading, setInfoLoading] = useState(false);
+  const [infoRows, setInfoRows] = useState<TaskPlanInfoItem[]>([]);
+  const [infoTaskKey, setInfoTaskKey] = useState<string | null>(null);
+  const [infoTaskName, setInfoTaskName] = useState<string | null>(null);
   const theme = useTheme();
   const isXlUp = useMediaQuery(theme.breakpoints.up("xl"));
   const isLgUp = useMediaQuery(theme.breakpoints.up("lg"));
@@ -63,6 +75,21 @@ const TableCheckPlan: FC = () => {
     return 400;
   }, [isLgUp, isMdUp, isSmUp, isXlUp]);
   const isSprintReady = sprintId != null;
+  const handleOpenInfo = async (row: TaskListItem) => {
+    setInfoTaskKey(row.TaskKey ?? null);
+    setInfoTaskName(row.TaskName ?? null);
+    setInfoOpen(true);
+    setInfoLoading(true);
+    setInfoRows([]);
+    try {
+      const data = await getTaskPlanInfo(row.TaskKey);
+      setInfoRows(data);
+    } catch (error: any) {
+      console.error("[TableCheckPlan] getTaskPlanInfo error:", error?.message);
+    } finally {
+      setInfoLoading(false);
+    }
+  };
   useEffect(() => {
     let isMounted = true;
     if (effectiveTrackerUids.length === 0) {
@@ -118,15 +145,29 @@ const TableCheckPlan: FC = () => {
             [params.value, workName, workType].filter(Boolean).join(" / ") ||
             "-";
           return (
-            <Tooltip title={title}>
-              <span>
-                <IssueDisplay
-                  display={params.value}
-                  href={`https://tracker.yandex.ru/${params.row.TaskKey}`}
-                  fio={params.row.CheckListAssignee ?? ""}
-                />
-              </span>
-            </Tooltip>
+            <Stack direction="row" spacing={1} alignItems="center">
+              <Tooltip title={title}>
+                <span>
+                  <IssueDisplay
+                    display={params.value}
+                    href={`https://tracker.yandex.ru/${params.row.TaskKey}`}
+                    fio={params.row.CheckListAssignee ?? ""}
+                  />
+                </span>
+              </Tooltip>
+              <Tooltip title="Показать информацию по задаче">
+                <IconButton
+                  size="small"
+                  sx={(theme) => ({ color: theme.palette.info.main })}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    handleOpenInfo(params.row as TaskListItem);
+                  }}
+                >
+                  <InfoIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            </Stack>
           );
         },
       },
@@ -235,6 +276,22 @@ const TableCheckPlan: FC = () => {
         issue={selectedIssue}
         sprintId={sprintId}
       />
+      <Dialog
+        open={infoOpen}
+        onClose={() => setInfoOpen(false)}
+        maxWidth="lg"
+        fullWidth
+      >
+        <DialogTitle>
+          Информация по задаче • {infoTaskKey ?? "-"} • {infoTaskName ?? "-"}
+        </DialogTitle>
+        <DialogContent>
+          <TableTaskPlanInfo rows={infoRows} loading={infoLoading} />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setInfoOpen(false)}>Закрыть</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
