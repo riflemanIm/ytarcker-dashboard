@@ -5,6 +5,7 @@ import { Alert } from "@mui/material";
 import { FC, useEffect, useMemo, useState } from "react";
 import TableTimeSpend from "./TableTimeSpend";
 import { Dayjs } from "dayjs";
+import { useAppContext } from "@/context/AppContext";
 
 interface TableTimeSpendByPlanProps {
   data: TaskItem[];
@@ -35,6 +36,18 @@ const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
     groupIds,
     workPlanRefreshKey,
   } = useTableTimePlanSelectors();
+  const { state } = useAppContext();
+  const fetchByLogin = state.state.fetchByLogin;
+  const currentTrackerUid =
+    state.state.userId ||
+    state.tableTimePlanState.selectedPatientUid ||
+    (Array.isArray(state.state.users) && state.state.users.length === 1
+      ? (state.state.users[0]?.id ?? null)
+      : null);
+  const effectiveTrackerUids = useMemo(() => {
+    if (fetchByLogin) return trackerUids;
+    return currentTrackerUid ? [currentTrackerUid] : [];
+  }, [currentTrackerUid, fetchByLogin, trackerUids]);
   const [planItemsState, setPlanItemsState] = useState<WorkPlanItem[]>([]);
   const [loading, setLoading] = useState(false);
   const effectivePlanItems = planItems ?? planItemsState;
@@ -49,7 +62,7 @@ const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
       };
     }
 
-    if (!sprintId) {
+    if (!sprintId || effectiveTrackerUids.length === 0) {
       setPlanItemsState([]);
       setLoading(false);
       return () => {
@@ -58,7 +71,13 @@ const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
     }
 
     setLoading(true);
-    getWorkPlan({ sprintId, trackerUids, projectIds, roleIds, groupIds })
+    getWorkPlan({
+      sprintId,
+      trackerUids: effectiveTrackerUids,
+      projectIds,
+      roleIds,
+      groupIds,
+    })
       .then((items) => {
         if (!isMounted) return;
         setPlanItemsState(items as WorkPlanItem[]);
@@ -80,7 +99,7 @@ const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
   }, [
     planItems,
     sprintId,
-    trackerUids,
+    effectiveTrackerUids,
     projectIds,
     roleIds,
     groupIds,
@@ -121,6 +140,14 @@ const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
         };
       });
   }, [data, planKeys, planMeta]);
+
+  if (effectiveTrackerUids.length === 0) {
+    return (
+      <Alert severity="warning">
+        Выберите сотрудника или сотрудников для отображения плана.
+      </Alert>
+    );
+  }
 
   if (!loading && filteredData.length === 0) {
     return (

@@ -1,6 +1,7 @@
 import { SetDataArgs, getTaskPlanInfo, setWorkPlan } from "@/actions/data";
 import { Issue, TaskPlanInfoItem, WorkPlanItem } from "@/types/global";
 import {
+  Alert,
   Box,
   Button,
   Dialog,
@@ -42,8 +43,19 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
   setData,
   isEditable,
 }) => {
-  const { sprintId } = useTableTimePlanSelectors();
+  const { sprintId, trackerUids } = useTableTimePlanSelectors();
   const { state, dispatch } = useAppContext();
+  const fetchByLogin = state.state.fetchByLogin;
+  const currentTrackerUid =
+    state.state.userId ||
+    state.tableTimePlanState.selectedPatientUid ||
+    (Array.isArray(state.state.users) && state.state.users.length === 1
+      ? (state.state.users[0]?.id ?? null)
+      : null);
+  const effectiveTrackerUids = useMemo(() => {
+    if (fetchByLogin) return trackerUids;
+    return currentTrackerUid ? [currentTrackerUid] : [];
+  }, [currentTrackerUid, fetchByLogin, trackerUids]);
   const { login } = state.auth;
   const [filterText, setFilterText] = useState("");
   const isSprintReady = sprintId != null;
@@ -382,6 +394,14 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
       setDeleteLoading(false);
     }
   };
+
+  if (effectiveTrackerUids.length === 0) {
+    return (
+      <Alert severity="warning" sx={{ mb: 2 }}>
+        Выберите сотрудника или сотрудников для отображения плана.
+      </Alert>
+    );
+  }
 
   return (
     <Box sx={{ mt: 2 }}>

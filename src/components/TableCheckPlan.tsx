@@ -1,6 +1,13 @@
 import { getTaskList } from "@/actions/data";
 import { TaskListItem } from "@/types/global";
-import { Box, Button, Stack, Tooltip, useMediaQuery } from "@mui/material";
+import {
+  Alert,
+  Box,
+  Button,
+  Stack,
+  Tooltip,
+  useMediaQuery,
+} from "@mui/material";
 import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import dayjs from "dayjs";
 import { FC, useEffect, useMemo, useState } from "react";
@@ -10,6 +17,7 @@ import { useTableTimePlanSelectors } from "@/hooks/useTableTimePlanSelectors";
 import FilterTableText from "./FilterTableText";
 import { useTheme } from "@mui/material/styles";
 import { workMinutesToDurationInput } from "@/helpers";
+import { useAppContext } from "@/context/AppContext";
 
 const TableCheckPlan: FC = () => {
   const {
@@ -20,6 +28,18 @@ const TableCheckPlan: FC = () => {
     groupIds,
     workPlanRefreshKey,
   } = useTableTimePlanSelectors();
+  const { state } = useAppContext();
+  const fetchByLogin = state.state.fetchByLogin;
+  const currentTrackerUid =
+    state.state.userId ||
+    state.tableTimePlanState.selectedPatientUid ||
+    (Array.isArray(state.state.users) && state.state.users.length === 1
+      ? (state.state.users[0]?.id ?? null)
+      : null);
+  const effectiveTrackerUids = useMemo(() => {
+    if (fetchByLogin) return trackerUids;
+    return currentTrackerUid ? [currentTrackerUid] : [];
+  }, [currentTrackerUid, fetchByLogin, trackerUids]);
   const [rows, setRows] = useState<TaskListItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -45,8 +65,20 @@ const TableCheckPlan: FC = () => {
   const isSprintReady = sprintId != null;
   useEffect(() => {
     let isMounted = true;
+    if (effectiveTrackerUids.length === 0) {
+      setRows([]);
+      setLoading(false);
+      return () => {
+        isMounted = false;
+      };
+    }
     setLoading(true);
-    getTaskList({ trackerUids, projectIds, roleIds, groupIds })
+    getTaskList({
+      trackerUids: effectiveTrackerUids,
+      projectIds,
+      roleIds,
+      groupIds,
+    })
       .then((data) => {
         if (!isMounted) return;
         setRows(data);
@@ -61,7 +93,13 @@ const TableCheckPlan: FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [trackerUids, projectIds, roleIds, groupIds, workPlanRefreshKey]);
+  }, [
+    effectiveTrackerUids,
+    projectIds,
+    roleIds,
+    groupIds,
+    workPlanRefreshKey,
+  ]);
 
   const columns = useMemo<GridColDef<TaskListItem>[]>(
     () => [
@@ -166,6 +204,14 @@ const TableCheckPlan: FC = () => {
       return values.some((value) => value.includes(query));
     });
   }, [rowsWithId, filterText]);
+
+  if (effectiveTrackerUids.length === 0) {
+    return (
+      <Alert severity="warning" sx={{ mt: 2 }}>
+        Выберите сотрудника или сотрудников для отображения задач.
+      </Alert>
+    );
+  }
 
   return (
     <Box sx={{ mt: 2, height: 400 }}>
