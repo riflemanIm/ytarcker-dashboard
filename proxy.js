@@ -38,12 +38,25 @@ function toMSKISO(str) {
 
   return `${yyyy}-${mm}-${dd}T${HH}:${MM}:${SS}.${mmm}+03:00`;
 }
-// Сдвигаем startDate на -3 часа (UTC коррекция)
-const shiftHours = (dateStr, hours) => {
-  const ts = Date.parse(dateStr);
-  if (isNaN(ts)) return dateStr;
-  const shifted = new Date(ts + hours * 60 * 60 * 1000);
-  return shifted.toISOString().slice(0, 16); // YYYY-MM-DDTHH:mm
+
+const hasTimezone = (value) => /([+-]\d{2}:\d{2}|[+-]\d{4}|Z)$/.test(value);
+
+const ensureTimestampWithTz = (value) => {
+  if (typeof value !== "string" || value.length === 0) return value;
+  if (hasTimezone(value)) return value;
+  return `${value}+03:00`;
+};
+
+const buildDateTimeWithOffset = (dateStr, timeStr) => {
+  if (typeof dateStr !== "string" || dateStr.length === 0) return dateStr;
+  const base = `${dateStr}T${timeStr}`;
+  return ensureTimestampWithTz(base);
+};
+
+const normalizeRangeBoundary = (value, timeFallback) => {
+  if (typeof value !== "string" || value.length === 0) return value;
+  if (value.includes("T")) return ensureTimestampWithTz(value);
+  return buildDateTimeWithOffset(value, timeFallback);
 };
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -174,9 +187,15 @@ app.get("/api/issues", async (req, res) => {
           ? login
           : null;
 
-      // Форматирование диапазона запроса (строки остаются строками)
-      const from = shiftHours(startDate, -3);
-      const to = `${endDate}T23:59`;
+      // Форматирование диапазона запроса (timestamp с таймзоной)
+      const from = normalizeRangeBoundary(startDate, "00:00:00.000");
+      const to = normalizeRangeBoundary(endDate, "23:59:59.999");
+      if (!hasTimezone(from) || !hasTimezone(to)) {
+        return res.status(400).json({
+          error:
+            "startDate/endDate must be timestamps with timezone (e.g. +03:00 or Z)",
+        });
+      }
       // console.log(
       //   "from",
       //   from,
@@ -190,7 +209,7 @@ app.get("/api/issues", async (req, res) => {
       // );
       // Формируем тело запроса
       let requestBody = {
-        start: {
+        createdAt: {
           from,
           to,
         },
@@ -203,7 +222,7 @@ app.get("/api/issues", async (req, res) => {
       }
 
       const url =
-        "https://api.tracker.yandex.net/v2/worklog/_search?perPage=10000";
+        "https://api.tracker.yandex.net/v3/worklog/_search?perPage=10000";
       const response = await axios.post(url, requestBody, headers(token));
 
       // Фильтрация данных с использованием уже вычисленных timestamp'ов
@@ -247,7 +266,12 @@ app.post("/api/add_time", async (req, res) => {
     }
 
     // Добавляем новый worklog
-    const url = `https://api.tracker.yandex.net/v2/issues/${issueId}/worklog`;
+    if (typeof start !== "string" || !hasTimezone(start)) {
+      return res.status(400).json({
+        error: "start must be a timestamp with timezone (e.g. +03:00 or Z)",
+      });
+    }
+    const url = `https://api.tracker.yandex.net/v3/issues/${issueId}/worklog`;
     const { data } = await axios.post(
       url,
       { start, duration, comment },
@@ -273,7 +297,7 @@ app.patch("/api/edit_time", async (req, res) => {
         .json({ error: "issueId, worklogId and duration are required" });
     }
 
-    const url = `https://api.tracker.yandex.net/v2/issues/${issueId}/worklog/${worklogId}`;
+    const url = `https://api.tracker.yandex.net/v3/issues/${issueId}/worklog/${worklogId}`;
     const payload = {
       duration,
       comment,
@@ -300,7 +324,7 @@ app.post("/api/delete_all", async (req, res) => {
         ids.map((id) =>
           axios
             .delete(
-              `https://api.tracker.yandex.net/v2/issues/${issueId}/worklog/${id}`,
+              `https://api.tracker.yandex.net/v3/issues/${issueId}/worklog/${id}`,
               headers(token),
             )
             .catch((err) => {
@@ -422,6 +446,12 @@ app.post("/api/worklog_update", async (req, res) => {
           message: "Missing or invalid field 'start'. It must be a string.",
         });
       }
+      if (!hasTimezone(start)) {
+        return res.status(400).json({
+          message:
+            "Field 'start' must be a timestamp with timezone (e.g. +03:00 or Z).",
+        });
+      }
       if (action === 1 && !Number.isInteger(Number(worklogId))) {
         return res.status(400).json({
           message:
@@ -455,8 +485,8 @@ app.post("/api/worklog_update", async (req, res) => {
 
       const trackerUrl =
         action === 0
-          ? `https://api.tracker.yandex.net/v2/issues/${taskKey}/worklog`
-          : `https://api.tracker.yandex.net/v2/issues/${taskKey}/worklog/${worklogId}`;
+          ? `https://api.tracker.yandex.net/v3/issues/${taskKey}/worklog`
+          : `https://api.tracker.yandex.net/v3/issues/${taskKey}/worklog/${worklogId}`;
       const trackerPayload =
         action === 0
           ? { start, duration, comment: commentWithTags }
@@ -507,7 +537,7 @@ app.post("/api/worklog_update", async (req, res) => {
         console.log("-----------\n\n");
         if (commentWithInternalTag !== commentWithTags) {
           await axios.patch(
-            `https://api.tracker.yandex.net/v2/issues/${taskKey}/worklog/${trackerWorklogId}`,
+            `https://api.tracker.yandex.net/v3/issues/${taskKey}/worklog/${trackerWorklogId}`,
             { comment: commentWithInternalTag },
             headers(token),
           );
@@ -565,7 +595,7 @@ app.post("/api/worklog_update", async (req, res) => {
       await Promise.all(
         deleteIds.map((id) =>
           axios.delete(
-            `https://api.tracker.yandex.net/v2/issues/${taskKey}/worklog/${id}`,
+            `https://api.tracker.yandex.net/v3/issues/${taskKey}/worklog/${id}`,
             headers(token),
           ),
         ),
@@ -616,7 +646,7 @@ app.post("/api/worklog_update", async (req, res) => {
     }
 
     await axios.delete(
-      `https://api.tracker.yandex.net/v2/issues/${taskKey}/worklog/${worklogId}`,
+      `https://api.tracker.yandex.net/v3/issues/${taskKey}/worklog/${worklogId}`,
       headers(token),
     );
 
@@ -759,7 +789,7 @@ const fetchIssueComments = async (token, issueId) => {
     const { data } = await withRetries(
       () =>
         axios.get(
-          `https://api.tracker.yandex.net/v2/issues/${issueId}/comments`,
+          `https://api.tracker.yandex.net/v3/issues/${issueId}/comments`,
           headers(token),
         ),
       { retries: 4, baseDelay: 600 },
@@ -822,7 +852,7 @@ app.get("/api/queues", async (req, res) => {
 
   try {
     const response = await axios.get(
-      "https://api.tracker.yandex.net/v2/queues?perPage=1000",
+      "https://api.tracker.yandex.net/v3/queues?perPage=1000",
       headers(token),
     );
     const payload = Array.isArray(response.data) ? response.data : [];
