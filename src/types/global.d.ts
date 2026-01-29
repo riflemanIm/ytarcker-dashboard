@@ -103,6 +103,18 @@ export interface WorkPlanCapacityItem {
   RoleName: string;
 }
 
+export interface TaskPlanInfoItem {
+  SprintLabel: string;
+  CheckListAssignee: string;
+  WorkName: string;
+  WorkDone: boolean;
+  Deadline: string | null;
+  EstimateTimeMinutes: number;
+  SpentTimeMinutes: number;
+  RemainTimeMinutes: number;
+  Hint: string;
+}
+
 export interface WorkPlanCapacityState {
   rows: WorkPlanCapacityItem[];
   loading: boolean;

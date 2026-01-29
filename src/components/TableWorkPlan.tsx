@@ -1,5 +1,5 @@
-import { SetDataArgs, setWorkPlan } from "@/actions/data";
-import { Issue, WorkPlanItem } from "@/types/global";
+import { SetDataArgs, getTaskPlanInfo, setWorkPlan } from "@/actions/data";
+import { Issue, TaskPlanInfoItem, WorkPlanItem } from "@/types/global";
 import {
   Box,
   Button,
@@ -14,18 +14,20 @@ import {
 } from "@mui/material";
 import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import dayjs from "dayjs";
-import { FC, useMemo, useState } from "react";
+import { FC, useCallback, useMemo, useState } from "react";
 import IssueDisplay from "./IssueDisplay";
 import { getPriorityPalette } from "@/helpers/priorityStyles";
 import { isSuperLogin, workMinutesToDurationInput } from "@/helpers";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddAlarmIcon from "@mui/icons-material/AddAlarm";
+import InfoIcon from "@mui/icons-material/Info";
 import SetIssuePlanTable from "./SetIssuePlanTable";
 import { useAppContext } from "@/context/AppContext";
 import FilterTableText from "./FilterTableText";
 import AddDurationIssueDialog from "./AddDurationIssueDialog";
 import { useTableTimePlanSelectors } from "@/hooks/useTableTimePlanSelectors";
+import TableTaskPlanInfo from "./TableTaskPlanInfo";
 
 interface TableWorkPlanProps {
   rows: WorkPlanItem[];
@@ -52,6 +54,11 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [addTimeOpen, setAddTimeOpen] = useState(false);
   const [addTimeIssue, setAddTimeIssue] = useState<Issue | null>(null);
+  const [infoOpen, setInfoOpen] = useState(false);
+  const [infoLoading, setInfoLoading] = useState(false);
+  const [infoRows, setInfoRows] = useState<TaskPlanInfoItem[]>([]);
+  const [infoTaskKey, setInfoTaskKey] = useState<string | null>(null);
+  const [infoTaskName, setInfoTaskName] = useState<string | null>(null);
   const isAdmin = !!(login && isSuperLogin(login));
   const canAddTime = state.state.fetchByLogin;
 
@@ -60,6 +67,22 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
     if (!Number.isFinite(num)) return "";
     return workMinutesToDurationInput(num);
   };
+
+  const handleOpenInfo = useCallback(async (row: WorkPlanItem) => {
+    setInfoTaskKey(row.TaskKey);
+    setInfoTaskName(row.TaskName);
+    setInfoOpen(true);
+    setInfoLoading(true);
+    setInfoRows([]);
+    try {
+      const data = await getTaskPlanInfo(row.TaskKey);
+      setInfoRows(data);
+    } catch (error: any) {
+      console.error("[TableWorkPlan] getTaskPlanInfo error:", error?.message);
+    } finally {
+      setInfoLoading(false);
+    }
+  }, []);
 
   const columns = useMemo<GridColDef<WorkPlanItem | { id: string }>[]>(() => {
     const baseColumns: GridColDef<WorkPlanItem | { id: string }>[] = [
@@ -105,6 +128,18 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
       ) =>
         (params.row as any).id === "__total__" ? null : (
           <Stack direction="row" spacing={1}>
+            <Tooltip title="Показать информацию по задаче">
+              <IconButton
+                size="small"
+                sx={(theme) => ({ color: theme.palette.info.main })}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  handleOpenInfo(params.row as WorkPlanItem);
+                }}
+              >
+                <InfoIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
             {canAddTime && (
               <Tooltip title="Добавить отметку времени">
                 <IconButton
@@ -230,7 +265,7 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
     return isAdmin
       ? [...baseColumns, actionColumn, ...tailColumns]
       : [...baseColumns, ...tailColumns];
-  }, [isAdmin, canAddTime]);
+  }, [isAdmin, canAddTime, handleOpenInfo]);
 
   const filteredRows = useMemo(() => {
     const query = filterText.trim().toLowerCase();
@@ -453,6 +488,22 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
           >
             Удалить
           </Button>
+        </DialogActions>
+      </Dialog>
+      <Dialog
+        open={infoOpen}
+        onClose={() => setInfoOpen(false)}
+        maxWidth="lg"
+        fullWidth
+      >
+        <DialogTitle>
+          Информация по задаче • {infoTaskKey ?? "-"} • {infoTaskName ?? "-"}
+        </DialogTitle>
+        <DialogContent>
+          <TableTaskPlanInfo rows={infoRows} loading={infoLoading} />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setInfoOpen(false)}>Закрыть</Button>
         </DialogActions>
       </Dialog>
       {canAddTime && setData && (

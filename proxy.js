@@ -1240,6 +1240,39 @@ const handleSetWorkPlan = async (req, res) => {
 
 app.post("/api/setworkplan", handleSetWorkPlan);
 
+app.post("/api/task_plan_info", async (req, res) => {
+  try {
+    const { taskKey } = req.body ?? {};
+
+    if (typeof taskKey !== "string" || taskKey.length === 0) {
+      return res.status(400).json({
+        message: "Missing or invalid field 'taskKey'. It must be a string.",
+      });
+    }
+
+    const resp = await axios.post(
+      "http://of-srv-apps-001.pmtech.ru:18005/acceptor/yandextracker/gettaskplanifo",
+      { taskKey },
+      {
+        timeout: 15000,
+      },
+    );
+
+    res.json(resp.data);
+  } catch (error) {
+    const status = error.response?.status || 500;
+    const payload = {
+      error: error.message,
+      code: error.code,
+      cause: error.cause,
+      upstreamStatus: error.response?.status,
+      upstreamData: error.response?.data,
+    };
+    console.error("[api/task_plan_info] upstream error:", payload);
+    res.status(status).json(payload);
+  }
+});
+
 const handleTlWorklogUpdate = async (req, res) => {
   try {
     const {

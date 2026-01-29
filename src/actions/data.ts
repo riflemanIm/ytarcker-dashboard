@@ -20,6 +20,7 @@ import {
   DurationItem,
   WorkPlanItem,
   WorkPlanCapacityItem,
+  TaskPlanInfoItem,
 } from "@/types/global";
 import { handleLogout } from "@/components/LogInOut";
 import type { AppAction } from "@/context/AppContext";
@@ -758,8 +759,6 @@ export interface SetWorkPlanArgs {
   estimateTimeMinutes?: number;
   priority?: "Red" | "Orange" | "Green";
   workPlanId?: number;
-  StatusName?: string;
-  Comment?: string;
 }
 
 export const setWorkPlan = async (
@@ -800,6 +799,21 @@ export const getWorkPlanCapacity = async (
     return Array.isArray(res.data) ? res.data : [];
   } catch (err: any) {
     console.error("[Ошибка в getWorkPlanCapacity]:", err.message);
+    return [];
+  }
+};
+
+export const getTaskPlanInfo = async (
+  taskKey: string,
+): Promise<TaskPlanInfoItem[]> => {
+  try {
+    const res = await axios.post<TaskPlanInfoItem[]>(
+      `${apiUrl}/api/task_plan_info`,
+      { taskKey },
+    );
+    return Array.isArray(res.data) ? res.data : [];
+  } catch (err: any) {
+    console.error("[Ошибка в getTaskPlanInfo]:", err.message);
     return [];
   }
 };
