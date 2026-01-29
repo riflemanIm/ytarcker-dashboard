@@ -539,9 +539,11 @@ export const workMinutesToDurationInput = (
 ): string => {
   if (minutes == null || Number.isNaN(minutes)) return "";
   const totalMinutes = Math.round(minutes);
+  const sign = totalMinutes < 0 ? "-" : "";
+  const absMinutes = Math.abs(totalMinutes);
   const minutesInDay = WORK_HOURS_PER_DAY * 60;
-  const fullDays = Math.floor(totalMinutes / minutesInDay);
-  const remainingMinutes = totalMinutes % minutesInDay;
+  const fullDays = Math.floor(absMinutes / minutesInDay);
+  const remainingMinutes = absMinutes % minutesInDay;
   const hours = Math.floor(remainingMinutes / 60);
   const restMinutes = remainingMinutes % 60;
 
@@ -550,7 +552,8 @@ export const workMinutesToDurationInput = (
   if (hours) parts.push(`${hours}h`);
   if (restMinutes) parts.push(`${restMinutes}m`);
 
-  return parts.length > 0 ? parts.join(" ") : "0m";
+  if (parts.length === 0) return "0m";
+  return `${sign}${parts.join(" ")}`;
 };
 
 export const durationToWorkDays = (isoDuration: string): number => {

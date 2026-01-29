@@ -68,14 +68,14 @@ const getInitialAuth = (): AuthState => {
 
   return { token, login };
 };
-//export const debugUserId = "8000000000000145"; // Смирнов
-export const debugUserId = null;
+export const debugUserId = "8000000000000145"; // Смирнов
+//export const debugUserId = null;
 const initialState: AppState = {
   loaded: true,
   userId: debugUserId, // for debug
   users: null,
   data: [],
-  fetchByLogin: true,
+  fetchByLogin: false,
   issues: [],
 };
 
