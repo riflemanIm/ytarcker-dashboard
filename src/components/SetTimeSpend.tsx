@@ -44,6 +44,7 @@ import isEmpty, {
 } from "@/helpers";
 import {
   buildCommentWithTags,
+  extractWorkPlanId,
   parseCommentForEditing,
   parseRiskBlock,
 } from "@/helpers/issueTypeComment";
@@ -359,7 +360,7 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
         row.cleanComment,
         row.selectedLabel ?? undefined,
         riskState,
-        item.id,
+        extractWorkPlanId(item.comment ?? "") ?? undefined,
       );
 
       setData({
@@ -411,7 +412,14 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
       if (issueTypes.length > 0 && !row.selectedLabel) return true;
     }
     return false;
-  }, [loaded, durations, rows, issueTypes, validateDurationValue, getRowFromItem]);
+  }, [
+    loaded,
+    durations,
+    rows,
+    issueTypes,
+    validateDurationValue,
+    getRowFromItem,
+  ]);
 
   const riskSection = (
     <>

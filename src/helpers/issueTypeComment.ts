@@ -9,11 +9,11 @@ export type RiskState = {
 };
 
 const ISSUE_TYPE_TAG = "ProjectControlWT";
-const WORKLOG_ID_TAG = "YT_TL_WORKLOG_ID";
+const WORKPLAN_TAG = "YT_TL_WORKPLAN_ID";
 
 export function buildFinalComment(
   comment: string,
-  label?: string | null
+  label?: string | null,
 ): string {
   const base = (comment ?? "").trimEnd();
   const tag = label ? `[${ISSUE_TYPE_TAG}:${label}]` : "";
@@ -21,9 +21,11 @@ export function buildFinalComment(
   return base ? `${base}\n${tag}` : tag;
 }
 
-export function buildWorklogIdTag(worklogId?: string | number | null): string {
-  if (worklogId == null || worklogId === "") return "";
-  return `[${WORKLOG_ID_TAG}:${worklogId}]`;
+export function buildWorkPlanIdTag(
+  workPlanId?: string | number | null,
+): string {
+  if (workPlanId == null || workPlanId === "") return "";
+  return `[${WORKPLAN_TAG}:${workPlanId}]`;
 }
 
 const appendTag = (base: string, tag: string): string => {
@@ -35,6 +37,7 @@ export function stripIssueTypeTags(comment: string): string {
   if (!comment) return "";
   return comment
     .replace(/\[ProjectControlWT:[^\]]+\]/g, "")
+    .replace(/\[YT_TL_WORKPLAN_ID:[^\]]+\]/g, "")
     .replace(/\[YT_TL_WORKLOG_ID:[^\]]+\]/g, "")
     .trim();
 }
@@ -45,9 +48,11 @@ export function extractIssueTypeLabel(comment: string): string | null {
   return match ? match[1] : null;
 }
 
-export function extractWorklogId(comment: string): string | null {
+export function extractWorkPlanId(comment: string): string | null {
   if (!comment) return null;
-  const match = comment.match(/\[YT_TL_WORKLOG_ID:([^\]]+)\]/);
+  const match =
+    comment.match(/\[YT_TL_WORKPLAN_ID:([^\]]+)\]/) ??
+    comment.match(/\[YT_TL_WORKLOG_ID:([^\]]+)\]/);
   return match ? match[1] : null;
 }
 
@@ -84,7 +89,7 @@ export function buildRiskBlock(riskState: RiskState): string {
 
 export function appendRisksToComment(
   comment: string,
-  riskState: RiskState
+  riskState: RiskState,
 ): string {
   const cleaned = stripRiskBlock(comment);
   const riskBlock = buildRiskBlock(riskState);
@@ -95,16 +100,18 @@ export function buildCommentWithTags(
   comment: string,
   label?: string | null,
   riskState?: RiskState | null,
-  worklogId?: string | number | null
+  workPlanId?: string | number | null,
 ): string {
   const withType = buildFinalComment(comment, label ?? undefined);
-  const withWorklog = appendTag(withType, buildWorklogIdTag(worklogId));
-  if (!riskState) return withWorklog;
-  return appendRisksToComment(withWorklog, riskState);
+  const withWorkPlan = appendTag(withType, buildWorkPlanIdTag(workPlanId));
+  if (!riskState) return withWorkPlan;
+  return appendRisksToComment(withWorkPlan, riskState);
 }
 
 export function stripRiskBlock(comment: string): string {
-  return (comment ?? "").replace(/\n?\[Risks:\s*\{[\s\S]*?\}\s*\]/m, "").trimEnd();
+  return (comment ?? "")
+    .replace(/\n?\[Risks:\s*\{[\s\S]*?\}\s*\]/m, "")
+    .trimEnd();
 }
 
 // ✅ Алиас для совместимости с существующими импортами
@@ -118,19 +125,19 @@ export function hasAnyIssueTypeTag(comment: string): boolean {
 /** Оставляем и эту функцию — «есть ли тег из текущего списка типов» */
 export function commentHasAnyIssueType(
   comment: string,
-  list: IssueType[]
+  list: IssueType[],
 ): boolean {
   if (!comment || !list?.length) return false;
   return list.some((t) =>
     new RegExp(
-      `\\[${ISSUE_TYPE_TAG}:${t.label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\]`
-    ).test(comment)
+      `\\[${ISSUE_TYPE_TAG}:${t.label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\]`,
+    ).test(comment),
   );
 }
 
 export function parseCommentForEditing(
   comment: string,
-  issueTypes?: IssueType[]
+  issueTypes?: IssueType[],
 ): { cleanComment: string; selectedLabel: string | null } {
   const parsedLabel = extractIssueTypeLabel(comment ?? "") ?? null;
   const cleanComment = stripRiskBlock(stripIssueTypeTags(comment ?? ""));

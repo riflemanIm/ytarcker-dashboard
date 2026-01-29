@@ -147,7 +147,7 @@ export default function AddDurationIssueDialog({
       values.comment ?? "",
       selectedIssueType ?? undefined,
       riskState,
-      (values.issue as any)?.YT_TL_WORKLOG_ID ?? undefined,
+      (values.issue as any)?.YT_TL_WORKPLAN_ID ?? undefined,
     );
 
     setData({
