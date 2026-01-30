@@ -245,7 +245,7 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
       { field: "ProjectName", headerName: "Проект", flex: 1.2, minWidth: 150 },
       {
         field: "EstimateTimeMinutes",
-        headerName: "Оценка, мин.",
+        headerName: "Оценка.",
         flex: 0.7,
         minWidth: 90,
         valueFormatter: (value: WorkPlanItem["EstimateTimeMinutes"]) =>
@@ -253,7 +253,7 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
       },
       {
         field: "SpentTimeMinutes",
-        headerName: "Потрачено, мин.",
+        headerName: "Потрачено.",
         flex: 0.8,
         minWidth: 100,
         valueFormatter: (value: WorkPlanItem["SpentTimeMinutes"]) =>
@@ -261,7 +261,7 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
       },
       {
         field: "RemainTimeMinutes",
-        headerName: "Остаток, мин.",
+        headerName: "Остаток.",
         flex: 0.8,
         minWidth: 100,
         valueFormatter: (value: WorkPlanItem["RemainTimeMinutes"]) =>

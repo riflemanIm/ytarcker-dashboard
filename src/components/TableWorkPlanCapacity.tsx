@@ -103,7 +103,7 @@ const TableWorkPlanCapacity: FC = () => {
       },
       {
         field: "EstimateTimeMinutes",
-        headerName: "План, мин.",
+        headerName: "План.",
         flex: 1.5,
         minWidth: 160,
         valueFormatter: (value: WorkPlanCapacityItem["EstimateTimeMinutes"]) =>
@@ -111,7 +111,7 @@ const TableWorkPlanCapacity: FC = () => {
       },
       {
         field: "SpentTimeMinutes",
-        headerName: "Факт, мин.",
+        headerName: "Факт.",
         flex: 1,
         minWidth: 60,
         valueFormatter: (value: WorkPlanCapacityItem["SpentTimeMinutes"]) =>
@@ -119,7 +119,7 @@ const TableWorkPlanCapacity: FC = () => {
       },
       {
         field: "RemainTimeMinutes",
-        headerName: "Остаток, мин.",
+        headerName: "Остаток.",
         flex: 1,
         minWidth: 140,
         valueFormatter: (value: WorkPlanCapacityItem["RemainTimeMinutes"]) =>

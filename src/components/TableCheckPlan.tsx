@@ -199,7 +199,7 @@ const TableCheckPlan: FC = () => {
 
       {
         field: "WorkMinutes",
-        headerName: "Трудозатраты, мин.",
+        headerName: "Трудозатраты.",
         flex: 1,
         minWidth: 60,
         disableColumnMenu: true,
