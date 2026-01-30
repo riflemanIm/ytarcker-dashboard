@@ -128,6 +128,40 @@ const YandexTracker: FC = () => {
     ? state.loginUid
     : appState.tableTimePlanState.selectedPatientUid;
 
+  const fetchPlanRangeData = useCallback(() => {
+    if (viewMode !== "table_time_plan") return;
+    const planRangeStart = sprintRange?.start;
+    const planRangeEnd = sprintRange?.end;
+
+    if (!currentTrackerUid || !token || !planRangeStart || !planRangeEnd) {
+      return;
+    }
+
+    dispatch({
+      type: "setState",
+      payload: (prev) => ({ ...prev, data: [] }),
+    });
+    getData({
+      userId: currentTrackerUid,
+      dispatch,
+      token,
+      start: planRangeStart.format("YYYY-MM-DD"),
+      end: planRangeEnd.format("YYYY-MM-DD"),
+      login: undefined,
+    });
+  }, [currentTrackerUid, dispatch, sprintRange, token, viewMode]);
+
+  const fetchUserIssues = useCallback(() => {
+    if (viewMode !== "table_time_spend") return;
+    const issuesUserId = debugUserId || state.userId;
+    getUserIssues({
+      dispatch,
+      token,
+      userId: issuesUserId,
+      login: debugUserId ? null : login,
+    });
+  }, [dispatch, login, state.userId, token, viewMode]);
+
   const fetchForActiveRange = useCallback(() => {
     if (viewMode === "search" || viewMode === "table_time_plan") return;
     if (!(login || state.userId || currentTrackerUid) || !token) return;
@@ -163,49 +197,16 @@ const YandexTracker: FC = () => {
   ]);
 
   useEffect(() => {
-    if (viewMode !== "table_time_plan") return;
-    const planRangeStart = sprintRange?.start;
-    const planRangeEnd = sprintRange?.end;
+    fetchPlanRangeData();
+  }, [fetchPlanRangeData]);
 
-    if (!currentTrackerUid || !token || !planRangeStart || !planRangeEnd)
-      return;
-
-    dispatch({
-      type: "setState",
-      payload: (prev) => ({ ...prev, data: [] }),
-    });
-    getData({
-      userId: currentTrackerUid,
-      dispatch,
-      token,
-      start: planRangeStart.format("YYYY-MM-DD"),
-      end: planRangeEnd.format("YYYY-MM-DD"),
-      login: undefined,
-    });
-  }, [viewMode, currentTrackerUid, token, dispatch, sprintRange]);
   useEffect(() => {
-    if (viewMode === "table_time_spend") {
-      const issuesUserId = debugUserId || state.userId;
-      getUserIssues({
-        dispatch,
-        token,
-        userId: issuesUserId,
-        login: debugUserId ? null : login,
-      });
-    }
-  }, [dispatch, login, state.userId, token, viewMode]);
+    fetchUserIssues();
+  }, [fetchUserIssues]);
 
   useEffect(() => {
     fetchForActiveRange();
-  }, [
-    login,
-    state.userId,
-    state.fetchByLogin,
-    weekOffset,
-    viewMode,
-    reportFrom,
-    reportTo,
-  ]);
+  }, [fetchForActiveRange]);
 
   const handleSelectedUsersChange = (userId: string | null) => {
     dispatch({
@@ -216,6 +217,8 @@ const YandexTracker: FC = () => {
 
   const handleRefresh = () => {
     fetchForActiveRange();
+    fetchPlanRangeData();
+    fetchUserIssues();
   };
 
   console.log("state", state);
