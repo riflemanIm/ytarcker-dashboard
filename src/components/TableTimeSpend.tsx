@@ -65,6 +65,7 @@ interface TableTimeSpendProps {
   deleteData: (args: DeleteDataArgs) => void;
   isEditable: boolean;
   isAddable?: boolean;
+  onWorkPlanRefresh?: () => void;
 }
 
 interface RawTransformedRow {
@@ -158,6 +159,7 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
   deleteData,
   isEditable = false,
   isAddable = true,
+  onWorkPlanRefresh,
 }) => {
   const { state: appState, dispatch } = useAppContext();
   const { token } = appState.auth;
@@ -778,6 +780,7 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
         menuState={menuState}
         deleteData={deleteData}
         setData={setData}
+        onWorkPlanRefresh={onWorkPlanRefresh}
       />
       <TableCellInfoPopover
         open={infoOpen}

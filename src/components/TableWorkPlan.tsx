@@ -1,6 +1,7 @@
 import { SetDataArgs, getTaskPlanInfo, setWorkPlan } from "@/actions/data";
 import { Issue, TaskPlanInfoItem, WorkPlanItem } from "@/types/global";
 import {
+  Alert,
   Box,
   Button,
   Dialog,
@@ -33,14 +34,16 @@ interface TableWorkPlanProps {
   rows: WorkPlanItem[];
   loading?: boolean;
   setData?: (args: SetDataArgs) => Promise<void>;
+  onWorkPlanRefresh?: () => void | Promise<void>;
 }
 
 const TableWorkPlan: FC<TableWorkPlanProps> = ({
   rows,
   loading = false,
   setData,
+  onWorkPlanRefresh,
 }) => {
-  const { sprintId } = useTableTimePlanSelectors();
+  const { sprintId, trackerUids } = useTableTimePlanSelectors();
   const { state, dispatch } = useAppContext();
   const fetchByLogin = state.state.fetchByLogin;
 
@@ -84,6 +87,10 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
       setInfoLoading(false);
     }
   }, []);
+
+  const handleTimeSaved = useCallback(() => {
+    onWorkPlanRefresh?.();
+  }, [onWorkPlanRefresh]);
 
   const columns = useMemo<GridColDef<WorkPlanItem | { id: string }>[]>(() => {
     const baseColumns: GridColDef<WorkPlanItem | { id: string }>[] = [
@@ -405,6 +412,13 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
       setDeleteLoading(false);
     }
   };
+  if (trackerUids.length === 0) {
+    return (
+      <Alert severity="warning" sx={{ mt: 2 }}>
+        Выберите сотрудника или сотрудников для отображения задач.
+      </Alert>
+    );
+  }
 
   return (
     <Box sx={{ mt: 2 }}>
@@ -540,6 +554,8 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
           }}
           initialIssue={addTimeIssue}
           hideTrigger
+          onSaved={handleTimeSaved}
+          onWorkPlanRefresh={onWorkPlanRefresh}
         />
       )}
     </Box>

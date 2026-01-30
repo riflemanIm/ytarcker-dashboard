@@ -15,6 +15,7 @@ interface TableTimeSpendByPlanProps {
   deleteData: (args: DeleteDataArgs) => void;
   isEditable: boolean;
   planItems?: WorkPlanItem[];
+  onWorkPlanRefresh?: () => void;
 }
 
 const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
@@ -26,6 +27,7 @@ const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
   deleteData,
   isEditable,
   planItems,
+  onWorkPlanRefresh,
 }) => {
   useTableTimePlanSelectors();
   const effectivePlanItems = planItems ?? [];
@@ -84,6 +86,7 @@ const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
       deleteData={deleteData}
       isEditable={isEditable}
       isAddable={false}
+      onWorkPlanRefresh={onWorkPlanRefresh}
     />
   );
 };

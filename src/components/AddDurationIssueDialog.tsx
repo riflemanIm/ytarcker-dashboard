@@ -28,11 +28,13 @@ import PlanningInfoSection from "./PlanningInfoSection";
 import SelectIssueTypeList from "./SelectIssueTypeList";
 interface AddDurationIssueDialogProps {
   issues: Issue[];
-  setData: (args: SetDataArgs) => void;
+  setData: (args: SetDataArgs) => Promise<void>;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   initialIssue?: Issue | null;
   hideTrigger?: boolean;
+  onSaved?: () => void;
+  onWorkPlanRefresh?: () => void | Promise<void>;
 }
 
 type FormValues = {
@@ -53,6 +55,8 @@ export default function AddDurationIssueDialog({
   onOpenChange,
   initialIssue,
   hideTrigger,
+  onSaved,
+  onWorkPlanRefresh,
 }: AddDurationIssueDialogProps) {
   const { state, dispatch } = useAppContext();
   const { token } = state.auth;
@@ -132,7 +136,7 @@ export default function AddDurationIssueDialog({
     return errs;
   };
 
-  const submit = () => {
+  const submit = async () => {
     // Жёсткая проверка на выбранный тип при наличии списка
     if (labels.length > 0 && !selectedIssueType) return;
 
@@ -140,7 +144,7 @@ export default function AddDurationIssueDialog({
       (values.issue as any)?.TaskKey ?? values.issue?.key ?? null;
     if (!issueKey) return;
     const dateCell = dayjs(values.dateTime);
-    setData({
+    await setData({
       dateCell,
       dispatch,
       token,
@@ -167,6 +171,10 @@ export default function AddDurationIssueDialog({
       },
     });
 
+    onSaved?.();
+    if (onWorkPlanRefresh) {
+      await onWorkPlanRefresh();
+    }
     handleClose();
   };
 

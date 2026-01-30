@@ -3,7 +3,7 @@ import { useTableTimePlanSelectors } from "@/hooks/useTableTimePlanSelectors";
 import { TaskItem, WorkPlanItem } from "@/types/global";
 import { Box, Divider, Paper, Stack, Typography } from "@mui/material";
 import { Dayjs } from "dayjs";
-import { FC, useEffect, useState } from "react";
+import { FC, useCallback, useEffect, useState } from "react";
 import TableCheckPlan from "./TableCheckPlan";
 import TableTimeSpendByPlan from "./TableTimeSpendByPlan";
 import TableWorkPlan from "./TableWorkPlan";
@@ -39,40 +39,46 @@ const ViewTimePlan: FC<ViewTimePlanProps> = ({
   const [workPlanRows, setWorkPlanRows] = useState<WorkPlanItem[]>([]);
   const [workPlanLoading, setWorkPlanLoading] = useState(false);
 
+  const fetchWorkPlan = useCallback(
+    async (isActive?: () => boolean) => {
+      const active = isActive ?? (() => true);
+      if (!sprintId) {
+        if (!active()) return;
+        setWorkPlanRows([]);
+        setWorkPlanLoading(false);
+        return;
+      }
+
+      if (active()) setWorkPlanLoading(true);
+      try {
+        const items = await getWorkPlan({
+          sprintId,
+          trackerUids: trackerUids.length ? trackerUids : undefined,
+          projectIds,
+          roleIds,
+          groupIds,
+        });
+        if (!active()) return;
+        setWorkPlanRows(items as WorkPlanItem[]);
+        setWorkPlanLoading(false);
+      } catch (error: any) {
+        console.error("[ViewTimePlan] getWorkPlan error:", error.message);
+        if (!active()) return;
+        setWorkPlanRows([]);
+        setWorkPlanLoading(false);
+      }
+    },
+    [sprintId, trackerUids, projectIds, roleIds, groupIds],
+  );
+
   useEffect(() => {
     let isMounted = true;
-
-    if (!sprintId) {
-      setWorkPlanRows([]);
-      setWorkPlanLoading(false);
+    fetchWorkPlan(() => isMounted);
+    if (trackerUids.length === 0) {
       return () => {
         isMounted = false;
       };
     }
-
-    setWorkPlanLoading(true);
-    getWorkPlan({
-      sprintId,
-      trackerUids: trackerUids.length ? trackerUids : undefined,
-      projectIds,
-      roleIds,
-      groupIds,
-    })
-      .then((items) => {
-        if (!isMounted) return;
-        setWorkPlanRows(items as WorkPlanItem[]);
-        setWorkPlanLoading(false);
-      })
-      .catch((error) => {
-        console.error("[ViewTimePlan] getWorkPlan error:", error.message);
-        if (!isMounted) return;
-        setWorkPlanRows([]);
-        setWorkPlanLoading(false);
-      });
-
-    return () => {
-      isMounted = false;
-    };
   }, [
     sprintId,
     trackerUids,
@@ -80,6 +86,7 @@ const ViewTimePlan: FC<ViewTimePlanProps> = ({
     roleIds,
     groupIds,
     workPlanRefreshKey,
+    fetchWorkPlan,
   ]);
   return (
     <Box sx={{ px: 2, pb: 2 }}>
@@ -150,6 +157,7 @@ const ViewTimePlan: FC<ViewTimePlanProps> = ({
           rows={workPlanRows}
           loading={workPlanLoading}
           setData={setData}
+          onWorkPlanRefresh={fetchWorkPlan}
         />
         <Divider sx={{ my: 2 }} />
         <Typography variant="h5" textAlign="center" my={2}>
@@ -164,6 +172,7 @@ const ViewTimePlan: FC<ViewTimePlanProps> = ({
           deleteData={deleteData}
           isEditable={fetchByLogin}
           planItems={workPlanRows}
+          onWorkPlanRefresh={fetchWorkPlan}
         />
       </Paper>
     </Box>

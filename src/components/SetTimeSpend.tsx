@@ -61,12 +61,17 @@ type RowUI = {
 
 const RECENT_ISSUE_TYPES_KEY = "recent_issue_types";
 
-const SetTimeSpend: FC<EditableCellMenuProps> = ({
+interface SetTimeSpendProps extends EditableCellMenuProps {
+  onWorkPlanRefresh?: () => void;
+}
+
+const SetTimeSpend: FC<SetTimeSpendProps> = ({
   open,
   onClose,
   menuState,
   deleteData,
   setData,
+  onWorkPlanRefresh,
 }) => {
   const { state, dispatch } = useAppContext();
   const { token } = state.auth;
@@ -115,6 +120,10 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
   >({});
   const [openConfirm, setOpenConfirm] = useState(false);
   const [recentIssueTypes, setRecentIssueTypes] = useState<string[]>([]);
+
+  const bumpWorkPlanRefresh = useCallback(() => {
+    onWorkPlanRefresh?.();
+  }, [onWorkPlanRefresh]);
 
   const availableRecentTypes = useMemo(
     () =>
@@ -372,6 +381,7 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
       });
     }
 
+    bumpWorkPlanRefresh();
     onClose();
   }, [
     validateAllEditRows,
@@ -387,6 +397,7 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
     menuState.dateField,
     trackerUid,
     onClose,
+    bumpWorkPlanRefresh,
   ]);
 
   // Кнопка "Сохранить изменения" disabled?
@@ -521,6 +532,7 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
     });
     setNewEntry({ duration: "", comment: "" });
     setSelectedIssueTypeLabelNew(null);
+    bumpWorkPlanRefresh();
     onClose();
   }, [
     newEntry,
@@ -535,6 +547,7 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
     token,
     trackerUid,
     onClose,
+    bumpWorkPlanRefresh,
   ]);
 
   // --- Удаление
@@ -551,8 +564,17 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
       });
     }
     setOpenConfirm(false);
+    bumpWorkPlanRefresh();
     onClose();
-  }, [menuState, token, deleteData, dispatch, onClose, trackerUid]);
+  }, [
+    menuState,
+    token,
+    deleteData,
+    dispatch,
+    onClose,
+    trackerUid,
+    bumpWorkPlanRefresh,
+  ]);
 
   const handleCancelDeleteAll = useCallback(() => setOpenConfirm(false), []);
   const handleDeleteItem = useCallback(
@@ -565,9 +587,18 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
         durations: [item],
         trackerUid,
       });
+      bumpWorkPlanRefresh();
       onClose();
     },
-    [menuState.issueId, token, deleteData, dispatch, onClose, trackerUid],
+    [
+      menuState.issueId,
+      token,
+      deleteData,
+      dispatch,
+      onClose,
+      trackerUid,
+      bumpWorkPlanRefresh,
+    ],
   );
 
   return (
