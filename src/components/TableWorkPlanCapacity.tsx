@@ -12,7 +12,7 @@ import { workMinutesToDurationInput } from "@/helpers";
 const TableWorkPlanCapacity: FC = () => {
   const { state: appState, dispatch } = useAppContext();
   const { workPlanCapacityState } = appState;
-  const { trackerUids, projectIds, roleIds, groupIds } =
+  const { trackerUids, projectIds, roleIds, groupIds, workPlanRefreshKey } =
     useTableTimePlanSelectors();
   const { rows, loading, refreshKey, capacityFrom, capacityTo } =
     workPlanCapacityState;
@@ -84,6 +84,7 @@ const TableWorkPlanCapacity: FC = () => {
     roleIds,
     groupIds,
     refreshKey,
+    workPlanRefreshKey,
   ]);
 
   const columns = useMemo<GridColDef<WorkPlanCapacityItem>[]>(

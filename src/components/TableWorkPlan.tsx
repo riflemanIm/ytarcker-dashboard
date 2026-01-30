@@ -1,7 +1,6 @@
 import { SetDataArgs, getTaskPlanInfo, setWorkPlan } from "@/actions/data";
 import { Issue, TaskPlanInfoItem, WorkPlanItem } from "@/types/global";
 import {
-  Alert,
   Box,
   Button,
   Dialog,
@@ -56,6 +55,7 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
     if (fetchByLogin) return trackerUids;
     return currentTrackerUid ? [currentTrackerUid] : [];
   }, [currentTrackerUid, fetchByLogin, trackerUids]);
+  const canEditPlan = effectiveTrackerUids.length > 0;
   const { login } = state.auth;
   const [filterText, setFilterText] = useState("");
   const isSprintReady = sprintId != null;
@@ -106,16 +106,27 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
         sortable: false,
         filterable: false,
         disableColumnMenu: true,
-        renderCell: (params: GridRenderCellParams) =>
-          (params.row as any).id === "__total__" ? (
-            <Typography variant="subtitle1">{params.value}</Typography>
-          ) : (
-            <IssueDisplay
-              display={params.value}
-              href={`https://tracker.yandex.ru/${(params.row as WorkPlanItem).TaskKey}`}
-              fio={(params.row as WorkPlanItem).CheckListAssignee ?? ""}
-            />
-          ),
+        renderCell: (params: GridRenderCellParams) => {
+          if ((params.row as any).id === "__total__") {
+            return <Typography variant="subtitle1">{params.value}</Typography>;
+          }
+          const row = params.row as WorkPlanItem;
+          const title =
+            [params.value, row.WorkName, row.WorkNameDict]
+              .filter(Boolean)
+              .join(" / ") || "-";
+          return (
+            <Tooltip title={title}>
+              <span>
+                <IssueDisplay
+                  display={params.value}
+                  href={`https://tracker.yandex.ru/${row.TaskKey}`}
+                  fio={row.CheckListAssignee ?? ""}
+                />
+              </span>
+            </Tooltip>
+          );
+        },
       },
       {
         field: "TaskKey",
@@ -186,7 +197,9 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
             <IconButton
               size="small"
               sx={(theme) => ({ color: theme.palette.primary.main })}
+              disabled={!canEditPlan}
               onClick={() => {
+                if (!canEditPlan) return;
                 setSelectedRow(params.row as WorkPlanItem);
                 setEditOpen(true);
               }}
@@ -196,7 +209,9 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
             <IconButton
               size="small"
               sx={(theme) => ({ color: theme.palette.warning.main })}
+              disabled={!canEditPlan}
               onClick={() => {
+                if (!canEditPlan) return;
                 setDeleteTarget(params.row as WorkPlanItem);
                 setDeleteOpen(true);
               }}
@@ -400,14 +415,6 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
     }
   };
 
-  if (effectiveTrackerUids.length === 0) {
-    return (
-      <Alert severity="warning" sx={{ mb: 2 }}>
-        Выберите сотрудника или сотрудников для отображения плана.
-      </Alert>
-    );
-  }
-
   return (
     <Box sx={{ mt: 2 }}>
       <FilterTableText
@@ -468,11 +475,11 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
           };
         }}
       />
-      <Box sx={{ mt: 1 }}>
+      {/* <Box sx={{ mt: 1 }}>
         <Typography variant="h6" color="error">
           Остаток: {remainingDays ?? "-"}
         </Typography>
-      </Box>
+      </Box> */}
       <SetIssuePlanTable
         open={editOpen}
         onClose={() => {

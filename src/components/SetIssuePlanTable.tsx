@@ -349,7 +349,7 @@ const SetIssuePlanTable: FC<SetIssuePlanTableProps> = ({
                   },
                 })}
               >
-                Green
+                Тривиальный
               </MenuItem>
               <MenuItem
                 value="Orange"
@@ -367,7 +367,7 @@ const SetIssuePlanTable: FC<SetIssuePlanTableProps> = ({
                   },
                 })}
               >
-                Orange
+                Важный
               </MenuItem>
               <MenuItem
                 value="Red"
@@ -385,7 +385,7 @@ const SetIssuePlanTable: FC<SetIssuePlanTableProps> = ({
                   },
                 })}
               >
-                Red
+                Критический
               </MenuItem>
             </TextField>
           </Stack>

@@ -37,6 +37,7 @@ const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
     workPlanRefreshKey,
   } = useTableTimePlanSelectors();
   const { state } = useAppContext();
+  const { users } = state.state;
   const fetchByLogin = state.state.fetchByLogin;
   const currentTrackerUid =
     state.state.userId ||
@@ -141,15 +142,19 @@ const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
       });
   }, [data, planKeys, planMeta]);
 
-  if (effectiveTrackerUids.length === 0) {
-    return (
-      <Alert severity="warning">
-        Выберите сотрудника или сотрудников для отображения плана.
-      </Alert>
-    );
-  }
+  const filteredByAssignee = useMemo(() => {
+    if (!effectiveTrackerUids.length) return filteredData;
+    const names =
+      users
+        ?.filter((user) => effectiveTrackerUids.includes(user.id))
+        .map((user) => user.name)
+        .filter(Boolean) ?? [];
+    if (names.length === 0) return filteredData;
+    const nameSet = new Set(names);
+    return filteredData.filter((item) => nameSet.has(item.issue?.fio ?? ""));
+  }, [effectiveTrackerUids, filteredData, users]);
 
-  if (!loading && filteredData.length === 0) {
+  if (!loading && filteredByAssignee.length === 0) {
     return (
       <Alert severity="warning">
         Нет ни одной отметки времени за выбранный период
@@ -159,7 +164,7 @@ const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
 
   return (
     <TableTimeSpend
-      data={filteredData}
+      data={filteredByAssignee}
       start={start}
       rangeStart={rangeStart}
       rangeEnd={rangeEnd}

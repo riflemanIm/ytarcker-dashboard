@@ -68,7 +68,7 @@ const TableCheckPlan: FC = () => {
     return workMinutesToDurationInput(num);
   };
   const nameMinWidth = useMemo(() => {
-    if (isXlUp) return 580;
+    if (isXlUp) return 520;
     if (isLgUp) return 380;
     if (isMdUp) return 620;
     if (isSmUp) return 480;
@@ -154,7 +154,7 @@ const TableCheckPlan: FC = () => {
       {
         field: "TaskKey",
         headerName: "В План",
-        minWidth: 140,
+        minWidth: 196,
         flex: 1,
         sortable: false,
         filterable: false,

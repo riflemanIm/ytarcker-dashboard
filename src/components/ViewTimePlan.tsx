@@ -1,4 +1,4 @@
-import { Alert, Box, Divider, Paper, Stack, Typography } from "@mui/material";
+import { Box, Divider, Paper, Stack, Typography } from "@mui/material";
 import { FC, useEffect, useMemo, useState } from "react";
 import TableCheckPlan from "./TableCheckPlan";
 import TableWorkPlan from "./TableWorkPlan";
@@ -93,12 +93,6 @@ const ViewTimePlan: FC<ViewTimePlanProps> = ({
     groupIds,
     workPlanRefreshKey,
   ]);
-  if (effectiveTrackerUids.length === 0)
-    return (
-      <Alert severity="warning" sx={{ mb: 2 }}>
-        Выберите сотрудника или сотрудников для отображения плана.
-      </Alert>
-    );
   return (
     <Box sx={{ px: 2, pb: 2 }}>
       <Stack
