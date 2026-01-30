@@ -155,7 +155,7 @@ export default function AddDurationIssueDialog({
       issueTypeLabel: selectedIssueType ?? null,
       workPlanId: (values.issue as any)?.YT_TL_WORKPLAN_ID ?? undefined,
       addEndWorkDayTime: false,
-      loginUid,
+      trackerUid: loginUid ?? undefined,
     } as SetDataArgs);
 
     dispatch({
@@ -402,13 +402,10 @@ export default function AddDurationIssueDialog({
                   getOptionLabel={(opt) => `[${opt.key}] ${opt.summary}`}
                   value={values.issue}
                   onChange={(_, val) => {
-                    // при смене задачи сбросим комментарий и ошибки по нему
-                    setValues((prev) => ({ ...prev, issue: val, comment: "" }));
-                    setErrors((prev) => {
-                      const next = { ...prev };
-                      delete next.comment;
-                      return next;
-                    });
+                    const newVals = { ...values, issue: val, comment: "" };
+                    // при смене задачи сбрасываем комментарий и пересчитываем ошибки
+                    setValues(newVals);
+                    setErrors(validate(newVals));
                   }}
                   renderInput={(params) => (
                     <TextField
