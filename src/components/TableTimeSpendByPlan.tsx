@@ -1,11 +1,10 @@
-import { DeleteDataArgs, SetDataArgs, getWorkPlan } from "@/actions/data";
+import { DeleteDataArgs, SetDataArgs } from "@/actions/data";
 import { useTableTimePlanSelectors } from "@/hooks/useTableTimePlanSelectors";
 import { TaskItem, WorkPlanItem } from "@/types/global";
 import { Alert } from "@mui/material";
-import { FC, useEffect, useMemo, useState } from "react";
+import { FC, useMemo } from "react";
 import TableTimeSpend from "./TableTimeSpend";
 import { Dayjs } from "dayjs";
-import { useAppContext } from "@/context/AppContext";
 
 interface TableTimeSpendByPlanProps {
   data: TaskItem[];
@@ -28,84 +27,8 @@ const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
   isEditable,
   planItems,
 }) => {
-  const {
-    sprintId,
-    trackerUids,
-    projectIds,
-    roleIds,
-    groupIds,
-    workPlanRefreshKey,
-  } = useTableTimePlanSelectors();
-  const { state } = useAppContext();
-  const { users } = state.state;
-  const fetchByLogin = state.state.fetchByLogin;
-  const currentTrackerUid =
-    state.state.userId ||
-    state.tableTimePlanState.selectedPatientUid ||
-    (Array.isArray(state.state.users) && state.state.users.length === 1
-      ? (state.state.users[0]?.id ?? null)
-      : null);
-  const effectiveTrackerUids = useMemo(() => {
-    if (fetchByLogin) return trackerUids;
-    return currentTrackerUid ? [currentTrackerUid] : [];
-  }, [currentTrackerUid, fetchByLogin, trackerUids]);
-  const [planItemsState, setPlanItemsState] = useState<WorkPlanItem[]>([]);
-  const [loading, setLoading] = useState(false);
-  const effectivePlanItems = planItems ?? planItemsState;
-
-  useEffect(() => {
-    let isMounted = true;
-
-    if (planItems) {
-      setLoading(false);
-      return () => {
-        isMounted = false;
-      };
-    }
-
-    if (!sprintId || effectiveTrackerUids.length === 0) {
-      setPlanItemsState([]);
-      setLoading(false);
-      return () => {
-        isMounted = false;
-      };
-    }
-
-    setLoading(true);
-    getWorkPlan({
-      sprintId,
-      trackerUids: effectiveTrackerUids,
-      projectIds,
-      roleIds,
-      groupIds,
-    })
-      .then((items) => {
-        if (!isMounted) return;
-        setPlanItemsState(items as WorkPlanItem[]);
-        setLoading(false);
-      })
-      .catch((error: Error) => {
-        console.error(
-          "[TableTimeSpendByPlan] getWorkPlan error:",
-          error.message,
-        );
-        if (!isMounted) return;
-        setPlanItemsState([]);
-        setLoading(false);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [
-    planItems,
-    sprintId,
-    effectiveTrackerUids,
-    projectIds,
-    roleIds,
-    groupIds,
-    workPlanRefreshKey,
-  ]);
+  useTableTimePlanSelectors();
+  const effectivePlanItems = planItems ?? [];
 
   const { planKeys, planMeta } = useMemo(() => {
     const next = new Set<string>();
@@ -142,19 +65,7 @@ const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
       });
   }, [data, planKeys, planMeta]);
 
-  const filteredByAssignee = useMemo(() => {
-    if (!effectiveTrackerUids.length) return filteredData;
-    const names =
-      users
-        ?.filter((user) => effectiveTrackerUids.includes(user.id))
-        .map((user) => user.name)
-        .filter(Boolean) ?? [];
-    if (names.length === 0) return filteredData;
-    const nameSet = new Set(names);
-    return filteredData.filter((item) => nameSet.has(item.issue?.fio ?? ""));
-  }, [effectiveTrackerUids, filteredData, users]);
-
-  if (!loading && filteredByAssignee.length === 0) {
+  if (filteredData.length === 0) {
     return (
       <Alert severity="warning">
         Нет ни одной отметки времени за выбранный период
@@ -164,7 +75,7 @@ const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
 
   return (
     <TableTimeSpend
-      data={filteredByAssignee}
+      data={filteredData}
       start={start}
       rangeStart={rangeStart}
       rangeEnd={rangeEnd}

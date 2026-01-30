@@ -70,12 +70,11 @@ const SetTimeSpend: FC<EditableCellMenuProps> = ({
 }) => {
   const { state, dispatch } = useAppContext();
   const { token } = state.auth;
-  const trackerUid =
-    state.state.userId ||
-    state.tableTimePlanState.selectedPatientUid ||
-    (Array.isArray(state.state.users) && state.state.users.length === 1
-      ? (state.state.users[0]?.id ?? null)
-      : null);
+  const {
+    state: { loginUid },
+  } = state;
+
+  const trackerUid = loginUid;
   const [riskState, setRiskState] = useState({
     deadlineOk: true,
     needUpgradeEstimate: false,

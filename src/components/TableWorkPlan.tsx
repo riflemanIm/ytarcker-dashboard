@@ -33,29 +33,17 @@ interface TableWorkPlanProps {
   rows: WorkPlanItem[];
   loading?: boolean;
   setData?: (args: SetDataArgs) => Promise<void>;
-  isEditable?: boolean;
 }
 
 const TableWorkPlan: FC<TableWorkPlanProps> = ({
   rows,
   loading = false,
   setData,
-  isEditable,
 }) => {
-  const { sprintId, trackerUids } = useTableTimePlanSelectors();
+  const { sprintId } = useTableTimePlanSelectors();
   const { state, dispatch } = useAppContext();
   const fetchByLogin = state.state.fetchByLogin;
-  const currentTrackerUid =
-    state.state.userId ||
-    state.tableTimePlanState.selectedPatientUid ||
-    (Array.isArray(state.state.users) && state.state.users.length === 1
-      ? (state.state.users[0]?.id ?? null)
-      : null);
-  const effectiveTrackerUids = useMemo(() => {
-    if (fetchByLogin) return trackerUids;
-    return currentTrackerUid ? [currentTrackerUid] : [];
-  }, [currentTrackerUid, fetchByLogin, trackerUids]);
-  const canEditPlan = effectiveTrackerUids.length > 0;
+
   const { login } = state.auth;
   const [filterText, setFilterText] = useState("");
   const isSprintReady = sprintId != null;
@@ -72,8 +60,9 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
   const [infoTaskKey, setInfoTaskKey] = useState<string | null>(null);
   const [infoTaskName, setInfoTaskName] = useState<string | null>(null);
   const isAdmin = !!(login && isSuperLogin(login));
-  const canAddTime = state.state.fetchByLogin;
 
+  const canAddTime = fetchByLogin;
+  const canEditPlan = !fetchByLogin;
   const formatWorkMinutes = (value: unknown) => {
     const num = Number(value);
     if (!Number.isFinite(num)) return "";
@@ -194,30 +183,34 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
                 </IconButton>
               </Tooltip>
             )}
-            <IconButton
-              size="small"
-              sx={(theme) => ({ color: theme.palette.primary.main })}
-              disabled={!canEditPlan}
-              onClick={() => {
-                if (!canEditPlan) return;
-                setSelectedRow(params.row as WorkPlanItem);
-                setEditOpen(true);
-              }}
-            >
-              <EditIcon fontSize="small" />
-            </IconButton>
-            <IconButton
-              size="small"
-              sx={(theme) => ({ color: theme.palette.warning.main })}
-              disabled={!canEditPlan}
-              onClick={() => {
-                if (!canEditPlan) return;
-                setDeleteTarget(params.row as WorkPlanItem);
-                setDeleteOpen(true);
-              }}
-            >
-              <DeleteIcon fontSize="small" />
-            </IconButton>
+            {canEditPlan && (
+              <>
+                <IconButton
+                  size="small"
+                  sx={(theme) => ({ color: theme.palette.primary.main })}
+                  disabled={!canEditPlan}
+                  onClick={() => {
+                    if (!canEditPlan) return;
+                    setSelectedRow(params.row as WorkPlanItem);
+                    setEditOpen(true);
+                  }}
+                >
+                  <EditIcon fontSize="small" />
+                </IconButton>
+                <IconButton
+                  size="small"
+                  sx={(theme) => ({ color: theme.palette.warning.main })}
+                  disabled={!canEditPlan}
+                  onClick={() => {
+                    if (!canEditPlan) return;
+                    setDeleteTarget(params.row as WorkPlanItem);
+                    setDeleteOpen(true);
+                  }}
+                >
+                  <DeleteIcon fontSize="small" />
+                </IconButton>
+              </>
+            )}
           </Stack>
         ),
     };

@@ -74,6 +74,8 @@ const initialState: AppState = {
   loaded: true,
   userId: debugUserId, // for debug
   users: null,
+  loginUser: null,
+  loginUid: null,
   data: [],
   fetchByLogin: true,
   issues: [],

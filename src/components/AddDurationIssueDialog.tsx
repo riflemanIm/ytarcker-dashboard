@@ -56,13 +56,11 @@ export default function AddDurationIssueDialog({
 }: AddDurationIssueDialogProps) {
   const { state, dispatch } = useAppContext();
   const { token } = state.auth;
-  const { tableTimePlanState } = state;
-  const trackerUid =
-    state.state.userId ||
-    state.tableTimePlanState.selectedPatientUid ||
-    (Array.isArray(state.state.users) && state.state.users.length === 1
-      ? (state.state.users[0]?.id ?? null)
-      : null);
+  const {
+    tableTimePlanState,
+    state: { loginUid },
+  } = state;
+
   const [internalOpen, setInternalOpen] = useState(false);
   const [riskState, setRiskState] = useState({
     deadlineOk: true,
@@ -157,7 +155,7 @@ export default function AddDurationIssueDialog({
       issueTypeLabel: selectedIssueType ?? null,
       workPlanId: (values.issue as any)?.YT_TL_WORKPLAN_ID ?? undefined,
       addEndWorkDayTime: false,
-      trackerUid,
+      loginUid,
     } as SetDataArgs);
 
     dispatch({

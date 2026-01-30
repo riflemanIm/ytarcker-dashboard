@@ -30,6 +30,8 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 
 const apiUrl: string = import.meta.env.VITE_APP_API_URL;
+let tlSprintsPromise: Promise<TlSprint[]> | null = null;
+let tlSprintsCache: TlSprint[] | null = null;
 
 type AppDispatch = Dispatch<AppAction>;
 
@@ -70,7 +72,37 @@ export const getData = async ({
     }
     dispatch({
       type: "setState",
-      payload: (prev) => ({ ...prev, loaded: true, ...res.data }),
+      payload: (prev) => {
+        const users = res.data?.users ?? prev.users;
+        const loginLower = login?.toLowerCase();
+        const loginUserFromUsers =
+          loginLower && Array.isArray(users)
+            ? users.find((u) => {
+                const name = String(u?.name ?? "").toLowerCase();
+                const id = String(u?.id ?? "").toLowerCase();
+                return (
+                  name === loginLower ||
+                  id === loginLower ||
+                  name.includes(loginLower)
+                );
+              }) ?? null
+            : null;
+        const singleUser =
+          Array.isArray(users) && users.length === 1 ? users[0] : null;
+        const loginUser =
+          loginUserFromUsers ?? singleUser ?? prev.loginUser ?? null;
+        const loginUid =
+          prev.loginUid ??
+          (loginUser?.id ? String(loginUser.id) : null);
+        return {
+          ...prev,
+          loaded: true,
+          ...res.data,
+          users,
+          loginUser,
+          loginUid,
+        };
+      },
     });
   } catch (err: unknown) {
     if (axios.isAxiosError(err) && err.response?.status === 422) {
@@ -661,8 +693,21 @@ export const getIssueTypeList = async ({
 
 export const getTlSprints = async (): Promise<TlSprint[]> => {
   try {
-    const res = await axios.post<TlSprint[]>(`${apiUrl}/api/tl_sprints`, {});
-    return Array.isArray(res.data) ? res.data : [];
+    if (tlSprintsCache) return tlSprintsCache;
+    if (!tlSprintsPromise) {
+      tlSprintsPromise = axios
+        .post<TlSprint[]>(`${apiUrl}/api/tl_sprints`, {})
+        .then((res) => (Array.isArray(res.data) ? res.data : []))
+        .then((data) => {
+          tlSprintsCache = data;
+          return data;
+        })
+        .catch((err) => {
+          tlSprintsPromise = null;
+          throw err;
+        });
+    }
+    return await tlSprintsPromise;
   } catch (err: any) {
     console.error("[Ошибка в getTlSprints]:", err.message);
     return [];

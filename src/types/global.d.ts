@@ -159,6 +159,8 @@ export interface AppState {
   loaded: boolean;
   userId: string | null;
   users: User[] | null;
+  loginUser?: User | null;
+  loginUid?: string | null;
   data: DataItem[];
   fetchByLogin: boolean;
   issues: Issue[];

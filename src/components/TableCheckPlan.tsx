@@ -1,5 +1,8 @@
 import { getTaskList, getTaskPlanInfo } from "@/actions/data";
+import { workMinutesToDurationInput } from "@/helpers";
+import { useTableTimePlanSelectors } from "@/hooks/useTableTimePlanSelectors";
 import { TaskListItem, TaskPlanInfoItem } from "@/types/global";
+import InfoIcon from "@mui/icons-material/Info";
 import {
   Alert,
   Box,
@@ -13,17 +16,13 @@ import {
   Tooltip,
   useMediaQuery,
 } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
 import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import dayjs from "dayjs";
 import { FC, useEffect, useMemo, useState } from "react";
+import FilterTableText from "./FilterTableText";
 import IssueDisplay from "./IssueDisplay";
 import SetIssuePlanTable from "./SetIssuePlanTable";
-import { useTableTimePlanSelectors } from "@/hooks/useTableTimePlanSelectors";
-import FilterTableText from "./FilterTableText";
-import { useTheme } from "@mui/material/styles";
-import { workMinutesToDurationInput } from "@/helpers";
-import { useAppContext } from "@/context/AppContext";
-import InfoIcon from "@mui/icons-material/Info";
 import TableTaskPlanInfo from "./TableTaskPlanInfo";
 
 const TableCheckPlan: FC = () => {
@@ -34,19 +33,9 @@ const TableCheckPlan: FC = () => {
     roleIds,
     groupIds,
     workPlanRefreshKey,
+    fetchByLogin,
   } = useTableTimePlanSelectors();
-  const { state } = useAppContext();
-  const fetchByLogin = state.state.fetchByLogin;
-  const currentTrackerUid =
-    state.state.userId ||
-    state.tableTimePlanState.selectedPatientUid ||
-    (Array.isArray(state.state.users) && state.state.users.length === 1
-      ? (state.state.users[0]?.id ?? null)
-      : null);
-  const effectiveTrackerUids = useMemo(() => {
-    if (fetchByLogin) return trackerUids;
-    return currentTrackerUid ? [currentTrackerUid] : [];
-  }, [currentTrackerUid, fetchByLogin, trackerUids]);
+
   const [rows, setRows] = useState<TaskListItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -92,7 +81,7 @@ const TableCheckPlan: FC = () => {
   };
   useEffect(() => {
     let isMounted = true;
-    if (effectiveTrackerUids.length === 0) {
+    if (trackerUids.length === 0) {
       setRows([]);
       setLoading(false);
       return () => {
@@ -101,7 +90,7 @@ const TableCheckPlan: FC = () => {
     }
     setLoading(true);
     getTaskList({
-      trackerUids: effectiveTrackerUids,
+      trackerUids: trackerUids,
       projectIds,
       roleIds,
       groupIds,
@@ -120,7 +109,14 @@ const TableCheckPlan: FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [effectiveTrackerUids, projectIds, roleIds, groupIds, workPlanRefreshKey]);
+  }, [
+    trackerUids,
+    projectIds,
+    roleIds,
+    groupIds,
+    workPlanRefreshKey,
+    fetchByLogin,
+  ]);
 
   const columns = useMemo<GridColDef<TaskListItem>[]>(
     () => [
@@ -246,7 +242,7 @@ const TableCheckPlan: FC = () => {
     });
   }, [rowsWithId, filterText]);
 
-  if (effectiveTrackerUids.length === 0) {
+  if (trackerUids.length === 0) {
     return (
       <Alert severity="warning" sx={{ mt: 2 }}>
         Выберите сотрудника или сотрудников для отображения задач.

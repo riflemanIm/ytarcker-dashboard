@@ -1,14 +1,13 @@
+import { DeleteDataArgs, SetDataArgs, getWorkPlan } from "@/actions/data";
+import { useTableTimePlanSelectors } from "@/hooks/useTableTimePlanSelectors";
+import { TaskItem, WorkPlanItem } from "@/types/global";
 import { Box, Divider, Paper, Stack, Typography } from "@mui/material";
-import { FC, useEffect, useMemo, useState } from "react";
+import { Dayjs } from "dayjs";
+import { FC, useEffect, useRef, useState } from "react";
 import TableCheckPlan from "./TableCheckPlan";
+import TableTimeSpendByPlan from "./TableTimeSpendByPlan";
 import TableWorkPlan from "./TableWorkPlan";
 import TableWorkPlanCapacity from "./TableWorkPlanCapacity";
-import { useAppContext } from "@/context/AppContext";
-import TableTimeSpendByPlan from "./TableTimeSpendByPlan";
-import { DeleteDataArgs, SetDataArgs, getWorkPlan } from "@/actions/data";
-import { TaskItem, WorkPlanItem } from "@/types/global";
-import { Dayjs } from "dayjs";
-import { useTableTimePlanSelectors } from "@/hooks/useTableTimePlanSelectors";
 
 interface ViewTimePlanProps {
   data: TaskItem[];
@@ -27,9 +26,6 @@ const ViewTimePlan: FC<ViewTimePlanProps> = ({
   setData,
   deleteData,
 }) => {
-  const { state } = useAppContext();
-  const fetchByLogin = state.state.fetchByLogin;
-
   const {
     sprintId,
     trackerUids,
@@ -37,24 +33,17 @@ const ViewTimePlan: FC<ViewTimePlanProps> = ({
     roleIds,
     groupIds,
     workPlanRefreshKey,
+    fetchByLogin,
   } = useTableTimePlanSelectors();
-  const currentTrackerUid =
-    state.state.userId ||
-    state.tableTimePlanState.selectedPatientUid ||
-    (Array.isArray(state.state.users) && state.state.users.length === 1
-      ? (state.state.users[0]?.id ?? null)
-      : null);
-  const effectiveTrackerUids = useMemo(() => {
-    if (fetchByLogin) return trackerUids;
-    return currentTrackerUid ? [currentTrackerUid] : [];
-  }, [currentTrackerUid, fetchByLogin, trackerUids]);
+
   const [workPlanRows, setWorkPlanRows] = useState<WorkPlanItem[]>([]);
   const [workPlanLoading, setWorkPlanLoading] = useState(false);
+  const lastRequestKeyRef = useRef<string>("");
 
   useEffect(() => {
     let isMounted = true;
 
-    if (!sprintId || effectiveTrackerUids.length === 0) {
+    if (!sprintId || trackerUids.length === 0) {
       setWorkPlanRows([]);
       setWorkPlanLoading(false);
       return () => {
@@ -62,10 +51,20 @@ const ViewTimePlan: FC<ViewTimePlanProps> = ({
       };
     }
 
+    const requestKey = `${sprintId}|${trackerUids.join(",")}|${projectIds.join(
+      ",",
+    )}|${roleIds.join(",")}|${groupIds.join(",")}`;
+    if (lastRequestKeyRef.current === requestKey) {
+      return () => {
+        isMounted = false;
+      };
+    }
+    lastRequestKeyRef.current = requestKey;
+
     setWorkPlanLoading(true);
     getWorkPlan({
       sprintId,
-      trackerUids: effectiveTrackerUids,
+      trackerUids: trackerUids,
       projectIds,
       roleIds,
       groupIds,
@@ -87,7 +86,7 @@ const ViewTimePlan: FC<ViewTimePlanProps> = ({
     };
   }, [
     sprintId,
-    effectiveTrackerUids,
+    trackerUids,
     projectIds,
     roleIds,
     groupIds,
@@ -102,45 +101,46 @@ const ViewTimePlan: FC<ViewTimePlanProps> = ({
         sx={{ width: "100%" }}
       >
         {!fetchByLogin && (
-          <Paper
-            variant="elevation"
-            sx={(theme) => ({
-              p: { xs: 1, sm: 2 },
-              borderRadius: { xs: 1, sm: 2 },
-              border: `1px solid ${theme.palette.divider}`,
-              boxShadow: "0px 10px 15px rgba(15, 23, 42, 0.04)",
-              flexBasis: { xs: "100%", lg: "50%" },
-              flexGrow: 1,
-              minWidth: 0,
-              minHeight: 530,
-            })}
-          >
-            <Typography variant="h5" textAlign="center" my={2}>
-              Подбор задач в план
-            </Typography>
-            <TableCheckPlan />
-          </Paper>
-        )}
-        {!fetchByLogin && (
-          <Paper
-            variant="elevation"
-            sx={(theme) => ({
-              p: { xs: 1, sm: 2 },
-              borderRadius: { xs: 1, sm: 2 },
-              border: `1px solid ${theme.palette.divider}`,
-              boxShadow: "0px 10px 15px rgba(15, 23, 42, 0.04)",
-              my: 2,
-              flexBasis: { xs: "100%", lg: "50%" },
-              flexGrow: 1,
-              minWidth: 0,
-              minHeight: 530,
-            })}
-          >
-            <Typography variant="h5" textAlign="center" my={2}>
-              Загрузка сотрудников
-            </Typography>
-            <TableWorkPlanCapacity />
-          </Paper>
+          <>
+            {" "}
+            <Paper
+              variant="elevation"
+              sx={(theme) => ({
+                p: { xs: 1, sm: 2 },
+                borderRadius: { xs: 1, sm: 2 },
+                border: `1px solid ${theme.palette.divider}`,
+                boxShadow: "0px 10px 15px rgba(15, 23, 42, 0.04)",
+                flexBasis: { xs: "100%", lg: "50%" },
+                flexGrow: 1,
+                minWidth: 0,
+                minHeight: 530,
+              })}
+            >
+              <Typography variant="h5" textAlign="center" my={2}>
+                Подбор задач в план
+              </Typography>
+              <TableCheckPlan />
+            </Paper>
+            <Paper
+              variant="elevation"
+              sx={(theme) => ({
+                p: { xs: 1, sm: 2 },
+                borderRadius: { xs: 1, sm: 2 },
+                border: `1px solid ${theme.palette.divider}`,
+                boxShadow: "0px 10px 15px rgba(15, 23, 42, 0.04)",
+                my: 2,
+                flexBasis: { xs: "100%", lg: "50%" },
+                flexGrow: 1,
+                minWidth: 0,
+                minHeight: 530,
+              })}
+            >
+              <Typography variant="h5" textAlign="center" my={2}>
+                Загрузка сотрудников
+              </Typography>
+              <TableWorkPlanCapacity />
+            </Paper>
+          </>
         )}
       </Stack>
       <Paper
@@ -161,7 +161,6 @@ const ViewTimePlan: FC<ViewTimePlanProps> = ({
           rows={workPlanRows}
           loading={workPlanLoading}
           setData={setData}
-          isEditable={fetchByLogin}
         />
         <Divider sx={{ my: 2 }} />
         <Typography variant="h5" textAlign="center" my={2}>

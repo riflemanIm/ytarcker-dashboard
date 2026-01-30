@@ -161,12 +161,11 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
 }) => {
   const { state: appState, dispatch } = useAppContext();
   const { token } = appState.auth;
-  const trackerUid =
-    appState.state.userId ||
-    appState.tableTimePlanState.selectedPatientUid ||
-    (Array.isArray(appState.state.users) && appState.state.users.length === 1
-      ? (appState.state.users[0]?.id ?? null)
-      : null);
+  const {
+    state: { loginUid },
+  } = appState;
+
+  const trackerUid = loginUid;
   const issueMeta = useMemo(() => {
     const map = new Map<
       string,

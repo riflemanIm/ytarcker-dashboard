@@ -77,7 +77,7 @@ const YandexTracker: FC = () => {
   };
 
   // НЕДЕЛЬНЫЙ РЕЖИМ (TableTimeSpend)
-  const { start, end } = getWeekRange(weekOffset);
+  const { start, end } = useMemo(() => getWeekRange(weekOffset), [weekOffset]);
   const sprintLabel = useMemo(() => {
     if (!selectedSprintId) return null;
     return (
@@ -124,9 +124,13 @@ const YandexTracker: FC = () => {
     });
   };
 
+  const currentTrackerUid = state.fetchByLogin
+    ? state.loginUid
+    : appState.tableTimePlanState.selectedPatientUid;
+
   const fetchForActiveRange = useCallback(() => {
-    if (viewMode === "search") return;
-    if (!(login || state.userId) || !token) return;
+    if (viewMode === "search" || viewMode === "table_time_plan") return;
+    if (!(login || state.userId || currentTrackerUid) || !token) return;
 
     const rangeStart = viewMode === "report" ? reportFrom : start;
     const rangeEnd = viewMode === "report" ? reportTo : end;
@@ -149,6 +153,7 @@ const YandexTracker: FC = () => {
     state.userId,
     token,
     state.fetchByLogin,
+
     reportFrom,
     reportTo,
     sprintRange,
@@ -156,6 +161,28 @@ const YandexTracker: FC = () => {
     end,
     viewMode,
   ]);
+
+  useEffect(() => {
+    if (viewMode !== "table_time_plan") return;
+    const planRangeStart = sprintRange?.start;
+    const planRangeEnd = sprintRange?.end;
+
+    if (!currentTrackerUid || !token || !planRangeStart || !planRangeEnd)
+      return;
+
+    dispatch({
+      type: "setState",
+      payload: (prev) => ({ ...prev, data: [] }),
+    });
+    getData({
+      userId: currentTrackerUid,
+      dispatch,
+      token,
+      start: planRangeStart.format("YYYY-MM-DD"),
+      end: planRangeEnd.format("YYYY-MM-DD"),
+      login: undefined,
+    });
+  }, [viewMode, currentTrackerUid, token, dispatch, sprintRange]);
   useEffect(() => {
     if (viewMode === "table_time_spend") {
       const issuesUserId = debugUserId || state.userId;
