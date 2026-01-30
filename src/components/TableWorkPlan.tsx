@@ -383,24 +383,22 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
     if (!deleteTarget || !sprintId) return;
     setDeleteLoading(true);
     try {
-      const res = await setWorkPlan({
+      await setWorkPlan({
         sprintId,
         taskKey: deleteTarget.TaskKey,
         trackerUid: deleteTarget.trackerUid,
         action: 2,
         workPlanId: deleteTarget.YT_TL_WORKPLAN_ID,
       });
-      if (res?.YT_TL_WORKPLAN_ID != null) {
-        dispatch({
-          type: "setTableTimePlanState",
-          payload: (prev) => ({
-            ...prev,
-            workPlanRefreshKey: prev.workPlanRefreshKey + 1,
-          }),
-        });
-        setDeleteOpen(false);
-        setDeleteTarget(null);
-      }
+      dispatch({
+        type: "setTableTimePlanState",
+        payload: (prev) => ({
+          ...prev,
+          workPlanRefreshKey: prev.workPlanRefreshKey + 1,
+        }),
+      });
+      setDeleteOpen(false);
+      setDeleteTarget(null);
     } catch (error: any) {
       console.error("[TableWorkPlan] delete work plan error:", error?.message);
     } finally {

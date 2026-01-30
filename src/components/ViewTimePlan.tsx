@@ -3,7 +3,7 @@ import { useTableTimePlanSelectors } from "@/hooks/useTableTimePlanSelectors";
 import { TaskItem, WorkPlanItem } from "@/types/global";
 import { Box, Divider, Paper, Stack, Typography } from "@mui/material";
 import { Dayjs } from "dayjs";
-import { FC, useEffect, useRef, useState } from "react";
+import { FC, useEffect, useState } from "react";
 import TableCheckPlan from "./TableCheckPlan";
 import TableTimeSpendByPlan from "./TableTimeSpendByPlan";
 import TableWorkPlan from "./TableWorkPlan";
@@ -38,12 +38,11 @@ const ViewTimePlan: FC<ViewTimePlanProps> = ({
 
   const [workPlanRows, setWorkPlanRows] = useState<WorkPlanItem[]>([]);
   const [workPlanLoading, setWorkPlanLoading] = useState(false);
-  const lastRequestKeyRef = useRef<string>("");
 
   useEffect(() => {
     let isMounted = true;
 
-    if (!sprintId || trackerUids.length === 0) {
+    if (!sprintId) {
       setWorkPlanRows([]);
       setWorkPlanLoading(false);
       return () => {
@@ -51,20 +50,10 @@ const ViewTimePlan: FC<ViewTimePlanProps> = ({
       };
     }
 
-    const requestKey = `${sprintId}|${trackerUids.join(",")}|${projectIds.join(
-      ",",
-    )}|${roleIds.join(",")}|${groupIds.join(",")}`;
-    if (lastRequestKeyRef.current === requestKey) {
-      return () => {
-        isMounted = false;
-      };
-    }
-    lastRequestKeyRef.current = requestKey;
-
     setWorkPlanLoading(true);
     getWorkPlan({
       sprintId,
-      trackerUids: trackerUids,
+      trackerUids: trackerUids.length ? trackerUids : undefined,
       projectIds,
       roleIds,
       groupIds,
