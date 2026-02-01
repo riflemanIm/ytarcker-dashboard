@@ -162,8 +162,11 @@ export const updateTlWorklog = async (
       throw new Error("worklogId is required for edit/delete actions");
     }
     const res = await axios.post<{ YT_TL_WORKLOG_ID: number }>(
-      `${apiUrl}/tlworklogupdate`,
-      payload,
+      `${apiUrl}/api/worklog_update`,
+      {
+        ...payload,
+        durationMinutes: payload.duration,
+      },
     );
     return res.data ?? null;
   } catch (err: any) {

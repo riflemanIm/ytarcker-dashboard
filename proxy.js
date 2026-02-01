@@ -242,10 +242,6 @@ app.post("/api/add_time", async (req, res) => {
   let { token, issueId, start, duration, comment } = req.body;
 
   try {
-    if (!token) {
-      return res.status(400).json({ error: "token not passed" });
-    }
-
     // Добавляем новый worklog
     const url = `https://api.tracker.yandex.net/v2/issues/${issueId}/worklog`;
     const { data } = await axios.post(
@@ -341,9 +337,12 @@ app.post("/api/worklog_update", async (req, res) => {
       items,
     } = req.body ?? {};
 
-    if (!token) {
-      return res.status(400).json({ error: "token not passed" });
-    }
+    const hasToken = typeof token === "string" && token.length > 0;
+    const resolvedDurationMinutes = Number.isFinite(durationMinutes)
+      ? durationMinutes
+      : typeof duration === "number" && Number.isFinite(duration)
+        ? duration
+        : undefined;
     if (typeof taskKey !== "string" || taskKey.length === 0) {
       return res.status(400).json({
         message: "Missing or invalid field 'taskKey'. It must be a string.",
@@ -411,6 +410,56 @@ app.post("/api/worklog_update", async (req, res) => {
       );
     };
 
+    if (!hasToken) {
+      if ((action === 1 || action === 2) && !Number.isInteger(Number(worklogId))) {
+        return res.status(400).json({
+          message:
+            "Field 'worklogId' is required and must be an integer for Edit or Delete actions.",
+        });
+      }
+      const internalError = requireInternalFields({
+        durationMinutes: resolvedDurationMinutes,
+        startDate,
+        comment,
+        trackerUid,
+        deadlineOk,
+        needUpgradeEstimate,
+        makeTaskFaster,
+      });
+      if (internalError) {
+        return res.status(400).json({ message: internalError });
+      }
+
+      const commentWithTags = buildCommentWithTags(
+        comment,
+        issueTypeLabel ?? undefined,
+        {
+          deadlineOk,
+          needUpgradeEstimate,
+          makeTaskFaster,
+        },
+        workPlanId ?? undefined,
+      );
+
+      const internalResponse = await sendInternal({
+        taskKey,
+        duration: resolvedDurationMinutes,
+        startDate,
+        deadlineOk,
+        needUpgradeEstimate,
+        makeTaskFaster,
+        comment: commentWithTags,
+        action,
+        checklistItemId,
+        trackerUid,
+        worklogId: Number.isInteger(Number(worklogId))
+          ? Number(worklogId)
+          : undefined,
+      });
+
+      return res.json(internalResponse?.data ?? null);
+    }
+
     if (action === 0 || action === 1) {
       if (typeof duration !== "string" || duration.length === 0) {
         return res.status(400).json({
@@ -429,7 +478,7 @@ app.post("/api/worklog_update", async (req, res) => {
         });
       }
       const internalError = requireInternalFields({
-        durationMinutes,
+        durationMinutes: resolvedDurationMinutes,
         startDate,
         comment,
         trackerUid,
@@ -469,7 +518,7 @@ app.post("/api/worklog_update", async (req, res) => {
 
       const internalResponse = await sendInternal({
         taskKey,
-        duration: durationMinutes,
+        duration: resolvedDurationMinutes,
         startDate,
         deadlineOk,
         needUpgradeEstimate,
@@ -603,7 +652,7 @@ app.post("/api/worklog_update", async (req, res) => {
     }
 
     const internalError = requireInternalFields({
-      durationMinutes,
+      durationMinutes: resolvedDurationMinutes,
       startDate,
       comment,
       trackerUid,
@@ -622,7 +671,7 @@ app.post("/api/worklog_update", async (req, res) => {
 
     await sendInternal({
       taskKey,
-      duration: durationMinutes,
+      duration: resolvedDurationMinutes,
       startDate,
       deadlineOk,
       needUpgradeEstimate,
@@ -1421,144 +1470,5 @@ app.post("/api/task_plan_info", async (req, res) => {
     res.status(status).json(payload);
   }
 });
-
-const handleTlWorklogUpdate = async (req, res) => {
-  try {
-    const {
-      taskKey,
-      duration,
-      startDate,
-      deadlineOk,
-      needUpgradeEstimate,
-      makeTaskFaster,
-      comment,
-      action,
-      checklistItemId,
-      trackerUid,
-      worklogId,
-      issueTypeLabel,
-      workPlanId,
-    } = req.body ?? {};
-
-    if (typeof taskKey !== "string" || taskKey.length === 0) {
-      return res.status(400).json({
-        message: "Missing or invalid field 'taskKey'. It must be a string.",
-      });
-    }
-    if (typeof duration !== "number" || !Number.isFinite(duration)) {
-      return res.status(400).json({
-        message: "Missing or invalid field 'duration'. It must be a number.",
-      });
-    }
-    if (typeof startDate !== "string" || startDate.length === 0) {
-      return res.status(400).json({
-        message: "Missing or invalid field 'startDate'. It must be a string.",
-      });
-    }
-    if (typeof deadlineOk !== "boolean") {
-      return res.status(400).json({
-        message: "Missing or invalid field 'deadlineOk'. It must be a boolean.",
-      });
-    }
-    if (typeof needUpgradeEstimate !== "boolean") {
-      return res.status(400).json({
-        message:
-          "Missing or invalid field 'needUpgradeEstimate'. It must be a boolean.",
-      });
-    }
-    if (typeof makeTaskFaster !== "boolean") {
-      return res.status(400).json({
-        message:
-          "Missing or invalid field 'makeTaskFaster'. It must be a boolean.",
-      });
-    }
-    if (typeof comment !== "string") {
-      return res.status(400).json({
-        message: "Missing or invalid field 'comment'. It must be a string.",
-      });
-    }
-    if (issueTypeLabel != null && typeof issueTypeLabel !== "string") {
-      return res.status(400).json({
-        message: "Field 'issueTypeLabel' must be a string when provided.",
-      });
-    }
-    if (
-      workPlanId != null &&
-      typeof workPlanId !== "string" &&
-      typeof workPlanId !== "number"
-    ) {
-      return res.status(400).json({
-        message: "Field 'workPlanId' must be a string or number when provided.",
-      });
-    }
-    if (![0, 1, 2].includes(action)) {
-      return res.status(400).json({
-        message: "Field 'action' must be 0 (Add), 1 (Edit), or 2 (Delete).",
-      });
-    }
-    if (typeof trackerUid !== "string" || trackerUid.length === 0) {
-      return res.status(400).json({
-        message: "Missing or invalid field 'trackerUid'. It must be a string.",
-      });
-    }
-    if (checklistItemId != null && typeof checklistItemId !== "string") {
-      return res.status(400).json({
-        message: "Field 'checklistItemId' must be a string when provided.",
-      });
-    }
-    if ((action === 1 || action === 2) && !Number.isInteger(worklogId)) {
-      return res.status(400).json({
-        message:
-          "Field 'worklogId' is required and must be an integer for Edit or Delete actions.",
-      });
-    }
-
-    const commentWithTags = buildCommentWithTags(
-      comment,
-      issueTypeLabel ?? undefined,
-      {
-        deadlineOk,
-        needUpgradeEstimate,
-        makeTaskFaster,
-      },
-      workPlanId ?? undefined,
-    );
-
-    const resp = await axios.post(
-      "http://of-srv-apps-001.pmtech.ru:18005/acceptor/yandextracker/tlworklogupdate",
-      {
-        taskKey,
-        duration,
-        startDate,
-        deadlineOk,
-        needUpgradeEstimate,
-        makeTaskFaster,
-        comment: commentWithTags,
-        action,
-        checklistItemId,
-        trackerUid,
-        worklogId,
-      },
-      {
-        timeout: 15000,
-      },
-    );
-
-    res.json(resp.data);
-  } catch (error) {
-    const status = error.response?.status || 500;
-    const payload = {
-      error: error.message,
-      code: error.code,
-      cause: error.cause,
-      upstreamStatus: error.response?.status,
-      upstreamData: error.response?.data,
-    };
-    console.error("[tlworklogupdate] upstream error:", payload);
-    res.status(status).json(payload);
-  }
-};
-
-app.post("/api/tlworklogupdate", handleTlWorklogUpdate);
 
 app.listen(4000, () => console.log("Proxy server running on port 4000"));
