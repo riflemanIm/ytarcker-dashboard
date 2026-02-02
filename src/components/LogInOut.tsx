@@ -40,7 +40,7 @@ const LogInOut: React.FC = () => {
                 headers: {
                   Authorization: `OAuth ${tokenFromHash}`,
                 },
-              }
+              },
             );
 
             const login: string | null = response.data.login;
@@ -65,7 +65,7 @@ const LogInOut: React.FC = () => {
           } catch (error) {
             console.error(
               "Ошибка при получении информации о пользователе:",
-              error
+              error,
             );
           }
         };

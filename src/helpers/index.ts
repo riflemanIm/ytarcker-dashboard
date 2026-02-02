@@ -534,9 +534,7 @@ export const workDaysToDurationInput = (days?: number | null): string => {
   return parts.length > 0 ? parts.join(" ") : "0m";
 };
 
-export const workMinutesToDurationInput = (
-  minutes?: number | null,
-): string => {
+export const workMinutesToDurationInput = (minutes?: number | null): string => {
   if (minutes == null || Number.isNaN(minutes)) return "";
   const totalMinutes = Math.round(minutes);
   const sign = totalMinutes < 0 ? "-" : "";

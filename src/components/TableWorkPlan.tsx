@@ -43,11 +43,19 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
   setData,
   onWorkPlanRefresh,
 }) => {
-  const { sprintId, trackerUids } = useTableTimePlanSelectors();
-  const { state, dispatch } = useAppContext();
-  const fetchByLogin = state.state.fetchByLogin;
+  const { sprintId, trackerUids, isAdmin, fetchByLogin } =
+    useTableTimePlanSelectors();
 
-  const { login } = state.auth;
+  const { dispatch } = useAppContext();
+
+  // const { login } = state.auth;
+  // const isAdmin = !!(login && isSuperLogin(login));
+
+  const canAddTime = fetchByLogin;
+  const canEditPlan = !fetchByLogin;
+
+  //console.log("canAddTime", canAddTime);
+
   const [filterText, setFilterText] = useState("");
   const isSprintReady = sprintId != null;
   const [editOpen, setEditOpen] = useState(false);
@@ -62,10 +70,7 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
   const [infoRows, setInfoRows] = useState<TaskPlanInfoItem[]>([]);
   const [infoTaskKey, setInfoTaskKey] = useState<string | null>(null);
   const [infoTaskName, setInfoTaskName] = useState<string | null>(null);
-  const isAdmin = !!(login && isSuperLogin(login));
 
-  const canAddTime = fetchByLogin;
-  const canEditPlan = !fetchByLogin;
   const formatWorkMinutes = (value: unknown) => {
     const num = Number(value);
     if (!Number.isFinite(num)) return "";
@@ -294,10 +299,8 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
       },
     ];
 
-    return isAdmin
-      ? [...baseColumns, actionColumn, ...tailColumns]
-      : [...baseColumns, ...tailColumns];
-  }, [isAdmin, canAddTime, handleOpenInfo]);
+    return [...baseColumns, actionColumn, ...tailColumns];
+  }, [isAdmin, fetchByLogin, handleOpenInfo]);
 
   const filteredRows = useMemo(() => {
     const query = filterText.trim().toLowerCase();
@@ -362,29 +365,29 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
     ];
   }, [filteredRows]);
 
-  const sprintWorkingDays = useMemo(() => {
-    const { selectedSprintId, sprins } = state.tableTimePlanState;
-    if (!selectedSprintId) return null;
-    const sprint = sprins.find(
-      (item) => String(item.yt_tl_sprints_id) === selectedSprintId,
-    );
-    return sprint?.workingminutes ?? null;
-  }, [state.tableTimePlanState]);
+  // const sprintWorkingDays = useMemo(() => {
+  //   const { selectedSprintId, sprins } = state.tableTimePlanState;
+  //   if (!selectedSprintId) return null;
+  //   const sprint = sprins.find(
+  //     (item) => String(item.yt_tl_sprints_id) === selectedSprintId,
+  //   );
+  //   return sprint?.workingminutes ?? null;
+  // }, [state.tableTimePlanState]);
 
-  const totalSpentDays = useMemo(() => {
-    const total = filteredRows.reduce(
-      (acc, item) => acc + (Number(item.SpentTimeMinutes) || 0),
-      0,
-    );
-    return formatWorkMinutes(total);
-  }, [filteredRows]);
+  // const totalSpentDays = useMemo(() => {
+  //   const total = filteredRows.reduce(
+  //     (acc, item) => acc + (Number(item.SpentTimeMinutes) || 0),
+  //     0,
+  //   );
+  //   return formatWorkMinutes(total);
+  // }, [filteredRows]);
 
-  const remainingDays = useMemo(() => {
-    if (sprintWorkingDays == null) return null;
-    const spent = Number(totalSpentDays);
-    if (!Number.isFinite(spent)) return null;
-    return formatWorkMinutes(sprintWorkingDays - spent);
-  }, [sprintWorkingDays, totalSpentDays]);
+  // const remainingDays = useMemo(() => {
+  //   if (sprintWorkingDays == null) return null;
+  //   const spent = Number(totalSpentDays);
+  //   if (!Number.isFinite(spent)) return null;
+  //   return formatWorkMinutes(sprintWorkingDays - spent);
+  // }, [sprintWorkingDays, totalSpentDays]);
 
   const handleDelete = async () => {
     if (!deleteTarget || !sprintId) return;

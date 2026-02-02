@@ -1,10 +1,13 @@
 import { useMemo } from "react";
 import { useAppContext } from "@/context/AppContext";
+import { isSuperLogin } from "@/helpers";
 
 export const useTableTimePlanSelectors = () => {
   const { state } = useAppContext();
   const { tableTimePlanState } = state;
   const { fetchByLogin, loginUid } = state.state;
+  const { login } = state.auth;
+  const isAdmin = !!(login && isSuperLogin(login));
 
   const sprintId = useMemo(() => {
     const parsed = Number(tableTimePlanState.selectedSprintId);
@@ -56,5 +59,6 @@ export const useTableTimePlanSelectors = () => {
     fetchByLogin,
     tableTimePlanState,
     workPlanRefreshKey: tableTimePlanState.workPlanRefreshKey,
+    isAdmin,
   };
 };
