@@ -33,7 +33,7 @@ const TableCheckPlan: FC = () => {
     roleIds,
     groupIds,
     workPlanRefreshKey,
-    fetchByLogin,
+    showAdminControls,
   } = useTableTimePlanSelectors();
 
   const [rows, setRows] = useState<TaskListItem[]>([]);
@@ -115,7 +115,7 @@ const TableCheckPlan: FC = () => {
     roleIds,
     groupIds,
     workPlanRefreshKey,
-    fetchByLogin,
+    showAdminControls,
   ]);
 
   const columns = useMemo<GridColDef<TaskListItem>[]>(

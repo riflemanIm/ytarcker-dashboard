@@ -30,14 +30,14 @@ export interface ReportRangeProps {
 }
 
 interface HeaderFiltersProps {
+  isSuperUser: boolean;
   showAdminControls: boolean;
   showRange: boolean;
   viewMode: ViewMode;
   weekNavigation: WeekNavigationProps;
   reportRange: ReportRangeProps;
-  fetchByLogin: boolean;
   login: string | null | undefined;
-  onToggleFetchMode: () => void;
+  onToggleShowAdminControls: () => void;
   loaded: boolean;
   users: User[] | null;
   userId: string | null;
@@ -45,20 +45,19 @@ interface HeaderFiltersProps {
 }
 
 const HeaderFilters: FC<HeaderFiltersProps> = ({
+  isSuperUser,
   showAdminControls,
   showRange,
   viewMode,
   weekNavigation,
   reportRange,
-  fetchByLogin,
   login,
-  onToggleFetchMode,
+  onToggleShowAdminControls,
   loaded,
   users,
   userId,
   handleSelectedUsersChange,
 }) => {
-  console.log("fetchByLogin-", fetchByLogin);
   const rangeFilters =
     viewMode === "table_time_spend" ? (
       <WeekNavigator
@@ -87,22 +86,22 @@ const HeaderFilters: FC<HeaderFiltersProps> = ({
         <Box sx={{ flex: "1 1 160px", minWidth: 0 }}>
           <SelectSprintList />
         </Box>
-        {!fetchByLogin && (
+        {showAdminControls && (
           <Box sx={{ flex: "1 1 160px", minWidth: 0 }}>
             <AutocompleteGroupList />
           </Box>
         )}
-        {!fetchByLogin && (
+        {showAdminControls && (
           <Box sx={{ flex: "1 0 210px", minWidth: 0 }}>
             <AutocompleteGroupPatientsList />
           </Box>
         )}
-        {!fetchByLogin && (
+        {showAdminControls && (
           <Box sx={{ flex: "0 0 220px", minWidth: 0 }}>
             <AutocompleteRoleList />
           </Box>
         )}
-        {!fetchByLogin && (
+        {showAdminControls && (
           <Box sx={{ flex: "0 0 260px", minWidth: 0 }}>
             <AutocompleteProjectList />
           </Box>
@@ -121,7 +120,7 @@ const HeaderFilters: FC<HeaderFiltersProps> = ({
       flexWrap="nowrap"
       sx={{ overflowX: "auto", width: "100%", minWidth: 0, flex: "1 1 auto" }}
     >
-      {showAdminControls && (
+      {isSuperUser && (
         <Stack
           direction="row"
           spacing={2}
@@ -130,15 +129,16 @@ const HeaderFilters: FC<HeaderFiltersProps> = ({
         >
           <Box>
             <FetchModeSwitch
-              fetchByLogin={fetchByLogin}
+              showAdminControls={showAdminControls}
               login={login ?? ""}
-              onToggle={onToggleFetchMode}
+              onToggle={onToggleShowAdminControls}
               disabled={!loaded}
             />
           </Box>
 
-          {viewMode !== "table_time_plan" &&
-            (isEmpty(users) && !fetchByLogin ? (
+          {showAdminControls &&
+            viewMode !== "table_time_plan" &&
+            (isEmpty(users) ? (
               <Alert severity="info" sx={{ flex: 1, minWidth: 260 }}>
                 Нет сотрудников за этот период
               </Alert>
@@ -148,7 +148,7 @@ const HeaderFilters: FC<HeaderFiltersProps> = ({
                   userId={userId}
                   handleSelectedUsersChange={handleSelectedUsersChange}
                   users={users}
-                  disabled={!loaded || fetchByLogin}
+                  disabled={!loaded}
                 />
               </Box>
             ))}

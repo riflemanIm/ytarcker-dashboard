@@ -1006,6 +1006,49 @@ app.get("/api/issue_type_list", async (req, res) => {
   }
 });
 
+app.post("/api/tl_userinfo", async (req, res) => {
+  try {
+    const { trackerUid, email } = req.body ?? {};
+
+    const trackerUidValue =
+      typeof trackerUid === "string" && trackerUid.length > 0
+        ? trackerUid
+        : null;
+    const emailValue =
+      typeof email === "string" && email.length > 0 ? email : null;
+
+    if (!trackerUidValue && !emailValue) {
+      return res.status(400).json({
+        message: "At least one field is required: 'trackerUid' or 'email'.",
+      });
+    }
+
+    const resp = await axios.post(
+      "http://of-srv-apps-001.pmtech.ru:18005/acceptor/yandextracker/gettluserinfo",
+      {
+        trackerUid: trackerUidValue ?? undefined,
+        email: emailValue ?? undefined,
+      },
+      {
+        timeout: 15000,
+      },
+    );
+
+    res.json(resp.data);
+  } catch (error) {
+    const status = error.response?.status || 500;
+    const payload = {
+      error: error.message,
+      code: error.code,
+      cause: error.cause,
+      upstreamStatus: error.response?.status,
+      upstreamData: error.response?.data,
+    };
+    console.error("[api/tl_userinfo] upstream error:", payload);
+    res.status(status).json(payload);
+  }
+});
+
 app.post("/api/tl_sprints", async (req, res) => {
   try {
     const resp = await axios.post(

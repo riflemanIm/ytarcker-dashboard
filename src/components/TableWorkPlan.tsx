@@ -18,7 +18,7 @@ import dayjs from "dayjs";
 import { FC, useCallback, useMemo, useState } from "react";
 import IssueDisplay from "./IssueDisplay";
 import { getPriorityPalette } from "@/helpers/priorityStyles";
-import { isSuperLogin, workMinutesToDurationInput } from "@/helpers";
+import { workMinutesToDurationInput } from "@/helpers";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddAlarmIcon from "@mui/icons-material/AddAlarm";
@@ -43,16 +43,13 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
   setData,
   onWorkPlanRefresh,
 }) => {
-  const { sprintId, trackerUids, isAdmin, fetchByLogin } =
+  const { sprintId, trackerUids, planEditMode, showAdminControls } =
     useTableTimePlanSelectors();
 
   const { dispatch } = useAppContext();
 
-  // const { login } = state.auth;
-  // const isAdmin = !!(login && isSuperLogin(login));
-
-  const canAddTime = fetchByLogin;
-  const canEditPlan = !fetchByLogin;
+  const canAddTime = !showAdminControls;
+  const canEditPlan = showAdminControls && !!planEditMode;
 
   //console.log("canAddTime", canAddTime);
 
@@ -300,7 +297,7 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
     ];
 
     return [...baseColumns, actionColumn, ...tailColumns];
-  }, [isAdmin, fetchByLogin, handleOpenInfo]);
+  }, [showAdminControls, handleOpenInfo]);
 
   const filteredRows = useMemo(() => {
     const query = filterText.trim().toLowerCase();

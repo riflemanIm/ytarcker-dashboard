@@ -8,20 +8,22 @@ import {
 } from "@mui/material";
 import dayjs from "dayjs";
 import { FC, useCallback, useEffect, useMemo } from "react";
-import { deleteData, getData, getUserIssues, setData } from "./actions/data";
+import {
+  deleteData,
+  getData,
+  getTlUserInfo,
+  getUserIssues,
+  setData,
+} from "./actions/data";
+import AddDurationIssueDialog from "./components/AddDurationIssueDialog";
 import AppHeader from "./components/AppHeader";
 import DurationAlert from "./components/DurationAlert";
-import AddDurationIssueDialog from "./components/AddDurationIssueDialog";
 import SearchIssues from "./components/SearchIssues";
 import TableTimeSpend from "./components/TableTimeSpend";
 import ViewTimePlan from "./components/ViewTimePlan";
 import WorklogWeeklyReport from "./components/WorklogWeeklyReport";
 import { debugUserId, useAppContext } from "./context/AppContext";
-import isEmpty, {
-  aggregateDurations,
-  getWeekRange,
-  isSuperLogin,
-} from "./helpers";
+import isEmpty, { aggregateDurations, getWeekRange } from "./helpers";
 import { DataItem } from "./types/global";
 
 const parseSprintRange = (raw?: string | null) => {
@@ -55,6 +57,11 @@ const YandexTracker: FC = () => {
     appState;
   const { token, login } = auth;
   const { selectedSprintId, sprins } = appState.tableTimePlanState;
+  const userInfoEmail = useMemo(() => {
+    const raw = localStorage.getItem("yandex_login");
+    if (raw && raw !== "undefined" && raw !== "null") return raw;
+    return login ?? null;
+  }, [login]);
   const handleCloseAlert = useCallback(
     () =>
       dispatch({
@@ -64,12 +71,12 @@ const YandexTracker: FC = () => {
     [dispatch],
   );
 
-  const toggleFetchMode = () => {
+  const toggleShowAdminControls = () => {
     dispatch({
       type: "setState",
       payload: (prev) => ({
         ...prev,
-        fetchByLogin: !prev.fetchByLogin,
+        showAdminControls: !prev.showAdminControls,
         userId: null,
         data: [],
       }),
@@ -124,9 +131,30 @@ const YandexTracker: FC = () => {
     });
   };
 
-  const currentTrackerUid = state.fetchByLogin
-    ? state.loginUid
-    : appState.tableTimePlanState.selectedPatientUid;
+  const currentTrackerUid = state.showAdminControls
+    ? appState.tableTimePlanState.selectedPatientUid
+    : state.loginUid;
+
+  useEffect(() => {
+    let isMounted = true;
+    if (!token) return;
+
+    const trackerUidCandidate = state.loginUid ?? null;
+    if (!userInfoEmail && !trackerUidCandidate) return;
+
+    const fetchUserInfo = async () => {
+      await getTlUserInfo({
+        email: userInfoEmail ?? undefined,
+        trackerUid: trackerUidCandidate ?? undefined,
+        dispatch,
+      });
+    };
+
+    fetchUserInfo();
+    return () => {
+      isMounted = false;
+    };
+  }, [dispatch, login, state.loginUid, token, userInfoEmail]);
 
   const fetchPlanRangeData = useCallback(() => {
     if (viewMode !== "table_time_plan") return;
@@ -174,19 +202,19 @@ const YandexTracker: FC = () => {
       payload: (prev) => ({ ...prev, data: [] }),
     });
     getData({
-      userId: state.fetchByLogin ? null : state.userId,
+      userId: state.showAdminControls ? state.userId : null,
       dispatch,
       token,
       start: rangeStart.format("YYYY-MM-DD"),
       end: rangeEnd.format("YYYY-MM-DD"),
-      login: state.fetchByLogin && login ? login : undefined,
+      login: !state.showAdminControls && login ? login : undefined,
     });
   }, [
     dispatch,
     login,
     state.userId,
     token,
-    state.fetchByLogin,
+    state.showAdminControls,
 
     reportFrom,
     reportTo,
@@ -222,6 +250,11 @@ const YandexTracker: FC = () => {
   };
 
   console.log("state", state);
+  const isSuperUser = !!state.isAdmin;
+  const shouldShowAddDialog =
+    viewMode === "table_time_spend" &&
+    !state.showAdminControls &&
+    !isEmpty(appState.state.issues);
   return (
     <>
       {!state.loaded && <LinearProgress />}
@@ -237,7 +270,7 @@ const YandexTracker: FC = () => {
       >
         <Grid size={12}>
           <AppHeader
-            isSuperUser={!!(login && isSuperLogin(login))}
+            isSuperUser={isSuperUser}
             loaded={state.loaded}
             viewMode={viewMode}
             onViewModeChange={(mode) =>
@@ -266,8 +299,8 @@ const YandexTracker: FC = () => {
               onNextMonth: handleNextReportMonth,
             }}
             showRangeControls={viewMode !== "search"}
-            fetchByLogin={state.fetchByLogin}
-            onToggleFetchMode={toggleFetchMode}
+            showAdminControls={state.showAdminControls}
+            onToggleShowAdminControls={toggleShowAdminControls}
             users={state.users}
             userId={state.userId}
             handleSelectedUsersChange={handleSelectedUsersChange}
@@ -312,10 +345,12 @@ const YandexTracker: FC = () => {
                     >
                       <Typography variant="h5">
                         {`Затраченное время ${
-                          state.fetchByLogin ? "по задачам" : "по сотрудникам"
+                          state.showAdminControls
+                            ? "по сотрудникам"
+                            : "по задачам"
                         }`}
                       </Typography>
-                      {state.fetchByLogin && (
+                      {shouldShowAddDialog && (
                         <AddDurationIssueDialog
                           issues={appState.state.issues}
                           setData={setData}
@@ -327,7 +362,7 @@ const YandexTracker: FC = () => {
                       start={start}
                       setData={setData}
                       deleteData={deleteData}
-                      isEditable={state.fetchByLogin}
+                      isEditable={!state.showAdminControls}
                     />
                   </>
                 ) : (
@@ -347,9 +382,34 @@ const YandexTracker: FC = () => {
                 />
               </>
             ) : (
-              <Alert severity="warning">
-                Нет ни одной отметки времени за выбранный период
-              </Alert>
+              <>
+                {viewMode === "table_time_spend" && (
+                  <Stack
+                    spacing={2}
+                    direction="row"
+                    alignItems="center"
+                    justifyContent="center"
+                    mb={2}
+                  >
+                    <Typography variant="h5">
+                      {`Затраченное время ${
+                        state.showAdminControls
+                          ? "по сотрудникам"
+                          : "по задачам"
+                      }`}
+                    </Typography>
+                    {shouldShowAddDialog && (
+                      <AddDurationIssueDialog
+                        issues={appState.state.issues}
+                        setData={setData}
+                      />
+                    )}
+                  </Stack>
+                )}
+                <Alert severity="warning">
+                  Нет ни одной отметки времени за выбранный период
+                </Alert>
+              </>
             )}
           </Grid>
         )}

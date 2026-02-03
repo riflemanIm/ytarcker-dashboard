@@ -44,6 +44,12 @@ type GetDataArgs = {
   login?: string;
 };
 
+export interface TlUserInfo {
+  trackerUid: string;
+  isAdmin: boolean;
+  planEditMode: boolean;
+}
+
 export const getData = async ({
   userId,
   dispatch,
@@ -73,34 +79,11 @@ export const getData = async ({
     dispatch({
       type: "setState",
       payload: (prev) => {
-        const users = res.data?.users ?? prev.users;
-        const loginLower = login?.toLowerCase();
-        const loginUserFromUsers =
-          loginLower && Array.isArray(users)
-            ? users.find((u) => {
-                const name = String(u?.name ?? "").toLowerCase();
-                const id = String(u?.id ?? "").toLowerCase();
-                return (
-                  name === loginLower ||
-                  id === loginLower ||
-                  name.includes(loginLower)
-                );
-              }) ?? null
-            : null;
-        const singleUser =
-          Array.isArray(users) && users.length === 1 ? users[0] : null;
-        const loginUser =
-          loginUserFromUsers ?? singleUser ?? prev.loginUser ?? null;
-        const loginUid =
-          prev.loginUid ??
-          (loginUser?.id ? String(loginUser.id) : null);
         return {
           ...prev,
           loaded: true,
           ...res.data,
-          users,
-          loginUser,
-          loginUid,
+          users: res.data?.users ?? prev.users,
         };
       },
     });
@@ -115,6 +98,47 @@ export const getData = async ({
       type: "setState",
       payload: (prev) => ({ ...prev, loaded: true }),
     });
+  }
+};
+
+export const getTlUserInfo = async ({
+  trackerUid,
+  email,
+  dispatch,
+}: {
+  trackerUid?: string | null;
+  email?: string | null;
+  dispatch: AppDispatch;
+}): Promise<TlUserInfo | null> => {
+  if (!trackerUid && !email) {
+    throw new Error("trackerUid or email is required");
+  }
+
+  try {
+    const res = await axios.post<TlUserInfo[]>(`${apiUrl}/api/tl_userinfo`, {
+      trackerUid: trackerUid ?? undefined,
+      email: email ?? undefined,
+    });
+    if (!Array.isArray(res.data) || res.data.length === 0) {
+      return null;
+    }
+    const info = res.data[0] ?? null;
+    if (!info) return null;
+
+    dispatch({
+      type: "setState",
+      payload: (prev) => ({
+        ...prev,
+        loginUid: info.trackerUid ?? prev.loginUid ?? null,
+        isAdmin: info.isAdmin ?? prev.isAdmin ?? false,
+        planEditMode: info.planEditMode ?? prev.planEditMode ?? false,
+      }),
+    });
+
+    return info;
+  } catch (err: any) {
+    console.error("[Ошибка в getTlUserInfo]:", err.message);
+    return null;
   }
 };
 

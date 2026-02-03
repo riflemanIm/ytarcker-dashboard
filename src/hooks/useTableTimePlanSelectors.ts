@@ -1,29 +1,29 @@
 import { useMemo } from "react";
 import { useAppContext } from "@/context/AppContext";
-import { isSuperLogin } from "@/helpers";
-
 export const useTableTimePlanSelectors = () => {
   const { state } = useAppContext();
   const { tableTimePlanState } = state;
-  const { fetchByLogin, loginUid } = state.state;
-  const { login } = state.auth;
-  const isAdmin = !!(login && isSuperLogin(login));
+  const { showAdminControls, loginUid, isAdmin, planEditMode } = state.state;
 
   const sprintId = useMemo(() => {
     const parsed = Number(tableTimePlanState.selectedSprintId);
     return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
   }, [tableTimePlanState.selectedSprintId]);
 
-  const currentTrackerUid = !fetchByLogin
+  const currentTrackerUid = showAdminControls
     ? tableTimePlanState.selectedPatientUid
     : loginUid;
 
   const trackerUids = useMemo(() => {
-    if (fetchByLogin && currentTrackerUid) return [currentTrackerUid];
+    if (!showAdminControls && currentTrackerUid) return [currentTrackerUid];
     return tableTimePlanState.selectedPatientUid
       ? [tableTimePlanState.selectedPatientUid]
       : [];
-  }, [fetchByLogin, currentTrackerUid, tableTimePlanState.selectedPatientUid]);
+  }, [
+    showAdminControls,
+    currentTrackerUid,
+    tableTimePlanState.selectedPatientUid,
+  ]);
 
   const projectIds = useMemo(
     () =>
@@ -56,9 +56,10 @@ export const useTableTimePlanSelectors = () => {
     roleIds,
     groupIds,
     currentTrackerUid,
-    fetchByLogin,
+    showAdminControls,
     tableTimePlanState,
     workPlanRefreshKey: tableTimePlanState.workPlanRefreshKey,
     isAdmin,
+    planEditMode,
   };
 };

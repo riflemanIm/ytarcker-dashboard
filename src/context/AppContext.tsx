@@ -74,10 +74,11 @@ const initialState: AppState = {
   loaded: true,
   userId: debugUserId, // for debug
   users: null,
-  loginUser: null,
   loginUid: null,
+  isAdmin: false,
+  planEditMode: false,
   data: [],
-  fetchByLogin: true,
+  showAdminControls: false,
   issues: [],
 };
 

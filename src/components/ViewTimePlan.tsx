@@ -33,7 +33,7 @@ const ViewTimePlan: FC<ViewTimePlanProps> = ({
     roleIds,
     groupIds,
     workPlanRefreshKey,
-    fetchByLogin,
+    showAdminControls,
   } = useTableTimePlanSelectors();
 
   const [workPlanRows, setWorkPlanRows] = useState<WorkPlanItem[]>([]);
@@ -96,7 +96,7 @@ const ViewTimePlan: FC<ViewTimePlanProps> = ({
         alignItems="stretch"
         sx={{ width: "100%" }}
       >
-        {!fetchByLogin && (
+        {showAdminControls && (
           <>
             {" "}
             <Paper
@@ -170,7 +170,7 @@ const ViewTimePlan: FC<ViewTimePlanProps> = ({
           rangeEnd={rangeEnd}
           setData={setData}
           deleteData={deleteData}
-          isEditable={fetchByLogin}
+          isEditable={!showAdminControls}
           planItems={workPlanRows}
           onWorkPlanRefresh={fetchWorkPlan}
         />

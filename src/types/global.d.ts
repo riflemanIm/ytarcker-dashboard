@@ -159,10 +159,11 @@ export interface AppState {
   loaded: boolean;
   userId: string | null;
   users: User[] | null;
-  loginUser?: User | null;
   loginUid?: string | null;
+  isAdmin?: boolean;
+  planEditMode?: boolean;
   data: DataItem[];
-  fetchByLogin: boolean;
+  showAdminControls: boolean;
   issues: Issue[];
 }
 

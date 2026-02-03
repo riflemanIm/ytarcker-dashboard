@@ -12,14 +12,14 @@ import ToggleViewButton from "./ToggleViewButton";
 
 interface AppHeaderProps {
   isSuperUser: boolean;
+  showAdminControls: boolean;
   loaded: boolean;
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
   weekNavigation: WeekNavigationProps;
   reportRange: ReportRangeProps;
   showRangeControls: boolean;
-  fetchByLogin: boolean;
-  onToggleFetchMode: () => void;
+  onToggleShowAdminControls: () => void;
   users: User[] | null;
   userId: string | null;
   handleSelectedUsersChange: (userId: string | null) => void;
@@ -29,14 +29,14 @@ interface AppHeaderProps {
 
 const AppHeader: FC<AppHeaderProps> = ({
   isSuperUser,
+  showAdminControls,
   loaded,
   viewMode,
   onViewModeChange,
   weekNavigation,
   reportRange,
   showRangeControls,
-  fetchByLogin,
-  onToggleFetchMode,
+  onToggleShowAdminControls,
   users,
   userId,
   handleSelectedUsersChange,
@@ -45,9 +45,8 @@ const AppHeader: FC<AppHeaderProps> = ({
 }) => {
   const { state } = useAppContext();
   const { token, login } = state.auth;
-  const showControls = !!token && loaded;
-  const showAdminControls = showControls && !!isSuperUser;
-  const showRange = showControls && showRangeControls;
+  const canShowAdminControls = !!token && loaded && !!isSuperUser;
+  const showRange = !!token && loaded && showRangeControls;
   const theme = useTheme();
 
   return (
@@ -81,21 +80,21 @@ const AppHeader: FC<AppHeaderProps> = ({
       >
         <Box sx={{ minWidth: 200, mr: "auto", display: "flex" }}>
           <ToggleViewButton
-            showAdminControls={showAdminControls}
+            showAdminControls={canShowAdminControls && showAdminControls}
             viewMode={viewMode}
             onChange={onViewModeChange}
           />
         </Box>
 
         <HeaderFilters
+          isSuperUser={canShowAdminControls}
           showAdminControls={showAdminControls}
           showRange={showRange}
           viewMode={viewMode}
           weekNavigation={weekNavigation}
           reportRange={reportRange}
-          fetchByLogin={fetchByLogin}
           login={login}
-          onToggleFetchMode={onToggleFetchMode}
+          onToggleShowAdminControls={onToggleShowAdminControls}
           loaded={loaded}
           users={users}
           userId={userId}
@@ -115,7 +114,7 @@ const AppHeader: FC<AppHeaderProps> = ({
           <Box sx={{ display: "flex", justifyContent: "flex-end", flex: 1 }}>
             <LogInOut />
           </Box>
-          {showRefresh && showControls && (
+          {showRefresh && !!token && loaded && (
             <IconButton
               onClick={onRefresh}
               sx={{
