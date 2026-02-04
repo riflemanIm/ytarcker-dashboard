@@ -368,6 +368,12 @@ app.post("/api/worklog_update", async (req, res) => {
       });
     }
 
+    const riskState = {
+      deadlineOk,
+      needUpgradeEstimate,
+      makeTaskFaster,
+    };
+
     const requireInternalFields = (payload) => {
       if (typeof payload.durationMinutes !== "number") {
         return "Missing or invalid field 'durationMinutes'. It must be a number.";
@@ -399,6 +405,24 @@ app.post("/api/worklog_update", async (req, res) => {
       return null;
     };
 
+    const buildInternalComment = (value, worklogIdValue) =>
+      buildCommentWithTags(
+        value,
+        issueTypeLabel ?? undefined,
+        riskState,
+        workPlanId ?? undefined,
+        worklogIdValue,
+      );
+
+    const buildInternalPayload = (payload) => ({
+      taskKey,
+      deadlineOk,
+      needUpgradeEstimate,
+      makeTaskFaster,
+      trackerUid,
+      ...payload,
+    });
+
     const sendInternal = async (payload) => {
       if (!ENABLE_INTERNAL_UPDATES) {
         return { data: { skipped: true } };
@@ -410,8 +434,26 @@ app.post("/api/worklog_update", async (req, res) => {
       );
     };
 
+    const sendInternalLogged = async (payload, scope) => {
+      const response = await sendInternal(payload);
+      if (payload.action === 2) {
+        console.log("[api/worklog_update] internal delete response", {
+          scope,
+          taskKey: payload.taskKey,
+          worklogId: payload.worklogId,
+          checklistItemId: payload.checklistItemId,
+          response: response?.data,
+        });
+      }
+      return response;
+    };
+
+    // Action: Internal-only (no OAuth token)
     if (!hasToken) {
-      if ((action === 1 || action === 2) && !Number.isInteger(Number(worklogId))) {
+      if (
+        (action === 1 || action === 2) &&
+        !Number.isInteger(Number(worklogId))
+      ) {
         return res.status(400).json({
           message:
             "Field 'worklogId' is required and must be an integer for Edit or Delete actions.",
@@ -430,270 +472,263 @@ app.post("/api/worklog_update", async (req, res) => {
         return res.status(400).json({ message: internalError });
       }
 
-      const commentWithTags = buildCommentWithTags(
-        comment,
-        issueTypeLabel ?? undefined,
-        {
-          deadlineOk,
-          needUpgradeEstimate,
-          makeTaskFaster,
-        },
-        workPlanId ?? undefined,
+      const commentWithTags = buildInternalComment(comment);
+      const internalResponse = await sendInternalLogged(
+        buildInternalPayload({
+          duration: resolvedDurationMinutes,
+          startDate,
+          comment: commentWithTags,
+          action,
+          checklistItemId,
+          worklogId: Number.isInteger(Number(worklogId))
+            ? Number(worklogId)
+            : undefined,
+        }),
+        "internal-only",
       );
-
-      const internalResponse = await sendInternal({
-        taskKey,
-        duration: resolvedDurationMinutes,
-        startDate,
-        deadlineOk,
-        needUpgradeEstimate,
-        makeTaskFaster,
-        comment: commentWithTags,
-        action,
-        checklistItemId,
-        trackerUid,
-        worklogId: Number.isInteger(Number(worklogId))
-          ? Number(worklogId)
-          : undefined,
-      });
 
       return res.json(internalResponse?.data ?? null);
     }
 
-    if (action === 0 || action === 1) {
-      if (typeof duration !== "string" || duration.length === 0) {
-        return res.status(400).json({
-          message: "Missing or invalid field 'duration'. It must be a string.",
-        });
-      }
-      if (typeof start !== "string" || start.length === 0) {
-        return res.status(400).json({
-          message: "Missing or invalid field 'start'. It must be a string.",
-        });
-      }
-      if (action === 1 && !Number.isInteger(Number(worklogId))) {
-        return res.status(400).json({
-          message:
-            "Field 'worklogId' is required and must be an integer for Edit action.",
-        });
-      }
-      const internalError = requireInternalFields({
-        durationMinutes: resolvedDurationMinutes,
-        startDate,
-        comment,
-        trackerUid,
-        deadlineOk,
-        needUpgradeEstimate,
-        makeTaskFaster,
-      });
-      if (internalError) {
-        return res.status(400).json({ message: internalError });
-      }
-
-      const commentWithTags = buildCommentWithTags(
-        comment,
-        issueTypeLabel ?? undefined,
-        {
+    switch (action) {
+      // Action: Add or Edit
+      case 0:
+      case 1: {
+        if (typeof duration !== "string" || duration.length === 0) {
+          return res.status(400).json({
+            message: "Missing or invalid field 'duration'. It must be a string.",
+          });
+        }
+        if (typeof start !== "string" || start.length === 0) {
+          return res.status(400).json({
+            message: "Missing or invalid field 'start'. It must be a string.",
+          });
+        }
+        if (action === 1 && !Number.isInteger(Number(worklogId))) {
+          return res.status(400).json({
+            message:
+              "Field 'worklogId' is required and must be an integer for Edit action.",
+          });
+        }
+        const internalError = requireInternalFields({
+          durationMinutes: resolvedDurationMinutes,
+          startDate,
+          comment,
+          trackerUid,
           deadlineOk,
           needUpgradeEstimate,
           makeTaskFaster,
-        },
-        workPlanId ?? undefined,
-        undefined,
-      );
+        });
+        if (internalError) {
+          return res.status(400).json({ message: internalError });
+        }
 
-      const trackerUrl =
-        action === 0
-          ? `https://api.tracker.yandex.net/v2/issues/${taskKey}/worklog`
-          : `https://api.tracker.yandex.net/v2/issues/${taskKey}/worklog/${worklogId}`;
-      const trackerPayload =
-        action === 0
-          ? { start, duration, comment: commentWithTags }
-          : { duration, comment: commentWithTags };
+        const commentWithTags = buildInternalComment(comment);
+        const trackerUrl =
+          action === 0
+            ? `https://api.tracker.yandex.net/v2/issues/${taskKey}/worklog`
+            : `https://api.tracker.yandex.net/v2/issues/${taskKey}/worklog/${worklogId}`;
+        const trackerPayload =
+          action === 0
+            ? { start, duration, comment: commentWithTags }
+            : { duration, comment: commentWithTags };
 
-      const trackerResponse =
-        action === 0
-          ? await axios.post(trackerUrl, trackerPayload, headers(token))
-          : await axios.patch(trackerUrl, trackerPayload, headers(token));
+        const trackerResponse =
+          action === 0
+            ? await axios.post(trackerUrl, trackerPayload, headers(token))
+            : await axios.patch(trackerUrl, trackerPayload, headers(token));
 
-      const internalResponse = await sendInternal({
-        taskKey,
-        duration: resolvedDurationMinutes,
-        startDate,
-        deadlineOk,
-        needUpgradeEstimate,
-        makeTaskFaster,
-        comment: commentWithTags,
-        action,
-        checklistItemId,
-        trackerUid,
-        worklogId: action === 1 ? Number(worklogId) : undefined,
-      });
-
-      const internalWorklogId = internalResponse?.data?.YT_TL_WORKLOG_ID;
-      const trackerWorklogId =
-        action === 1
-          ? Number(worklogId)
-          : Number(
+        let internalResponse;
+        try {
+          internalResponse = await sendInternal(
+            buildInternalPayload({
+              duration: resolvedDurationMinutes,
+              startDate,
+              comment: commentWithTags,
+              action,
+              checklistItemId,
+              worklogId: action === 1 ? Number(worklogId) : undefined,
+            }),
+          );
+        } catch (error) {
+          if (action === 0) {
+            const trackerWorklogId = Number(
               trackerResponse?.data?.id ??
                 trackerResponse?.data?.ID ??
                 trackerResponse?.data?.worklogId,
             );
+            if (Number.isFinite(trackerWorklogId)) {
+              try {
+                await axios.delete(
+                  `https://api.tracker.yandex.net/v2/issues/${taskKey}/worklog/${trackerWorklogId}`,
+                  headers(token),
+                );
+              } catch (cleanupError) {
+                console.error(
+                  "[api/worklog_update] add cleanup failed after internal error",
+                  {
+                    taskKey,
+                    trackerWorklogId,
+                    error: cleanupError?.message,
+                  },
+                );
+              }
+            } else {
+              console.warn(
+                "[api/worklog_update] add cleanup skipped: missing tracker worklog id",
+                {
+                  taskKey,
+                  trackerResponseData: trackerResponse?.data,
+                },
+              );
+            }
+          }
+          throw error;
+        }
 
-      if (Number.isFinite(trackerWorklogId)) {
-        const commentWithInternalTag = buildCommentWithTags(
-          comment,
-          issueTypeLabel ?? undefined,
-          {
-            deadlineOk,
-            needUpgradeEstimate,
-            makeTaskFaster,
-          },
-          workPlanId ?? undefined,
-          internalWorklogId,
-        );
-        console.log("commentWithInternalTag\n\n", commentWithInternalTag);
-        console.log("-----------\n\n");
-        if (commentWithInternalTag !== commentWithTags) {
-          await axios.patch(
-            `https://api.tracker.yandex.net/v2/issues/${taskKey}/worklog/${trackerWorklogId}`,
-            { comment: commentWithInternalTag },
-            headers(token),
+        const internalWorklogId = internalResponse?.data?.YT_TL_WORKLOG_ID;
+        const trackerWorklogId =
+          action === 1
+            ? Number(worklogId)
+            : Number(
+                trackerResponse?.data?.id ??
+                  trackerResponse?.data?.ID ??
+                  trackerResponse?.data?.worklogId,
+              );
+
+        if (Number.isFinite(trackerWorklogId)) {
+          const commentWithInternalTag = buildInternalComment(
+            comment,
+            internalWorklogId,
+          );
+          console.log("commentWithInternalTag\n\n", commentWithInternalTag);
+          console.log("-----------\n\n");
+          if (commentWithInternalTag !== commentWithTags) {
+            await axios.patch(
+              `https://api.tracker.yandex.net/v2/issues/${taskKey}/worklog/${trackerWorklogId}`,
+              { comment: commentWithInternalTag },
+              headers(token),
+            );
+          }
+        } else if (!Number.isFinite(trackerWorklogId)) {
+          console.warn(
+            "[api/worklog_update] missing tracker worklog id in response",
+            {
+              taskKey,
+              action,
+              trackerResponseData: trackerResponse?.data,
+            },
           );
         }
-      } else if (!Number.isFinite(trackerWorklogId)) {
-        console.warn(
-          "[api/worklog_update] missing tracker worklog id in response",
-          {
-            taskKey,
-            action,
-            trackerResponseData: trackerResponse?.data,
-          },
-        );
+
+        return res.json(trackerResponse.data);
       }
+      // Action: Delete
+      case 2: {
+        const isBatch = Array.isArray(ids) && ids.length > 0;
+        const deleteIds = isBatch
+          ? ids.map((id) => Number(id)).filter((id) => Number.isInteger(id))
+          : [];
 
-      return res.json(trackerResponse.data);
-    }
+        if (!isBatch && !Number.isInteger(Number(worklogId))) {
+          return res.status(400).json({
+            message:
+              "Field 'worklogId' is required and must be an integer for Delete action.",
+          });
+        }
 
-    const isBatch = Array.isArray(ids) && ids.length > 0;
-
-    const deleteIds = isBatch
-      ? ids.map((id) => Number(id)).filter((id) => Number.isInteger(id))
-      : [];
-
-    if (!isBatch && !Number.isInteger(Number(worklogId))) {
-      return res.status(400).json({
-        message:
-          "Field 'worklogId' is required and must be an integer for Delete action.",
-      });
-    }
-
-    if (isBatch) {
-      if (!Array.isArray(items) || items.length === 0) {
-        return res.status(400).json({
-          message: "Field 'items' must be a non-empty array for batch delete.",
-        });
-      }
-      const internalErrors = items
-        .map((item) =>
-          requireInternalFields({
-            durationMinutes: item?.durationMinutes,
-            startDate: item?.startDate,
-            comment: item?.comment,
-            trackerUid,
-            deadlineOk,
-            needUpgradeEstimate,
-            makeTaskFaster,
-          }),
-        )
-        .filter(Boolean);
-      if (internalErrors.length > 0) {
-        return res.status(400).json({ message: internalErrors[0] });
-      }
-
-      await Promise.all(
-        deleteIds.map((id) =>
-          axios.delete(
-            `https://api.tracker.yandex.net/v2/issues/${taskKey}/worklog/${id}`,
-            headers(token),
-          ),
-        ),
-      );
-
-      await Promise.all(
-        items.map((item) =>
-          sendInternal({
-            taskKey,
-            duration: item.durationMinutes,
-            startDate: item.startDate,
-            deadlineOk,
-            needUpgradeEstimate,
-            makeTaskFaster,
-            comment: buildCommentWithTags(
-              item.comment ?? "",
-              issueTypeLabel ?? undefined,
-              {
+        if (isBatch) {
+          if (!Array.isArray(items) || items.length === 0) {
+            return res.status(400).json({
+              message:
+                "Field 'items' must be a non-empty array for batch delete.",
+            });
+          }
+          const internalErrors = items
+            .map((item) =>
+              requireInternalFields({
+                durationMinutes: item?.durationMinutes,
+                startDate: item?.startDate,
+                comment: item?.comment,
+                trackerUid,
                 deadlineOk,
                 needUpgradeEstimate,
                 makeTaskFaster,
-              },
-              workPlanId ?? undefined,
-              item.worklogId,
+              }),
+            )
+            .filter(Boolean);
+          if (internalErrors.length > 0) {
+            return res.status(400).json({ message: internalErrors[0] });
+          }
+
+          await Promise.all(
+            deleteIds.map((id) =>
+              axios.delete(
+                `https://api.tracker.yandex.net/v2/issues/${taskKey}/worklog/${id}`,
+                headers(token),
+              ),
             ),
-            action: 2,
-            checklistItemId: item.checklistItemId ?? checklistItemId,
-            trackerUid,
-            worklogId: Number(item.worklogId),
-          }),
-        ),
-      );
+          );
 
-      return res.json(true);
-    }
+          await Promise.all(
+            items.map((item) =>
+              sendInternalLogged(
+                buildInternalPayload({
+                  duration: item.durationMinutes,
+                  startDate: item.startDate,
+                  comment: buildInternalComment(
+                    item.comment ?? "",
+                    item.worklogId,
+                  ),
+                  action: 2,
+                  checklistItemId: item.checklistItemId ?? checklistItemId,
+                  worklogId: Number(item.worklogId),
+                }),
+                "batch",
+              ),
+            ),
+          );
 
-    const internalError = requireInternalFields({
-      durationMinutes: resolvedDurationMinutes,
-      startDate,
-      comment,
-      trackerUid,
-      deadlineOk,
-      needUpgradeEstimate,
-      makeTaskFaster,
-    });
-    if (internalError) {
-      return res.status(400).json({ message: internalError });
-    }
+          return res.json(true);
+        }
 
-    await axios.delete(
-      `https://api.tracker.yandex.net/v2/issues/${taskKey}/worklog/${worklogId}`,
-      headers(token),
-    );
-
-    await sendInternal({
-      taskKey,
-      duration: resolvedDurationMinutes,
-      startDate,
-      deadlineOk,
-      needUpgradeEstimate,
-      makeTaskFaster,
-      comment: buildCommentWithTags(
-        comment,
-        issueTypeLabel ?? undefined,
-        {
+        const internalError = requireInternalFields({
+          durationMinutes: resolvedDurationMinutes,
+          startDate,
+          comment,
+          trackerUid,
           deadlineOk,
           needUpgradeEstimate,
           makeTaskFaster,
-        },
-        workPlanId ?? undefined,
-        worklogId,
-      ),
-      action: 2,
-      checklistItemId,
-      trackerUid,
-      worklogId: Number(worklogId),
-    });
+        });
+        if (internalError) {
+          return res.status(400).json({ message: internalError });
+        }
 
-    return res.json(true);
+        await axios.delete(
+          `https://api.tracker.yandex.net/v2/issues/${taskKey}/worklog/${worklogId}`,
+          headers(token),
+        );
+
+        await sendInternalLogged(
+          buildInternalPayload({
+            duration: resolvedDurationMinutes,
+            startDate,
+            comment: buildInternalComment(comment, worklogId),
+            action: 2,
+            checklistItemId,
+            worklogId: Number(worklogId),
+          }),
+          "single",
+        );
+
+        return res.json(true);
+      }
+      default:
+        return res.status(400).json({
+          message: "Field 'action' must be 0 (Add), 1 (Edit), or 2 (Delete).",
+        });
+    }
   } catch (error) {
     const status = error.response?.status || 500;
     const payload = {
