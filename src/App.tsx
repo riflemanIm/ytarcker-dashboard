@@ -60,7 +60,8 @@ const YandexTracker: FC = () => {
   const { auth, state, alert, viewMode, weekOffset, reportFrom, reportTo } =
     appState;
   const { token, login } = auth;
-  const { selectedSprintId, sprins } = appState.tableTimePlanState;
+  const { selectedSprintId, sprins, workPlanRefreshKey } =
+    appState.tableTimePlanState;
   const userInfoEmail = useMemo(() => {
     const raw = localStorage.getItem("yandex_login");
     if (raw && raw !== "undefined" && raw !== "null") return raw;
@@ -181,7 +182,15 @@ const YandexTracker: FC = () => {
       end: planRangeEnd.format("YYYY-MM-DD"),
       login: undefined,
     });
-  }, [currentTrackerUid, dispatch, sprintRange, token, viewMode]);
+  }, [
+    currentTrackerUid,
+    dispatch,
+    sprintRange,
+    token,
+    viewMode,
+    state.showAdminControls,
+    workPlanRefreshKey,
+  ]);
 
   const fetchUserIssues = useCallback(() => {
     if (viewMode !== "table_time_spend") return;
@@ -247,6 +256,15 @@ const YandexTracker: FC = () => {
   };
 
   const handleRefresh = () => {
+    if (viewMode === "table_time_plan") {
+      dispatch({
+        type: "setTableTimePlanState",
+        payload: (prev) => ({
+          ...prev,
+          workPlanRefreshKey: prev.workPlanRefreshKey + 1,
+        }),
+      });
+    }
     fetchForActiveRange();
     fetchPlanRangeData();
     fetchUserIssues();
