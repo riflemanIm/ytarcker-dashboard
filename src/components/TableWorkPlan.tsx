@@ -541,6 +541,7 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
         disableColumnMenu
         getRowClassName={(params) => {
           if ((params.row as any).id === "__total__") return "row-total";
+          if ((params.row as WorkPlanItem).WorkDone) return "row-done";
           const priority = (params.row as WorkPlanItem).Priority;
           if (priority === "Red") return "priority-red";
           if (priority === "Orange") return "priority-orange";
@@ -580,6 +581,10 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
             "& .row-total": {
               fontWeight: 600,
               backgroundColor: theme.palette.action.hover,
+            },
+            "& .row-done": {
+              backgroundColor: theme.palette.action.disabledBackground,
+              color: theme.palette.text.disabled,
             },
           };
         }}
