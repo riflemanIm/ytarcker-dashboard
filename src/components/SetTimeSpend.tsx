@@ -21,6 +21,7 @@ import {
   MenuItem,
   Stack,
   TextField,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import React, {
@@ -60,6 +61,8 @@ type RowUI = {
 };
 
 const RECENT_ISSUE_TYPES_KEY = "recent_issue_types";
+const RECENT_TYPE_MAX_CHARS = 20;
+const RECENT_TYPE_MAX_WIDTH_PX = 180;
 
 interface SetTimeSpendProps extends EditableCellMenuProps {
   onWorkPlanRefresh?: () => void;
@@ -324,6 +327,45 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
       rememberRecentIssueType(normalizedLabel);
     },
     [rememberRecentIssueType],
+  );
+
+  const renderRecentTypeButton = useCallback(
+    (
+      key: string,
+      label: string,
+      onClick: () => void,
+      extraSx?: Record<string, unknown>,
+    ) => {
+      const shouldTruncate = label.length > RECENT_TYPE_MAX_CHARS;
+      const button = (
+        <Button
+          size="small"
+          variant="outlined"
+          sx={{
+            whiteSpace: "nowrap",
+            maxWidth: RECENT_TYPE_MAX_WIDTH_PX,
+            minWidth: 0,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            textAlign: "left",
+            justifyContent: "flex-start",
+            ...extraSx,
+          }}
+          onClick={onClick}
+        >
+          {label}
+        </Button>
+      );
+
+      if (!shouldTruncate) return button;
+
+      return (
+        <Tooltip key={key} title={label} arrow>
+          {button}
+        </Tooltip>
+      );
+    },
+    [],
   );
 
   // === Общее сохранение ВСЕХ изменений в блоке редактирования ===
@@ -757,21 +799,17 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
                                 flexWrap="wrap"
                                 rowGap={1}
                               >
-                                {availableRecentTypes.map((label) => (
-                                  <Button
-                                    key={`${item.id}-${label}`}
-                                    size="small"
-                                    variant="outlined"
-                                    onClick={() =>
+                                {availableRecentTypes.map((label) =>
+                                  renderRecentTypeButton(
+                                    `${item.id}-${label}`,
+                                    label,
+                                    () =>
                                       handleIssueTypeChangeForItem(
                                         item.id,
                                         label,
-                                      )
-                                    }
-                                  >
-                                    {label}
-                                  </Button>
-                                ))}
+                                      ),
+                                  ),
+                                )}
                               </Stack>
                             </Stack>
                           )}
@@ -884,16 +922,11 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
                           flexWrap="wrap"
                           rowGap={1}
                         >
-                          {availableRecentTypes.map((label) => (
-                            <Button
-                              key={`new-${label}`}
-                              size="small"
-                              variant="outlined"
-                              onClick={() => handleIssueTypeChangeNew(label)}
-                            >
-                              {label}
-                            </Button>
-                          ))}
+                          {availableRecentTypes.map((label) =>
+                            renderRecentTypeButton(`new-${label}`, label, () =>
+                              handleIssueTypeChangeNew(label),
+                            ),
+                          )}
                         </Stack>
                       </Stack>
                     )}
