@@ -127,6 +127,45 @@ const stripRiskBlock = (comment) => {
     .trimEnd();
 };
 
+const resolveDurationMinutes = (value) => {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return NaN;
+    const asNumber = Number(trimmed);
+    if (Number.isFinite(asNumber)) return asNumber;
+    const match = trimmed.match(
+      /^P(?:(\d+)W)?(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?$/,
+    );
+    if (!match) return NaN;
+    const [, w = "0", d = "0", h = "0", m = "0", s = "0"] = match;
+    const seconds =
+      Number(w) * 7 * 24 * 3600 +
+      Number(d) * 24 * 3600 +
+      Number(h) * 3600 +
+      Number(m) * 60 +
+      Number(s);
+    return Math.round(seconds / 60);
+  }
+  return NaN;
+};
+
+const normalizeTrackerDuration = (value) => {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return `PT${value}M`;
+  }
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return value;
+    const asNumber = Number(trimmed);
+    if (Number.isFinite(asNumber)) {
+      return `PT${asNumber}M`;
+    }
+    return value;
+  }
+  return value;
+};
+
 const buildRiskBlock = (riskState) => {
   return `[Risks: { deadlineOk: ${riskState.deadlineOk}, needUpgradeEstimate: ${riskState.needUpgradeEstimate}, makeTaskFaster: ${riskState.makeTaskFaster} }]`;
 };
@@ -321,7 +360,6 @@ app.post("/api/worklog_update", async (req, res) => {
       taskKey,
       action,
       duration,
-      durationMinutes,
       start,
       startDate,
       comment,
@@ -338,11 +376,7 @@ app.post("/api/worklog_update", async (req, res) => {
     } = req.body ?? {};
 
     const hasToken = typeof token === "string" && token.length > 0;
-    const resolvedDurationMinutes = Number.isFinite(durationMinutes)
-      ? durationMinutes
-      : typeof duration === "number" && Number.isFinite(duration)
-        ? duration
-        : undefined;
+    const resolvedDurationMinutes = resolveDurationMinutes(duration);
     if (typeof taskKey !== "string" || taskKey.length === 0) {
       return res.status(400).json({
         message: "Missing or invalid field 'taskKey'. It must be a string.",
@@ -375,8 +409,8 @@ app.post("/api/worklog_update", async (req, res) => {
     };
 
     const requireInternalFields = (payload) => {
-      if (typeof payload.durationMinutes !== "number") {
-        return "Missing or invalid field 'durationMinutes'. It must be a number.";
+      if (typeof payload.duration !== "number" || !Number.isFinite(payload.duration)) {
+        return "Missing or invalid field 'duration'. It must be a number.";
       }
       if (
         typeof payload.startDate !== "string" ||
@@ -436,15 +470,16 @@ app.post("/api/worklog_update", async (req, res) => {
 
     const sendInternalLogged = async (payload, scope) => {
       const response = await sendInternal(payload);
-      if (payload.action === 2) {
-        console.log("[api/worklog_update] internal delete response", {
+      console.log(
+        `\n[api/worklog_update] internal action ${payload.action} response`,
+        {
           scope,
           taskKey: payload.taskKey,
           worklogId: payload.worklogId,
           checklistItemId: payload.checklistItemId,
           response: response?.data,
-        });
-      }
+        },
+      );
       return response;
     };
 
@@ -460,7 +495,7 @@ app.post("/api/worklog_update", async (req, res) => {
         });
       }
       const internalError = requireInternalFields({
-        durationMinutes: resolvedDurationMinutes,
+        duration: resolvedDurationMinutes,
         startDate,
         comment,
         trackerUid,
@@ -494,9 +529,12 @@ app.post("/api/worklog_update", async (req, res) => {
       // Action: Add or Edit
       case 0:
       case 1: {
-        if (typeof duration !== "string" || duration.length === 0) {
+        const hasDurationValue =
+          (typeof duration === "string" && duration.length > 0) ||
+          (typeof duration === "number" && Number.isFinite(duration));
+        if (!hasDurationValue) {
           return res.status(400).json({
-            message: "Missing or invalid field 'duration'. It must be a string.",
+            message: "Missing or invalid field 'duration'.",
           });
         }
         if (typeof start !== "string" || start.length === 0) {
@@ -511,7 +549,7 @@ app.post("/api/worklog_update", async (req, res) => {
           });
         }
         const internalError = requireInternalFields({
-          durationMinutes: resolvedDurationMinutes,
+          duration: resolvedDurationMinutes,
           startDate,
           comment,
           trackerUid,
@@ -530,8 +568,15 @@ app.post("/api/worklog_update", async (req, res) => {
             : `https://api.tracker.yandex.net/v2/issues/${taskKey}/worklog/${worklogId}`;
         const trackerPayload =
           action === 0
-            ? { start, duration, comment: commentWithTags }
-            : { duration, comment: commentWithTags };
+            ? {
+                start,
+                duration: normalizeTrackerDuration(duration),
+                comment: commentWithTags,
+              }
+            : {
+                duration: normalizeTrackerDuration(duration),
+                comment: commentWithTags,
+              };
 
         const trackerResponse =
           action === 0
@@ -647,7 +692,7 @@ app.post("/api/worklog_update", async (req, res) => {
           const internalErrors = items
             .map((item) =>
               requireInternalFields({
-                durationMinutes: item?.durationMinutes,
+                duration: resolveDurationMinutes(item?.duration),
                 startDate: item?.startDate,
                 comment: item?.comment,
                 trackerUid,
@@ -674,7 +719,7 @@ app.post("/api/worklog_update", async (req, res) => {
             items.map((item) =>
               sendInternalLogged(
                 buildInternalPayload({
-                  duration: item.durationMinutes,
+                  duration: resolveDurationMinutes(item.duration),
                   startDate: item.startDate,
                   comment: buildInternalComment(
                     item.comment ?? "",
@@ -693,7 +738,7 @@ app.post("/api/worklog_update", async (req, res) => {
         }
 
         const internalError = requireInternalFields({
-          durationMinutes: resolvedDurationMinutes,
+          duration: resolvedDurationMinutes,
           startDate,
           comment,
           trackerUid,

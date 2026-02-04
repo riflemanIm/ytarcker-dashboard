@@ -147,7 +147,7 @@ export interface SetDataArgs {
   dispatch: AppDispatch;
   token: string | null;
   issueId: string | null;
-  duration: string;
+  duration: string | number;
   comment?: string;
   planningComment?: string;
   worklogId?: string | null;
@@ -189,7 +189,6 @@ export const updateTlWorklog = async (
       `${apiUrl}/api/worklog_update`,
       {
         ...payload,
-        durationMinutes: payload.duration,
       },
     );
     return res.data ?? null;
@@ -314,18 +313,11 @@ export const setData = async ({
         ? dayjs(dateCell).format("YYYY-MM-DD")
         : dayjs().format("YYYY-MM-DD"));
 
-    const seconds = parseISODurationToSeconds(duration);
-    const durationMinutes = Math.round(seconds / 60);
-    if (!Number.isFinite(durationMinutes)) {
-      throw new Error("Некорректная длительность");
-    }
-
     const payload = {
       token,
       taskKey: issueId,
       action: worklogId ? 1 : 0,
       duration,
-      durationMinutes,
       start: startDateTime,
       startDate: internalStartDate,
       comment: planningComment ?? comment ?? "",
@@ -444,16 +436,12 @@ export const deleteData = async ({
       Array.isArray(durations) && durations.length
         ? durations
             .filter((item) => ids.includes(item.id))
-            .map((item) => {
-              const seconds = parseISODurationToSeconds(item.duration);
-              const durationMinutes = Math.round(seconds / 60);
-              return {
-                worklogId: item.id,
-                durationMinutes,
-                startDate: dayjs(item.start).format("YYYY-MM-DD"),
-                comment: item.comment ?? "",
-              };
-            })
+            .map((item) => ({
+              worklogId: item.id,
+              duration: item.duration,
+              startDate: dayjs(item.start).format("YYYY-MM-DD"),
+              comment: item.comment ?? "",
+            }))
         : [];
 
     const payload = {
