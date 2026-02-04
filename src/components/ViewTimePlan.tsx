@@ -16,6 +16,7 @@ interface ViewTimePlanProps {
   rangeEnd?: Dayjs;
   setData: (args: SetDataArgs) => Promise<void>;
   deleteData: (args: DeleteDataArgs) => void;
+  dataTimeSpendLoading?: boolean;
 }
 
 const ViewTimePlan: FC<ViewTimePlanProps> = ({
@@ -25,6 +26,7 @@ const ViewTimePlan: FC<ViewTimePlanProps> = ({
   rangeEnd,
   setData,
   deleteData,
+  dataTimeSpendLoading = false,
 }) => {
   const {
     sprintId,
@@ -73,12 +75,15 @@ const ViewTimePlan: FC<ViewTimePlanProps> = ({
 
   useEffect(() => {
     let isMounted = true;
-    fetchWorkPlan(() => isMounted);
     if (trackerUids.length === 0) {
       return () => {
         isMounted = false;
       };
     }
+    fetchWorkPlan(() => isMounted);
+    return () => {
+      isMounted = false;
+    };
   }, [
     sprintId,
     trackerUids,
@@ -173,6 +178,7 @@ const ViewTimePlan: FC<ViewTimePlanProps> = ({
           isEditable={!showAdminControls}
           planItems={workPlanRows}
           onWorkPlanRefresh={fetchWorkPlan}
+          dataTimeSpendLoading={dataTimeSpendLoading}
         />
       </Paper>
     </Box>

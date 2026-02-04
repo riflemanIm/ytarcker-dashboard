@@ -16,6 +16,7 @@ interface TableTimeSpendByPlanProps {
   isEditable: boolean;
   planItems?: WorkPlanItem[];
   onWorkPlanRefresh?: () => void;
+  dataTimeSpendLoading?: boolean;
 }
 
 const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
@@ -28,6 +29,7 @@ const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
   isEditable,
   planItems,
   onWorkPlanRefresh,
+  dataTimeSpendLoading = false,
 }) => {
   useTableTimePlanSelectors();
   const effectivePlanItems = planItems ?? [];
@@ -87,6 +89,7 @@ const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
       isEditable={isEditable}
       isAddable={false}
       onWorkPlanRefresh={onWorkPlanRefresh}
+      dataTimeSpendLoading={dataTimeSpendLoading}
     />
   );
 };

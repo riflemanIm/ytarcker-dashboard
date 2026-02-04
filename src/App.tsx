@@ -23,7 +23,11 @@ import TableTimeSpend from "./components/TableTimeSpend";
 import ViewTimePlan from "./components/ViewTimePlan";
 import WorklogWeeklyReport from "./components/WorklogWeeklyReport";
 import { debugUserId, useAppContext } from "./context/AppContext";
-import isEmpty, { aggregateDurations, getWeekRange } from "./helpers";
+import isEmpty, {
+  aggregateDurations,
+  getWeekRange,
+  isSuperLogin,
+} from "./helpers";
 import { DataItem } from "./types/global";
 
 const parseSprintRange = (raw?: string | null) => {
@@ -78,7 +82,7 @@ const YandexTracker: FC = () => {
         ...prev,
         showAdminControls: !prev.showAdminControls,
         userId: null,
-        data: [],
+        dataTimeSpend: [],
       }),
     });
   };
@@ -167,7 +171,7 @@ const YandexTracker: FC = () => {
 
     dispatch({
       type: "setState",
-      payload: (prev) => ({ ...prev, data: [] }),
+      payload: (prev) => ({ ...prev, dataTimeSpend: [] }),
     });
     getData({
       userId: currentTrackerUid,
@@ -188,7 +192,7 @@ const YandexTracker: FC = () => {
       userId: issuesUserId,
       login: debugUserId ? null : login,
     });
-  }, [dispatch, login, state.userId, token, viewMode]);
+  }, [dispatch, login, state.userId, token, viewMode, state.showAdminControls]);
 
   const fetchForActiveRange = useCallback(() => {
     if (viewMode === "search" || viewMode === "table_time_plan") return;
@@ -199,7 +203,7 @@ const YandexTracker: FC = () => {
 
     dispatch({
       type: "setState",
-      payload: (prev) => ({ ...prev, data: [] }),
+      payload: (prev) => ({ ...prev, dataTimeSpend: [] }),
     });
     getData({
       userId: state.showAdminControls ? state.userId : null,
@@ -215,7 +219,6 @@ const YandexTracker: FC = () => {
     state.userId,
     token,
     state.showAdminControls,
-
     reportFrom,
     reportTo,
     sprintRange,
@@ -250,14 +253,14 @@ const YandexTracker: FC = () => {
   };
 
   console.log("state", state);
-  const isSuperUser = !!state.isAdmin;
+  const isSuperUser = !!(state.isAdmin || (login && isSuperLogin(login)));
   const shouldShowAddDialog =
     viewMode === "table_time_spend" &&
     !state.showAdminControls &&
     !isEmpty(appState.state.issues);
   return (
     <>
-      {!state.loaded && <LinearProgress />}
+      {state.dataTimeSpendLoading && <LinearProgress />}
       <Grid
         container
         sx={{
@@ -271,7 +274,7 @@ const YandexTracker: FC = () => {
         <Grid size={12}>
           <AppHeader
             isSuperUser={isSuperUser}
-            loaded={state.loaded}
+            dataTimeSpendLoading={state.dataTimeSpendLoading}
             viewMode={viewMode}
             onViewModeChange={(mode) =>
               dispatch({ type: "setViewMode", payload: mode })
@@ -308,7 +311,7 @@ const YandexTracker: FC = () => {
             showRefresh={viewMode !== "search"}
           />
         </Grid>
-        {token && state.loaded && (
+        {token && (
           <Grid
             size={12}
             sx={{ height: "87vh", background: "white", mx: "auto", mt: 2 }}
@@ -318,12 +321,13 @@ const YandexTracker: FC = () => {
             ) : viewMode === "table_time_plan" ? (
               <>
                 <ViewTimePlan
-                  data={aggregateDurations(state.data as DataItem[])}
+                  data={aggregateDurations(state.dataTimeSpend as DataItem[])}
                   start={start}
                   rangeStart={sprintRange?.start}
                   rangeEnd={sprintRange?.end}
                   setData={setData}
                   deleteData={deleteData}
+                  dataTimeSpendLoading={state.dataTimeSpendLoading}
                 />
                 <DurationAlert
                   open={alert.open}
@@ -332,7 +336,7 @@ const YandexTracker: FC = () => {
                   onClose={handleCloseAlert}
                 />
               </>
-            ) : !isEmpty(state.data) ? (
+            ) : !isEmpty(state.dataTimeSpend) ? (
               <>
                 {viewMode === "table_time_spend" ? (
                   <>
@@ -358,18 +362,21 @@ const YandexTracker: FC = () => {
                       )}
                     </Stack>
                     <TableTimeSpend
-                      data={aggregateDurations(state.data as DataItem[])}
+                      data={aggregateDurations(
+                        state.dataTimeSpend as DataItem[],
+                      )}
                       start={start}
                       setData={setData}
                       deleteData={deleteData}
                       isEditable={!state.showAdminControls}
+                      dataTimeSpendLoading={state.dataTimeSpendLoading}
                     />
                   </>
                 ) : (
                   <WorklogWeeklyReport
                     from={reportFrom.toDate()}
                     to={reportTo.toDate()}
-                    data={state.data as any}
+                    data={state.dataTimeSpend as any}
                     height={780}
                   />
                 )}

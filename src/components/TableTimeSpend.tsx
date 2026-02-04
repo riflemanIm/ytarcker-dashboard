@@ -66,6 +66,7 @@ interface TableTimeSpendProps {
   isEditable: boolean;
   isAddable?: boolean;
   onWorkPlanRefresh?: () => void;
+  dataTimeSpendLoading?: boolean;
 }
 
 interface RawTransformedRow {
@@ -160,6 +161,7 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
   isEditable = false,
   isAddable = true,
   onWorkPlanRefresh,
+  dataTimeSpendLoading = false,
 }) => {
   const { state: appState, dispatch } = useAppContext();
   const { token } = appState.auth;
@@ -731,6 +733,7 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
       <DataGrid
         rows={[...tableRows, totalRow]}
         columns={columns}
+        loading={dataTimeSpendLoading}
         disableColumnMenu
         pageSizeOptions={[15]}
         onCellClick={(params, event) => {

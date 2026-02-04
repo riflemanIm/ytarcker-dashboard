@@ -38,7 +38,7 @@ interface HeaderFiltersProps {
   reportRange: ReportRangeProps;
   login: string | null | undefined;
   onToggleShowAdminControls: () => void;
-  loaded: boolean;
+  dataTimeSpendLoading: boolean;
   users: User[] | null;
   userId: string | null;
   handleSelectedUsersChange: (userId: string | null) => void;
@@ -53,11 +53,12 @@ const HeaderFilters: FC<HeaderFiltersProps> = ({
   reportRange,
   login,
   onToggleShowAdminControls,
-  loaded,
+  dataTimeSpendLoading,
   users,
   userId,
   handleSelectedUsersChange,
 }) => {
+  const isLoading = dataTimeSpendLoading;
   const rangeFilters =
     viewMode === "table_time_spend" ? (
       <WeekNavigator
@@ -132,7 +133,7 @@ const HeaderFilters: FC<HeaderFiltersProps> = ({
               showAdminControls={showAdminControls}
               login={login ?? ""}
               onToggle={onToggleShowAdminControls}
-              disabled={!loaded}
+              disabled={isLoading}
             />
           </Box>
 
@@ -148,7 +149,7 @@ const HeaderFilters: FC<HeaderFiltersProps> = ({
                   userId={userId}
                   handleSelectedUsersChange={handleSelectedUsersChange}
                   users={users}
-                  disabled={!loaded}
+                  disabled={isLoading}
                 />
               </Box>
             ))}

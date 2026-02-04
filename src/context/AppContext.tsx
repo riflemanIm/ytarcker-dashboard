@@ -71,13 +71,13 @@ const getInitialAuth = (): AuthState => {
 //export const debugUserId = "8000000000000145"; // Смирнов
 export const debugUserId = null;
 const initialState: AppState = {
-  loaded: true,
   userId: debugUserId, // for debug
   users: null,
   loginUid: null,
   isAdmin: false,
   planEditMode: false,
-  data: [],
+  dataTimeSpend: [],
+  dataTimeSpendLoading: false,
   showAdminControls: false,
   issues: [],
 };

@@ -19,7 +19,7 @@ import {
 import { useTheme } from "@mui/material/styles";
 import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import dayjs from "dayjs";
-import { FC, useEffect, useMemo, useState } from "react";
+import { FC, useEffect, useMemo, useReducer } from "react";
 import FilterTableText from "./FilterTableText";
 import IssueDisplay from "./IssueDisplay";
 import SetIssuePlanTable from "./SetIssuePlanTable";
@@ -36,16 +36,76 @@ const TableCheckPlan: FC = () => {
     showAdminControls,
   } = useTableTimePlanSelectors();
 
-  const [rows, setRows] = useState<TaskListItem[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedIssue, setSelectedIssue] = useState<TaskListItem | null>(null);
-  const [filterText, setFilterText] = useState("");
-  const [infoOpen, setInfoOpen] = useState(false);
-  const [infoLoading, setInfoLoading] = useState(false);
-  const [infoRows, setInfoRows] = useState<TaskPlanInfoItem[]>([]);
-  const [infoTaskKey, setInfoTaskKey] = useState<string | null>(null);
-  const [infoTaskName, setInfoTaskName] = useState<string | null>(null);
+  type InfoState = {
+    open: boolean;
+    loading: boolean;
+    rows: TaskPlanInfoItem[];
+    taskKey: string | null;
+    taskName: string | null;
+  };
+
+  type State = {
+    rows: TaskListItem[];
+    loading: boolean;
+    dialogOpen: boolean;
+    selectedIssue: TaskListItem | null;
+    filterText: string;
+    info: InfoState;
+  };
+
+  type Action =
+    | { type: "setRows"; rows: TaskListItem[] }
+    | { type: "setLoading"; loading: boolean }
+    | { type: "setDialog"; open: boolean; issue?: TaskListItem | null }
+    | { type: "setFilter"; value: string }
+    | { type: "setInfo"; payload: Partial<InfoState> };
+
+  const initialState: State = {
+    rows: [],
+    loading: false,
+    dialogOpen: false,
+    selectedIssue: null,
+    filterText: "",
+    info: {
+      open: false,
+      loading: false,
+      rows: [],
+      taskKey: null,
+      taskName: null,
+    },
+  };
+
+  const reducer = (state: State, action: Action): State => {
+    switch (action.type) {
+      case "setRows":
+        return { ...state, rows: action.rows };
+      case "setLoading":
+        return { ...state, loading: action.loading };
+      case "setDialog":
+        return {
+          ...state,
+          dialogOpen: action.open,
+          selectedIssue:
+            action.open === false ? null : action.issue ?? state.selectedIssue,
+        };
+      case "setFilter":
+        return { ...state, filterText: action.value };
+      case "setInfo":
+        return { ...state, info: { ...state.info, ...action.payload } };
+      default:
+        return state;
+    }
+  };
+
+  const [state, dispatchState] = useReducer(reducer, initialState);
+  const {
+    rows,
+    loading,
+    dialogOpen,
+    selectedIssue,
+    filterText,
+    info,
+  } = state;
   const theme = useTheme();
   const isXlUp = useMediaQuery(theme.breakpoints.up("xl"));
   const isLgUp = useMediaQuery(theme.breakpoints.up("lg"));
@@ -65,30 +125,35 @@ const TableCheckPlan: FC = () => {
   }, [isLgUp, isMdUp, isSmUp, isXlUp]);
   const isSprintReady = sprintId != null;
   const handleOpenInfo = async (row: TaskListItem) => {
-    setInfoTaskKey(row.TaskKey ?? null);
-    setInfoTaskName(row.TaskName ?? null);
-    setInfoOpen(true);
-    setInfoLoading(true);
-    setInfoRows([]);
+    dispatchState({
+      type: "setInfo",
+      payload: {
+        taskKey: row.TaskKey ?? null,
+        taskName: row.TaskName ?? null,
+        open: true,
+        loading: true,
+        rows: [],
+      },
+    });
     try {
       const data = await getTaskPlanInfo(row.TaskKey);
-      setInfoRows(data);
+      dispatchState({ type: "setInfo", payload: { rows: data } });
     } catch (error: any) {
       console.error("[TableCheckPlan] getTaskPlanInfo error:", error?.message);
     } finally {
-      setInfoLoading(false);
+      dispatchState({ type: "setInfo", payload: { loading: false } });
     }
   };
   useEffect(() => {
     let isMounted = true;
     if (trackerUids.length === 0) {
-      setRows([]);
-      setLoading(false);
+      dispatchState({ type: "setRows", rows: [] });
+      dispatchState({ type: "setLoading", loading: false });
       return () => {
         isMounted = false;
       };
     }
-    setLoading(true);
+    dispatchState({ type: "setLoading", loading: true });
     getTaskList({
       trackerUids: trackerUids,
       projectIds,
@@ -97,13 +162,13 @@ const TableCheckPlan: FC = () => {
     })
       .then((data) => {
         if (!isMounted) return;
-        setRows(data);
-        setLoading(false);
+        dispatchState({ type: "setRows", rows: data });
+        dispatchState({ type: "setLoading", loading: false });
       })
       .catch((error) => {
         console.error("[TableCheckPlan] getTaskList error:", error.message);
         if (!isMounted) return;
-        setLoading(false);
+        dispatchState({ type: "setLoading", loading: false });
       });
 
     return () => {
@@ -169,8 +234,11 @@ const TableCheckPlan: FC = () => {
                 variant="outlined"
                 onClick={(event) => {
                   event.stopPropagation();
-                  setSelectedIssue(params.row);
-                  setDialogOpen(true);
+                  dispatchState({
+                    type: "setDialog",
+                    open: true,
+                    issue: params.row,
+                  });
                 }}
                 disabled={!sprintId}
               >
@@ -254,7 +322,7 @@ const TableCheckPlan: FC = () => {
     <Box sx={{ mt: 2, height: 400 }}>
       <FilterTableText
         value={filterText}
-        onChange={setFilterText}
+        onChange={(value) => dispatchState({ type: "setFilter", value })}
         label="Фильтр"
         placeholder="Название, Key, Работа, Тип работы"
         disabled={loading || rows.length === 0}
@@ -268,24 +336,32 @@ const TableCheckPlan: FC = () => {
       />
       <SetIssuePlanTable
         open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
+        onClose={() => dispatchState({ type: "setDialog", open: false })}
         issue={selectedIssue}
         sprintId={sprintId}
       />
       <Dialog
-        open={infoOpen}
-        onClose={() => setInfoOpen(false)}
+        open={info.open}
+        onClose={() =>
+          dispatchState({ type: "setInfo", payload: { open: false } })
+        }
         maxWidth="lg"
         fullWidth
       >
         <DialogTitle>
-          Информация по задаче • {infoTaskKey ?? "-"} • {infoTaskName ?? "-"}
+          Информация по задаче • {info.taskKey ?? "-"} • {info.taskName ?? "-"}
         </DialogTitle>
         <DialogContent>
-          <TableTaskPlanInfo rows={infoRows} loading={infoLoading} />
+          <TableTaskPlanInfo rows={info.rows} loading={info.loading} />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setInfoOpen(false)}>Закрыть</Button>
+          <Button
+            onClick={() =>
+              dispatchState({ type: "setInfo", payload: { open: false } })
+            }
+          >
+            Закрыть
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>

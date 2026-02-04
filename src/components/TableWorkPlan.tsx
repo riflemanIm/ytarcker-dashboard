@@ -15,7 +15,7 @@ import {
 } from "@mui/material";
 import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import dayjs from "dayjs";
-import { FC, useCallback, useMemo, useState } from "react";
+import { FC, useCallback, useMemo, useReducer } from "react";
 import IssueDisplay from "./IssueDisplay";
 import { getPriorityPalette } from "@/helpers/priorityStyles";
 import { workMinutesToDurationInput } from "@/helpers";
@@ -46,27 +46,108 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
   const { sprintId, trackerUids, planEditMode, showAdminControls } =
     useTableTimePlanSelectors();
 
-  const { dispatch } = useAppContext();
+  const { state: appState, dispatch } = useAppContext();
+  const dataTimeSpendLoading = appState.state.dataTimeSpendLoading;
 
   const canAddTime = !showAdminControls;
   const canEditPlan = showAdminControls && !!planEditMode;
 
   //console.log("canAddTime", canAddTime);
 
-  const [filterText, setFilterText] = useState("");
+  type InfoState = {
+    open: boolean;
+    loading: boolean;
+    rows: TaskPlanInfoItem[];
+    taskKey: string | null;
+    taskName: string | null;
+  };
+
+  type State = {
+    filterText: string;
+    editOpen: boolean;
+    selectedRow: WorkPlanItem | null;
+    deleteOpen: boolean;
+    deleteTarget: WorkPlanItem | null;
+    deleteLoading: boolean;
+    addTimeOpen: boolean;
+    addTimeIssue: Issue | null;
+    info: InfoState;
+  };
+
+  type Action =
+    | { type: "setFilter"; value: string }
+    | { type: "setEdit"; open: boolean; row?: WorkPlanItem | null }
+    | { type: "setDelete"; open: boolean; row?: WorkPlanItem | null }
+    | { type: "setDeleteLoading"; loading: boolean }
+    | { type: "setAddTime"; open: boolean; issue?: Issue | null }
+    | { type: "setInfo"; payload: Partial<InfoState> };
+
+  const initialState: State = {
+    filterText: "",
+    editOpen: false,
+    selectedRow: null,
+    deleteOpen: false,
+    deleteTarget: null,
+    deleteLoading: false,
+    addTimeOpen: false,
+    addTimeIssue: null,
+    info: {
+      open: false,
+      loading: false,
+      rows: [],
+      taskKey: null,
+      taskName: null,
+    },
+  };
+
+  const reducer = (state: State, action: Action): State => {
+    switch (action.type) {
+      case "setFilter":
+        return { ...state, filterText: action.value };
+      case "setEdit":
+        return {
+          ...state,
+          editOpen: action.open,
+          selectedRow:
+            action.open === false ? null : action.row ?? state.selectedRow,
+        };
+      case "setDelete":
+        return {
+          ...state,
+          deleteOpen: action.open,
+          deleteTarget:
+            action.open === false ? null : action.row ?? state.deleteTarget,
+        };
+      case "setDeleteLoading":
+        return { ...state, deleteLoading: action.loading };
+      case "setAddTime":
+        return {
+          ...state,
+          addTimeOpen: action.open,
+          addTimeIssue:
+            action.open === false ? null : action.issue ?? state.addTimeIssue,
+        };
+      case "setInfo":
+        return { ...state, info: { ...state.info, ...action.payload } };
+      default:
+        return state;
+    }
+  };
+
+  const [state, dispatchState] = useReducer(reducer, initialState);
+  const {
+    filterText,
+    editOpen,
+    selectedRow,
+    deleteOpen,
+    deleteTarget,
+    deleteLoading,
+    addTimeOpen,
+    addTimeIssue,
+    info,
+  } = state;
+
   const isSprintReady = sprintId != null;
-  const [editOpen, setEditOpen] = useState(false);
-  const [selectedRow, setSelectedRow] = useState<WorkPlanItem | null>(null);
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<WorkPlanItem | null>(null);
-  const [deleteLoading, setDeleteLoading] = useState(false);
-  const [addTimeOpen, setAddTimeOpen] = useState(false);
-  const [addTimeIssue, setAddTimeIssue] = useState<Issue | null>(null);
-  const [infoOpen, setInfoOpen] = useState(false);
-  const [infoLoading, setInfoLoading] = useState(false);
-  const [infoRows, setInfoRows] = useState<TaskPlanInfoItem[]>([]);
-  const [infoTaskKey, setInfoTaskKey] = useState<string | null>(null);
-  const [infoTaskName, setInfoTaskName] = useState<string | null>(null);
 
   const formatWorkMinutes = (value: unknown) => {
     const num = Number(value);
@@ -75,18 +156,23 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
   };
 
   const handleOpenInfo = useCallback(async (row: WorkPlanItem) => {
-    setInfoTaskKey(row.TaskKey);
-    setInfoTaskName(row.TaskName);
-    setInfoOpen(true);
-    setInfoLoading(true);
-    setInfoRows([]);
+    dispatchState({
+      type: "setInfo",
+      payload: {
+        taskKey: row.TaskKey,
+        taskName: row.TaskName,
+        open: true,
+        loading: true,
+        rows: [],
+      },
+    });
     try {
       const data = await getTaskPlanInfo(row.TaskKey);
-      setInfoRows(data);
+      dispatchState({ type: "setInfo", payload: { rows: data } });
     } catch (error: any) {
       console.error("[TableWorkPlan] getTaskPlanInfo error:", error?.message);
     } finally {
-      setInfoLoading(false);
+      dispatchState({ type: "setInfo", payload: { loading: false } });
     }
   }, []);
 
@@ -168,28 +254,35 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
             </Tooltip>
             {canAddTime && (
               <Tooltip title="Добавить отметку времени">
-                <IconButton
-                  size="small"
-                  sx={(theme) => ({ color: theme.palette.success.main })}
-                  onClick={() => {
-                    const row = params.row as WorkPlanItem;
-                    setAddTimeIssue({
-                      key: row.TaskKey,
-                      summary: row.TaskName,
-                      remainTimeMinutes: row.RemainTimeMinutes,
-                      checklistItemId: row.checklistItemId ?? null,
-                      YT_TL_WORKPLAN_ID: row.YT_TL_WORKPLAN_ID ?? null,
-                      YT_TL_WORKLOG_ID: row.YT_TL_WORKLOG_ID ?? null,
-                      TaskName: row.TaskName,
-                      TaskKey: row.TaskKey,
-                      WorkName: row.WorkName,
-                      WorkNameDict: row.WorkNameDict,
-                    });
-                    setAddTimeOpen(true);
-                  }}
-                >
-                  <AddAlarmIcon fontSize="small" />
-                </IconButton>
+                <span>
+                  <IconButton
+                    size="small"
+                    disabled={dataTimeSpendLoading}
+                    sx={(theme) => ({ color: theme.palette.success.main })}
+                    onClick={() => {
+                      if (dataTimeSpendLoading) return;
+                      const row = params.row as WorkPlanItem;
+                      dispatchState({
+                        type: "setAddTime",
+                        open: true,
+                        issue: {
+                        key: row.TaskKey,
+                        summary: row.TaskName,
+                        remainTimeMinutes: row.RemainTimeMinutes,
+                        checklistItemId: row.checklistItemId ?? null,
+                        YT_TL_WORKPLAN_ID: row.YT_TL_WORKPLAN_ID ?? null,
+                        YT_TL_WORKLOG_ID: row.YT_TL_WORKLOG_ID ?? null,
+                        TaskName: row.TaskName,
+                        TaskKey: row.TaskKey,
+                        WorkName: row.WorkName,
+                        WorkNameDict: row.WorkNameDict,
+                        },
+                      });
+                    }}
+                  >
+                    <AddAlarmIcon fontSize="small" />
+                  </IconButton>
+                </span>
               </Tooltip>
             )}
             {canEditPlan && (
@@ -200,8 +293,11 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
                   disabled={!canEditPlan}
                   onClick={() => {
                     if (!canEditPlan) return;
-                    setSelectedRow(params.row as WorkPlanItem);
-                    setEditOpen(true);
+                    dispatchState({
+                      type: "setEdit",
+                      open: true,
+                      row: params.row as WorkPlanItem,
+                    });
                   }}
                 >
                   <EditIcon fontSize="small" />
@@ -212,8 +308,11 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
                   disabled={!canEditPlan}
                   onClick={() => {
                     if (!canEditPlan) return;
-                    setDeleteTarget(params.row as WorkPlanItem);
-                    setDeleteOpen(true);
+                    dispatchState({
+                      type: "setDelete",
+                      open: true,
+                      row: params.row as WorkPlanItem,
+                    });
                   }}
                 >
                   <DeleteIcon fontSize="small" />
@@ -297,7 +396,13 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
     ];
 
     return [...baseColumns, actionColumn, ...tailColumns];
-  }, [showAdminControls, handleOpenInfo]);
+  }, [
+    canAddTime,
+    canEditPlan,
+    dataTimeSpendLoading,
+    handleOpenInfo,
+    showAdminControls,
+  ]);
 
   const filteredRows = useMemo(() => {
     const query = filterText.trim().toLowerCase();
@@ -388,7 +493,7 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
 
   const handleDelete = async () => {
     if (!deleteTarget || !sprintId) return;
-    setDeleteLoading(true);
+    dispatchState({ type: "setDeleteLoading", loading: true });
     try {
       await setWorkPlan({
         sprintId,
@@ -404,12 +509,11 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
           workPlanRefreshKey: prev.workPlanRefreshKey + 1,
         }),
       });
-      setDeleteOpen(false);
-      setDeleteTarget(null);
+      dispatchState({ type: "setDelete", open: false });
     } catch (error: any) {
       console.error("[TableWorkPlan] delete work plan error:", error?.message);
     } finally {
-      setDeleteLoading(false);
+      dispatchState({ type: "setDeleteLoading", loading: false });
     }
   };
   if (trackerUids.length === 0) {
@@ -424,7 +528,7 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
     <Box sx={{ mt: 2 }}>
       <FilterTableText
         value={filterText}
-        onChange={setFilterText}
+        onChange={(value) => dispatchState({ type: "setFilter", value })}
         label="Фильтр"
         placeholder="Название, Key, Работа, Тип работы, Проект, Сотрудник, Статус, Комментарий"
         disabled={loading || rows.length === 0}
@@ -487,20 +591,14 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
       </Box> */}
       <SetIssuePlanTable
         open={editOpen}
-        onClose={() => {
-          setEditOpen(false);
-          setSelectedRow(null);
-        }}
+        onClose={() => dispatchState({ type: "setEdit", open: false })}
         issue={selectedRow}
         sprintId={sprintId}
         mode="edit"
       />
       <Dialog
         open={deleteOpen}
-        onClose={() => {
-          setDeleteOpen(false);
-          setDeleteTarget(null);
-        }}
+        onClose={() => dispatchState({ type: "setDelete", open: false })}
       >
         <DialogTitle>Удалить запись из плана?</DialogTitle>
         <DialogContent>
@@ -511,8 +609,7 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
         <DialogActions>
           <Button
             onClick={() => {
-              setDeleteOpen(false);
-              setDeleteTarget(null);
+              dispatchState({ type: "setDelete", open: false });
             }}
           >
             Отмена
@@ -528,19 +625,27 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
         </DialogActions>
       </Dialog>
       <Dialog
-        open={infoOpen}
-        onClose={() => setInfoOpen(false)}
+        open={info.open}
+        onClose={() =>
+          dispatchState({ type: "setInfo", payload: { open: false } })
+        }
         maxWidth="lg"
         fullWidth
       >
         <DialogTitle>
-          Информация по задаче • {infoTaskKey ?? "-"} • {infoTaskName ?? "-"}
+          Информация по задаче • {info.taskKey ?? "-"} • {info.taskName ?? "-"}
         </DialogTitle>
         <DialogContent>
-          <TableTaskPlanInfo rows={infoRows} loading={infoLoading} />
+          <TableTaskPlanInfo rows={info.rows} loading={info.loading} />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setInfoOpen(false)}>Закрыть</Button>
+          <Button
+            onClick={() =>
+              dispatchState({ type: "setInfo", payload: { open: false } })
+            }
+          >
+            Закрыть
+          </Button>
         </DialogActions>
       </Dialog>
       {canAddTime && setData && (
@@ -549,8 +654,7 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
           setData={setData}
           open={addTimeOpen}
           onOpenChange={(open) => {
-            setAddTimeOpen(open);
-            if (!open) setAddTimeIssue(null);
+            dispatchState({ type: "setAddTime", open });
           }}
           initialIssue={addTimeIssue}
           hideTrigger

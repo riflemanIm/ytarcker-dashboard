@@ -13,7 +13,7 @@ import ToggleViewButton from "./ToggleViewButton";
 interface AppHeaderProps {
   isSuperUser: boolean;
   showAdminControls: boolean;
-  loaded: boolean;
+  dataTimeSpendLoading: boolean;
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
   weekNavigation: WeekNavigationProps;
@@ -30,7 +30,7 @@ interface AppHeaderProps {
 const AppHeader: FC<AppHeaderProps> = ({
   isSuperUser,
   showAdminControls,
-  loaded,
+  dataTimeSpendLoading,
   viewMode,
   onViewModeChange,
   weekNavigation,
@@ -45,8 +45,8 @@ const AppHeader: FC<AppHeaderProps> = ({
 }) => {
   const { state } = useAppContext();
   const { token, login } = state.auth;
-  const canShowAdminControls = !!token && loaded && !!isSuperUser;
-  const showRange = !!token && loaded && showRangeControls;
+  const canShowAdminControls = !!token && !dataTimeSpendLoading && !!isSuperUser;
+  const showRange = !!token && !dataTimeSpendLoading && showRangeControls;
   const theme = useTheme();
 
   return (
@@ -95,7 +95,7 @@ const AppHeader: FC<AppHeaderProps> = ({
           reportRange={reportRange}
           login={login}
           onToggleShowAdminControls={onToggleShowAdminControls}
-          loaded={loaded}
+          dataTimeSpendLoading={dataTimeSpendLoading}
           users={users}
           userId={userId}
           handleSelectedUsersChange={handleSelectedUsersChange}
@@ -114,7 +114,7 @@ const AppHeader: FC<AppHeaderProps> = ({
           <Box sx={{ display: "flex", justifyContent: "flex-end", flex: 1 }}>
             <LogInOut />
           </Box>
-          {showRefresh && !!token && loaded && (
+          {showRefresh && !!token && !dataTimeSpendLoading && (
             <IconButton
               onClick={onRefresh}
               sx={{

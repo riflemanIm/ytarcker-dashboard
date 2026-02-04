@@ -156,13 +156,13 @@ export interface QueueInfo {
 }
 
 export interface AppState {
-  loaded: boolean;
   userId: string | null;
   users: User[] | null;
   loginUid?: string | null;
   isAdmin?: boolean;
   planEditMode?: boolean;
-  data: DataItem[];
+  dataTimeSpend: DataItem[];
+  dataTimeSpendLoading: boolean;
   showAdminControls: boolean;
   issues: Issue[];
 }

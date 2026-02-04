@@ -60,7 +60,10 @@ export const getData = async ({
 }: GetDataArgs): Promise<void> => {
   dispatch({
     type: "setState",
-    payload: (prev) => ({ ...prev, loaded: false }),
+    payload: (prev) => ({
+      ...prev,
+      dataTimeSpendLoading: true,
+    }),
   });
 
   try {
@@ -79,11 +82,18 @@ export const getData = async ({
     dispatch({
       type: "setState",
       payload: (prev) => {
+        const nextData = Array.isArray(res.data?.data)
+          ? res.data.data
+          : Array.isArray(res.data?.dataTimeSpend)
+            ? res.data.dataTimeSpend
+            : [];
+        const { data, dataTimeSpend, ...rest } = res.data ?? {};
         return {
           ...prev,
-          loaded: true,
-          ...res.data,
+          dataTimeSpendLoading: false,
+          ...rest,
           users: res.data?.users ?? prev.users,
+          dataTimeSpend: nextData,
         };
       },
     });
@@ -96,7 +106,10 @@ export const getData = async ({
     console.error("getData error:", errorMessage);
     dispatch({
       type: "setState",
-      payload: (prev) => ({ ...prev, loaded: true }),
+      payload: (prev) => ({
+        ...prev,
+        dataTimeSpendLoading: false,
+      }),
     });
   }
 };
@@ -282,6 +295,11 @@ export const setData = async ({
     return;
   }
 
+  dispatch({
+    type: "setState",
+    payload: (prev) => ({ ...prev, dataTimeSpendLoading: true }),
+  });
+
   try {
     const startDateTime = (() => {
       const HOURS_END_DAY = 18; // конец рабочего дня
@@ -342,14 +360,14 @@ export const setData = async ({
         type: "setState",
         payload: (prev: AppState) => ({
           ...prev,
-          loaded: true,
-          data: worklogId
-            ? prev.data.map((item: DataItem) =>
+          dataTimeSpendLoading: false,
+          dataTimeSpend: worklogId
+            ? prev.dataTimeSpend.map((item: DataItem) =>
                 item.id === (res.data as DataItem).id
                   ? (res.data as DataItem)
                   : item,
               )
-            : [...prev.data, { ...(res.data as DataItem) }],
+            : [...prev.dataTimeSpend, { ...(res.data as DataItem) }],
         }),
       });
       dispatch({
@@ -371,7 +389,10 @@ export const setData = async ({
     console.error("ERROR", err.message);
     dispatch({
       type: "setState",
-      payload: (prev: AppState) => ({ ...prev, loaded: true }),
+      payload: (prev: AppState) => ({
+        ...prev,
+        dataTimeSpendLoading: false,
+      }),
     });
     dispatch({
       type: "setAlert",
@@ -431,6 +452,11 @@ export const deleteData = async ({
     return;
   }
 
+  dispatch({
+    type: "setState",
+    payload: (prev) => ({ ...prev, dataTimeSpendLoading: true }),
+  });
+
   try {
     const items =
       Array.isArray(durations) && durations.length
@@ -465,9 +491,11 @@ export const deleteData = async ({
         type: "setState",
         payload: (prev: AppState) => ({
           ...prev,
-          loaded: true,
-          data: [
-            ...prev.data.filter((item: DataItem) => !ids.includes(item.id)),
+          dataTimeSpendLoading: false,
+          dataTimeSpend: [
+            ...prev.dataTimeSpend.filter(
+              (item: DataItem) => !ids.includes(item.id),
+            ),
           ],
         }),
       });
@@ -486,7 +514,10 @@ export const deleteData = async ({
     console.error("ERROR", err.message);
     dispatch({
       type: "setState",
-      payload: (prev: AppState) => ({ ...prev, loaded: true }),
+      payload: (prev: AppState) => ({
+        ...prev,
+        dataTimeSpendLoading: false,
+      }),
     });
     dispatch({
       type: "setAlert",
@@ -506,10 +537,6 @@ export const getUserIssues = async ({
   userId?: string | null;
   login?: string | null;
 }): Promise<void> => {
-  dispatch({
-    type: "setState",
-    payload: (prev) => ({ ...prev, loaded: false }),
-  });
   try {
     // Проверяем обязательный токен
     if (!token) {
@@ -534,17 +561,12 @@ export const getUserIssues = async ({
       type: "setState",
       payload: (prev: AppState) => ({
         ...prev,
-        loaded: true,
         issues: res.data.issues,
       }),
     });
   } catch (err: any) {
     console.error("[Ошибка в getUserIssues]:", err.message);
     // Если токен протух — разлогиниваем
-    dispatch({
-      type: "setState",
-      payload: (prev) => ({ ...prev, loaded: true }),
-    });
     if (axios.isAxiosError(err) && err.response?.status === 401) {
       handleLogout();
     }
