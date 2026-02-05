@@ -151,7 +151,7 @@ export const getTlUserInfo = async ({
   } catch (err: any) {
     console.error("[Ошибка в getTlUserInfo]:", err.message);
     const errorStatus = axios.isAxiosError(err)
-      ? err.response?.status ?? null
+      ? (err.response?.status ?? null)
       : null;
     return { info: null, errorStatus };
   }

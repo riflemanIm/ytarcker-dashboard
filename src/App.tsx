@@ -236,11 +236,7 @@ const YandexTracker: FC = () => {
   const fetchForActiveRange = useCallback(() => {
     if (viewMode === "search" || viewMode === "table_time_plan") return;
     if (userInfoStatus !== "ready") return;
-    if (
-      !token ||
-      (!state.showAdminControls && !login) ||
-      (state.showAdminControls && !selectedPatientUid)
-    ) {
+    if (!token || (!state.showAdminControls && !login)) {
       return;
     }
 
@@ -251,6 +247,7 @@ const YandexTracker: FC = () => {
       type: "setState",
       payload: (prev) => ({ ...prev, dataTimeSpend: [] }),
     });
+
     getData({
       userId: state.showAdminControls ? selectedPatientUid : null,
       dispatch,
