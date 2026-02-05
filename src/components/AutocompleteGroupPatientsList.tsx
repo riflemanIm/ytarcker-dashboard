@@ -9,7 +9,7 @@ import {
 } from "@mui/material";
 import Autocomplete from "@mui/material/Autocomplete";
 import ClearIcon from "@mui/icons-material/Clear";
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useEffect, useMemo } from "react";
 import isEmpty from "../helpers";
 import { TlGroupPatient } from "@/types/global";
 
@@ -38,8 +38,6 @@ const AutocompleteGroupPatientsList: React.FC<
     selectedPatientUid,
     groupPatientsKey,
   } = appState.tableTimePlanState;
-  const lastGroupKeyRef = useRef<string>("");
-
   const groupIds = useMemo(
     () =>
       selectedGroupIds
@@ -52,12 +50,33 @@ const AutocompleteGroupPatientsList: React.FC<
     let isMounted = true;
 
     const groupKey = groupIds.join(",");
-    if (groupKey === lastGroupKeyRef.current || groupKey === groupPatientsKey) {
-      if (!(groupKey === "" && groupPatients.length === 0)) {
-        return;
+    if (groupIds.length === 0) {
+      if (
+        groupPatients.length !== 0 ||
+        groupPatientsKey !== "" ||
+        selectedPatientUid !== ""
+      ) {
+        dispatch({
+          type: "setTableTimePlanState",
+          payload: (prev) => ({
+            ...prev,
+            groupPatients: [],
+            groupPatientsKey: "",
+            selectedPatientUid: "",
+            loadingPatients: false,
+          }),
+        });
       }
+      return () => {
+        isMounted = false;
+      };
     }
-    lastGroupKeyRef.current = groupKey;
+
+    if (groupKey === groupPatientsKey && groupPatients.length > 0) {
+      return () => {
+        isMounted = false;
+      };
+    }
     dispatch({
       type: "setTableTimePlanState",
       payload: (prev) => ({ ...prev, loadingPatients: true }),
@@ -92,7 +111,6 @@ const AutocompleteGroupPatientsList: React.FC<
           error.message,
         );
         if (!isMounted) return;
-        lastGroupKeyRef.current = "";
         dispatch({
           type: "setTableTimePlanState",
           payload: (prev) => ({ ...prev, groupPatientsKey: "" }),
@@ -108,7 +126,13 @@ const AutocompleteGroupPatientsList: React.FC<
     return () => {
       isMounted = false;
     };
-  }, [dispatch, groupIds, groupPatientsKey, groupPatients.length]);
+  }, [
+    dispatch,
+    groupIds,
+    groupPatientsKey,
+    groupPatients.length,
+    selectedPatientUid,
+  ]);
 
   const handleChange = (
     event: React.SyntheticEvent,

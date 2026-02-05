@@ -92,6 +92,23 @@ const initialViewMode: ViewMode = "table_time_spend";
 const initialWeekOffset = 0;
 const initialReportFrom = dayjs().startOf("month");
 const initialReportTo = dayjs().endOf("month");
+const SELECTED_GROUP_IDS_STORAGE_KEY = "selected_group_ids";
+
+const getInitialSelectedGroupIds = (): string[] => {
+  if (typeof window === "undefined") return [];
+  const raw = window.localStorage.getItem(SELECTED_GROUP_IDS_STORAGE_KEY);
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map((item) => (item == null ? "" : String(item)))
+      .filter((item) => item.length > 0);
+  } catch {
+    return [];
+  }
+};
+
 const initialTableTimePlanState: TableTimePlanState = {
   sprins: [],
   sprinsLoaded: false,
@@ -108,7 +125,7 @@ const initialTableTimePlanState: TableTimePlanState = {
   loadingProjects: false,
   loadingPatients: false,
   selectedSprintId: "",
-  selectedGroupIds: [],
+  selectedGroupIds: getInitialSelectedGroupIds(),
   selectedRoleIds: [],
   selectedProjectIds: [],
   selectedPatientUid: "",

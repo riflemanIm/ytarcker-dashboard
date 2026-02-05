@@ -11,6 +11,8 @@ import Autocomplete from "@mui/material/Autocomplete";
 import ClearIcon from "@mui/icons-material/Clear";
 import React, { useEffect, useRef } from "react";
 
+const SELECTED_GROUP_IDS_STORAGE_KEY = "selected_group_ids";
+
 interface AutocompleteGroupListProps {
   variant?: "standard" | "outlined" | "filled";
   margin?: "none" | "dense" | "normal";
@@ -87,13 +89,28 @@ const AutocompleteGroupList: React.FC<AutocompleteGroupListProps> = ({
     event: React.SyntheticEvent,
     value: { yt_tl_group_id: number; label: string }[],
   ) => {
+    const nextSelectedGroupIds = value.map((item) =>
+      String(item.yt_tl_group_id),
+    );
+    try {
+      window.localStorage.setItem(
+        SELECTED_GROUP_IDS_STORAGE_KEY,
+        JSON.stringify(nextSelectedGroupIds),
+      );
+    } catch (error) {
+      console.warn(
+        "[AutocompleteGroupList] localStorage write failed:",
+        error,
+      );
+    }
     dispatch({
       type: "setTableTimePlanState",
       payload: (prev) => ({
         ...prev,
-        selectedGroupIds: value.map((item) =>
-          String(item.yt_tl_group_id),
-        ),
+        selectedGroupIds: nextSelectedGroupIds,
+        groupPatients: [],
+        groupPatientsKey: "",
+        selectedPatientUid: "",
       }),
     });
   };
