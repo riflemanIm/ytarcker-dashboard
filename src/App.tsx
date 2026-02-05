@@ -488,11 +488,12 @@ const YandexTracker: FC = () => {
                     Вы не подключены к офисной сети.
                   </Alert>
                 )}
-                {isEmpty(state.dataTimeSpend) && (
-                  <Alert severity="warning">
-                    Нет ни одной отметки времени за выбранный период
-                  </Alert>
-                )}
+                {isEmpty(state.dataTimeSpend) &&
+                  !state.dataTimeSpendLoading && (
+                    <Alert severity="warning">
+                      Нет ни одной отметки времени за выбранный период
+                    </Alert>
+                  )}
               </>
             )}
           </Grid>
