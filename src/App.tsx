@@ -7,7 +7,7 @@ import {
   Typography,
 } from "@mui/material";
 import dayjs from "dayjs";
-import { FC, useCallback, useEffect, useMemo } from "react";
+import { FC, useCallback, useEffect, useMemo, useState } from "react";
 import {
   deleteData,
   getData,
@@ -22,7 +22,7 @@ import SearchIssues from "./components/SearchIssues";
 import TableTimeSpend from "./components/TableTimeSpend";
 import ViewTimePlan from "./components/ViewTimePlan";
 import WorklogWeeklyReport from "./components/WorklogWeeklyReport";
-import { debugUserId, useAppContext } from "./context/AppContext";
+import { useAppContext } from "./context/AppContext";
 import isEmpty, {
   aggregateDurations,
   getWeekRange,
@@ -60,8 +60,13 @@ const YandexTracker: FC = () => {
   const { auth, state, alert, viewMode, weekOffset, reportFrom, reportTo } =
     appState;
   const { token, login } = auth;
-  const { selectedSprintId, sprins, workPlanRefreshKey } =
-    appState.tableTimePlanState;
+  const {
+    selectedSprintId,
+    sprins,
+    workPlanRefreshKey,
+    selectedGroupIds,
+    selectedPatientUid,
+  } = appState.tableTimePlanState;
   const userInfoEmail = useMemo(() => {
     const raw = localStorage.getItem("yandex_login");
     if (raw && raw !== "undefined" && raw !== "null") return raw;
@@ -82,7 +87,6 @@ const YandexTracker: FC = () => {
       payload: (prev) => ({
         ...prev,
         showAdminControls: !prev.showAdminControls,
-        userId: null,
         dataTimeSpend: [],
       }),
     });
@@ -140,29 +144,45 @@ const YandexTracker: FC = () => {
     ? appState.tableTimePlanState.selectedPatientUid
     : state.loginUid;
 
-  useEffect(() => {
-    let isMounted = true;
-    if (!token) return;
+  const [userInfoStatus, setUserInfoStatus] = useState<
+    "idle" | "loading" | "ready" | "failed"
+  >("idle");
 
+  const fetchUserInfo = useCallback(async () => {
+    if (!token) return false;
     const trackerUidCandidate = state.loginUid ?? null;
-    if (!userInfoEmail && !trackerUidCandidate) return;
+    if (!userInfoEmail && !trackerUidCandidate) return false;
 
-    const fetchUserInfo = async () => {
-      await getTlUserInfo({
-        email: userInfoEmail ?? undefined,
-        trackerUid: trackerUidCandidate ?? undefined,
-        dispatch,
+    setUserInfoStatus("loading");
+    const result = await getTlUserInfo({
+      email: userInfoEmail ?? undefined,
+      trackerUid: trackerUidCandidate ?? undefined,
+      dispatch,
+    });
+    if (!result.info || result.errorStatus === 500) {
+      setUserInfoStatus("failed");
+      dispatch({
+        type: "setAlert",
+        payload: {
+          open: true,
+          severity: "error",
+          message: "Вы не подключены к офисной сети.",
+        },
       });
-    };
+      return false;
+    }
 
+    setUserInfoStatus("ready");
+    return true;
+  }, [dispatch, state.loginUid, token, userInfoEmail]);
+
+  useEffect(() => {
     fetchUserInfo();
-    return () => {
-      isMounted = false;
-    };
-  }, [dispatch, login, state.loginUid, token, userInfoEmail]);
+  }, [fetchUserInfo]);
 
   const fetchPlanRangeData = useCallback(() => {
     if (viewMode !== "table_time_plan") return;
+    if (userInfoStatus !== "ready") return;
     const planRangeStart = sprintRange?.start;
     const planRangeEnd = sprintRange?.end;
 
@@ -190,22 +210,39 @@ const YandexTracker: FC = () => {
     viewMode,
     state.showAdminControls,
     workPlanRefreshKey,
+    userInfoStatus,
   ]);
 
   const fetchUserIssues = useCallback(() => {
     if (viewMode !== "table_time_spend") return;
-    const issuesUserId = debugUserId || state.userId;
+    if (userInfoStatus !== "ready") return;
+    if (state.showAdminControls && !selectedPatientUid) return;
     getUserIssues({
       dispatch,
       token,
-      userId: issuesUserId,
-      login: debugUserId ? null : login,
+      userId: state.showAdminControls ? selectedPatientUid : null,
+      login: !state.showAdminControls ? login : null,
     });
-  }, [dispatch, login, state.userId, token, viewMode, state.showAdminControls]);
+  }, [
+    dispatch,
+    login,
+    selectedPatientUid,
+    token,
+    viewMode,
+    state.showAdminControls,
+    userInfoStatus,
+  ]);
 
   const fetchForActiveRange = useCallback(() => {
     if (viewMode === "search" || viewMode === "table_time_plan") return;
-    if (!(login || state.userId || currentTrackerUid) || !token) return;
+    if (userInfoStatus !== "ready") return;
+    if (
+      !token ||
+      (!state.showAdminControls && !login) ||
+      (state.showAdminControls && !selectedPatientUid)
+    ) {
+      return;
+    }
 
     const rangeStart = viewMode === "report" ? reportFrom : start;
     const rangeEnd = viewMode === "report" ? reportTo : end;
@@ -215,7 +252,7 @@ const YandexTracker: FC = () => {
       payload: (prev) => ({ ...prev, dataTimeSpend: [] }),
     });
     getData({
-      userId: state.showAdminControls ? state.userId : null,
+      userId: state.showAdminControls ? selectedPatientUid : null,
       dispatch,
       token,
       start: rangeStart.format("YYYY-MM-DD"),
@@ -225,7 +262,6 @@ const YandexTracker: FC = () => {
   }, [
     dispatch,
     login,
-    state.userId,
     token,
     state.showAdminControls,
     reportFrom,
@@ -234,6 +270,8 @@ const YandexTracker: FC = () => {
     start,
     end,
     viewMode,
+    selectedPatientUid,
+    userInfoStatus,
   ]);
 
   useEffect(() => {
@@ -241,21 +279,41 @@ const YandexTracker: FC = () => {
   }, [fetchPlanRangeData]);
 
   useEffect(() => {
-    fetchUserIssues();
-  }, [fetchUserIssues]);
-
-  useEffect(() => {
     fetchForActiveRange();
   }, [fetchForActiveRange]);
 
-  const handleSelectedUsersChange = (userId: string | null) => {
+  useEffect(() => {
+    if (viewMode !== "table_time_spend") return;
+    const defaultGroupId = "4";
+    if (
+      selectedGroupIds.length === 1 &&
+      selectedGroupIds[0] === defaultGroupId
+    ) {
+      return;
+    }
+    try {
+      window.localStorage.setItem(
+        "selected_group_ids",
+        JSON.stringify([defaultGroupId]),
+      );
+    } catch (error) {
+      console.warn("[App] localStorage write failed:", error);
+    }
     dispatch({
-      type: "setState",
-      payload: (prev) => ({ ...prev, userId }),
+      type: "setTableTimePlanState",
+      payload: (prev) => ({
+        ...prev,
+        selectedGroupIds: [defaultGroupId],
+        groupPatients: [],
+        groupPatientsKey: "",
+        selectedPatientUid: "",
+      }),
     });
-  };
+  }, [dispatch, selectedGroupIds, viewMode]);
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
+    const ok = await fetchUserInfo();
+    if (!ok) return;
     if (viewMode === "table_time_plan") {
       dispatch({
         type: "setTableTimePlanState",
@@ -322,9 +380,6 @@ const YandexTracker: FC = () => {
             showRangeControls={viewMode !== "search"}
             showAdminControls={state.showAdminControls}
             onToggleShowAdminControls={toggleShowAdminControls}
-            users={state.users}
-            userId={state.userId}
-            handleSelectedUsersChange={handleSelectedUsersChange}
             onRefresh={handleRefresh}
             showRefresh={viewMode !== "search"}
           />
@@ -431,9 +486,16 @@ const YandexTracker: FC = () => {
                     )}
                   </Stack>
                 )}
-                <Alert severity="warning">
-                  Нет ни одной отметки времени за выбранный период
-                </Alert>
+                {userInfoStatus === "failed" && (
+                  <Alert severity="error">
+                    Вы не подключены к офисной сети.
+                  </Alert>
+                )}
+                {isEmpty(state.dataTimeSpend) && (
+                  <Alert severity="warning">
+                    Нет ни одной отметки времени за выбранный период
+                  </Alert>
+                )}
               </>
             )}
           </Grid>

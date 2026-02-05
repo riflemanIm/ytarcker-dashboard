@@ -144,11 +144,6 @@ export interface AuthError {
   error: string;
   error_description: string;
 }
-export interface User {
-  id: string;
-  name: string;
-}
-
 export interface QueueInfo {
   id?: string;
   key: string;
@@ -156,8 +151,6 @@ export interface QueueInfo {
 }
 
 export interface AppState {
-  userId: string | null;
-  users: User[] | null;
   loginUid?: string | null;
   isAdmin?: boolean;
   planEditMode?: boolean;

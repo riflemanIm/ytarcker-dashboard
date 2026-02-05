@@ -1,9 +1,7 @@
-import isEmpty from "@/helpers";
-import { User, ViewMode } from "@/types/global";
+import { ViewMode } from "@/types/global";
 import { Alert, Box, Stack } from "@mui/material";
 import dayjs from "dayjs";
 import { FC } from "react";
-import AutocompleteUsers from "./AutocompleteUsers";
 import FetchModeSwitch from "./FetchModeSwitch";
 import ReportDateRange from "./ReportDateRange";
 import AutocompleteGroupList from "./AutocompleteGroupList";
@@ -39,9 +37,6 @@ interface HeaderFiltersProps {
   login: string | null | undefined;
   onToggleShowAdminControls: () => void;
   dataTimeSpendLoading: boolean;
-  users: User[] | null;
-  userId: string | null;
-  handleSelectedUsersChange: (userId: string | null) => void;
 }
 
 const HeaderFilters: FC<HeaderFiltersProps> = ({
@@ -54,9 +49,6 @@ const HeaderFilters: FC<HeaderFiltersProps> = ({
   login,
   onToggleShowAdminControls,
   dataTimeSpendLoading,
-  users,
-  userId,
-  handleSelectedUsersChange,
 }) => {
   const isLoading = dataTimeSpendLoading;
   const rangeFilters =
@@ -139,18 +131,13 @@ const HeaderFilters: FC<HeaderFiltersProps> = ({
 
           {showAdminControls &&
             viewMode !== "table_time_plan" &&
-            (isEmpty(users) ? (
+            (isLoading ? (
               <Alert severity="info" sx={{ flex: 1, minWidth: 260 }}>
-                Нет сотрудников за этот период
+                Загрузка сотрудников
               </Alert>
             ) : (
               <Box sx={{ flex: "1 1 260px", minWidth: 260 }}>
-                <AutocompleteUsers
-                  userId={userId}
-                  handleSelectedUsersChange={handleSelectedUsersChange}
-                  users={users}
-                  disabled={isLoading}
-                />
+                <AutocompleteGroupPatientsList />
               </Box>
             ))}
         </Stack>

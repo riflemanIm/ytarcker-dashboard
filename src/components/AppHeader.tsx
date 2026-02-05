@@ -1,5 +1,5 @@
 import { useAppContext } from "@/context/AppContext";
-import { User, ViewMode } from "@/types/global";
+import { ViewMode } from "@/types/global";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import { Box, IconButton, Paper, Stack, useTheme } from "@mui/material";
 import { FC } from "react";
@@ -20,9 +20,6 @@ interface AppHeaderProps {
   reportRange: ReportRangeProps;
   showRangeControls: boolean;
   onToggleShowAdminControls: () => void;
-  users: User[] | null;
-  userId: string | null;
-  handleSelectedUsersChange: (userId: string | null) => void;
   onRefresh: () => void;
   showRefresh: boolean;
 }
@@ -37,9 +34,6 @@ const AppHeader: FC<AppHeaderProps> = ({
   reportRange,
   showRangeControls,
   onToggleShowAdminControls,
-  users,
-  userId,
-  handleSelectedUsersChange,
   onRefresh,
   showRefresh,
 }) => {
@@ -96,9 +90,6 @@ const AppHeader: FC<AppHeaderProps> = ({
           login={login}
           onToggleShowAdminControls={onToggleShowAdminControls}
           dataTimeSpendLoading={dataTimeSpendLoading}
-          users={users}
-          userId={userId}
-          handleSelectedUsersChange={handleSelectedUsersChange}
         />
 
         <Stack

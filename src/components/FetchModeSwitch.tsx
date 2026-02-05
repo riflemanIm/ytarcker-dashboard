@@ -11,7 +11,7 @@ export interface FetchModeSwitchProps {
 /**
  * Переключатель режима выборки:
  *  - showAdminControls = false → выборка по своему логину
- *  - showAdminControls = true  → выборка по выбранному сотруднику (AutocompleteUsers)
+ *  - showAdminControls = true  → выборка по выбранному сотруднику (AutocompleteGroupPatientsList)
  */
 export default function FetchModeSwitch({
   showAdminControls,

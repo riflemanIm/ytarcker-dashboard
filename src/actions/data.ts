@@ -92,7 +92,6 @@ export const getData = async ({
           ...prev,
           dataTimeSpendLoading: false,
           ...rest,
-          users: res.data?.users ?? prev.users,
           dataTimeSpend: nextData,
         };
       },
@@ -122,7 +121,7 @@ export const getTlUserInfo = async ({
   trackerUid?: string | null;
   email?: string | null;
   dispatch: AppDispatch;
-}): Promise<TlUserInfo | null> => {
+}): Promise<{ info: TlUserInfo | null; errorStatus?: number | null }> => {
   if (!trackerUid && !email) {
     throw new Error("trackerUid or email is required");
   }
@@ -133,10 +132,10 @@ export const getTlUserInfo = async ({
       email: email ?? undefined,
     });
     if (!Array.isArray(res.data) || res.data.length === 0) {
-      return null;
+      return { info: null };
     }
     const info = res.data[0] ?? null;
-    if (!info) return null;
+    if (!info) return { info: null };
 
     dispatch({
       type: "setState",
@@ -148,10 +147,13 @@ export const getTlUserInfo = async ({
       }),
     });
 
-    return info;
+    return { info };
   } catch (err: any) {
     console.error("[Ошибка в getTlUserInfo]:", err.message);
-    return null;
+    const errorStatus = axios.isAxiosError(err)
+      ? err.response?.status ?? null
+      : null;
+    return { info: null, errorStatus };
   }
 };
 
@@ -209,45 +211,6 @@ export const updateTlWorklog = async (
     console.error("[Ошибка в updateTlWorklog]:", err.message);
     return null;
   }
-};
-
-const buildTlWorklogPayload = (args: {
-  taskKey: string;
-  durationIso: string;
-  startDate: string;
-  comment: string;
-  action: 0 | 1 | 2;
-  trackerUid: string;
-  checklistItemId?: string | null;
-  worklogId?: string | number | null;
-  deadlineOk?: boolean;
-  needUpgradeEstimate?: boolean;
-  makeTaskFaster?: boolean;
-  issueTypeLabel?: string | null;
-  workPlanId?: string | number | null;
-}): TlWorklogUpdateArgs | null => {
-  const seconds = parseISODurationToSeconds(args.durationIso);
-  const minutes = Math.round(seconds / 60);
-  if (!Number.isFinite(minutes)) return null;
-  const worklogId =
-    args.worklogId != null && args.worklogId !== ""
-      ? Number(args.worklogId)
-      : undefined;
-  return {
-    taskKey: args.taskKey,
-    duration: minutes,
-    startDate: args.startDate,
-    deadlineOk: args.deadlineOk ?? true,
-    needUpgradeEstimate: args.needUpgradeEstimate ?? false,
-    makeTaskFaster: args.makeTaskFaster ?? false,
-    comment: args.comment ?? "",
-    action: args.action,
-    checklistItemId: args.checklistItemId ?? undefined,
-    trackerUid: args.trackerUid,
-    worklogId: Number.isFinite(worklogId) ? worklogId : undefined,
-    issueTypeLabel: args.issueTypeLabel ?? null,
-    workPlanId: args.workPlanId ?? null,
-  };
 };
 
 export const setData = async ({
