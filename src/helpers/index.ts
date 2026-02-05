@@ -43,6 +43,7 @@ const ADMIN_LOGINS = [
   "e.boyarkina",
   "e.sigalaeva",
   "a.trofimtsev",
+  "d.ermakova",
 ];
 /** ===== Общие хелперы для дат/форматов/агрегаций ===== */
 
