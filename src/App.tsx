@@ -145,7 +145,7 @@ const YandexTracker: FC = () => {
     : state.loginUid;
 
   const [userInfoStatus, setUserInfoStatus] = useState<
-    "idle" | "loading" | "ready" | "failed"
+    "idle" | "loading" | "ready" | "failed" | "empty"
   >("idle");
 
   const fetchUserInfo = useCallback(async () => {
@@ -159,7 +159,7 @@ const YandexTracker: FC = () => {
       trackerUid: trackerUidCandidate ?? undefined,
       dispatch,
     });
-    if (!result.info || result.errorStatus === 500) {
+    if (result.errorStatus === 500) {
       setUserInfoStatus("failed");
       dispatch({
         type: "setAlert",
@@ -169,6 +169,10 @@ const YandexTracker: FC = () => {
           message: "Вы не подключены к офисной сети.",
         },
       });
+      return false;
+    }
+    if (!result.info) {
+      setUserInfoStatus("empty");
       return false;
     }
 
@@ -485,9 +489,15 @@ const YandexTracker: FC = () => {
                 )}
                 {userInfoStatus === "failed" && (
                   <Alert severity="error">
-                    Вы не подключены к офисной сети.
+                    Возможно у Вас включен внешний vpn
                   </Alert>
                 )}
+                {userInfoStatus === "empty" && (
+                  <Alert severity="error">
+                    Вас пока не добавили во внутреннюю базу
+                  </Alert>
+                )}
+
                 {isEmpty(state.dataTimeSpend) &&
                   !state.dataTimeSpendLoading && (
                     <Alert severity="warning">
