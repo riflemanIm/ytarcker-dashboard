@@ -107,13 +107,29 @@ const buildFinalComment = (comment, label) => {
 };
 
 const buildWorkPlanIdTag = (workPlanId) => {
-  //if (workPlanId == null || workPlanId === "") return "";
-  return `[${WORKPLAN_TAG}:${workPlanId ?? "null"}]`;
+  if (workPlanId == null || workPlanId === "") return "";
+  return `[${WORKPLAN_TAG}:${workPlanId}]`;
 };
 
 const buildWorklogIdTag = (worklogId) => {
-  //if (worklogId == null || worklogId === "") return "";
-  return `[${WORKLOG_TAG}:${worklogId ?? "null"}]`;
+  if (worklogId == null || worklogId === "") return "";
+  return `[${WORKLOG_TAG}:${worklogId}]`;
+};
+
+const extractWorkPlanIdFromComment = (comment) => {
+  if (!comment) return undefined;
+  const match = String(comment).match(
+    new RegExp(`\\[${WORKPLAN_TAG}:([^\\]]*)\\]`),
+  );
+  return match ? match[1] : undefined;
+};
+
+const extractWorklogIdFromComment = (comment) => {
+  if (!comment) return undefined;
+  const match = String(comment).match(
+    new RegExp(`\\[${WORKLOG_TAG}:([^\\]]*)\\]`),
+  );
+  return match ? match[1] : undefined;
 };
 
 const appendTag = (base, tag) => {
@@ -442,12 +458,16 @@ app.post("/api/worklog_update", async (req, res) => {
       return null;
     };
 
-    const buildInternalComment = (value, worklogIdValue) =>
+    const buildInternalComment = (
+      value,
+      worklogIdValue,
+      workPlanIdValue,
+    ) =>
       buildCommentWithTags(
         value,
         issueTypeLabel ?? undefined,
         riskState,
-        workPlanId ?? undefined,
+        workPlanIdValue ?? workPlanId ?? undefined,
         worklogIdValue,
       );
 
@@ -564,7 +584,38 @@ app.post("/api/worklog_update", async (req, res) => {
           return res.status(400).json({ message: internalError });
         }
 
-        const commentWithTags = buildInternalComment(comment);
+        let existingComment = null;
+        let existingWorkPlanId;
+        let existingWorklogId;
+        if (action === 1) {
+          try {
+            const existing = await axios.get(
+              `https://api.tracker.yandex.net/v2/issues/${taskKey}/worklog/${worklogId}`,
+              headers(token),
+            );
+            const existingData = existing?.data ?? {};
+            existingComment =
+              typeof existingData?.comment === "string"
+                ? existingData.comment
+                : existingData?.comment?.text ?? null;
+            existingWorkPlanId = extractWorkPlanIdFromComment(existingComment);
+            existingWorklogId = extractWorklogIdFromComment(existingComment);
+          } catch (error) {
+            console.warn(
+              "[api/worklog_update] failed to load existing comment for tags",
+              { taskKey, worklogId, error: error?.message },
+            );
+          }
+        }
+
+        const resolvedWorkPlanId =
+          action === 1 ? existingWorkPlanId : workPlanId ?? existingWorkPlanId;
+        const resolvedWorklogId = action === 1 ? existingWorklogId : undefined;
+        const commentWithTags = buildInternalComment(
+          comment,
+          resolvedWorklogId,
+          resolvedWorkPlanId,
+        );
         const trackerUrl =
           action === 0
             ? `https://api.tracker.yandex.net/v2/issues/${taskKey}/worklog`
@@ -647,7 +698,8 @@ app.post("/api/worklog_update", async (req, res) => {
         if (Number.isFinite(trackerWorklogId)) {
           const commentWithInternalTag = buildInternalComment(
             comment,
-            internalWorklogId,
+            internalWorklogId ?? existingWorklogId,
+            resolvedWorkPlanId,
           );
           console.log("commentWithInternalTag\n\n", commentWithInternalTag);
           console.log("-----------\n\n");
