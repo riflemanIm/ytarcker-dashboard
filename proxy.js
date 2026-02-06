@@ -782,22 +782,28 @@ app.post("/api/worklog_update", async (req, res) => {
           );
 
           await Promise.all(
-            items.map((item) =>
-              sendInternalLogged(
+            items.map((item) => {
+              const internalWorklogId = extractWorklogIdFromComment(
+                item.comment ?? "",
+              );
+              return sendInternalLogged(
                 buildInternalPayload({
                   duration: resolveDurationMinutes(item.duration),
                   startDate: item.startDate,
                   comment: buildInternalComment(
                     item.comment ?? "",
-                    item.worklogId,
+                    internalWorklogId,
                   ),
                   action: 2,
                   checklistItemId: item.checklistItemId ?? checklistItemId,
-                  worklogId: Number(item.worklogId),
+                  worklogId:
+                    internalWorklogId != null
+                      ? Number(internalWorklogId)
+                      : undefined,
                 }),
                 "batch",
-              ),
-            ),
+              );
+            }),
           );
 
           return res.json(true);
@@ -821,14 +827,16 @@ app.post("/api/worklog_update", async (req, res) => {
           headers(token),
         );
 
+        const internalWorklogId = extractWorklogIdFromComment(comment);
         await sendInternalLogged(
           buildInternalPayload({
             duration: resolvedDurationMinutes,
             startDate,
-            comment: buildInternalComment(comment, worklogId),
+            comment: buildInternalComment(comment, internalWorklogId),
             action: 2,
             checklistItemId,
-            worklogId: Number(worklogId),
+            worklogId:
+              internalWorklogId != null ? Number(internalWorklogId) : undefined,
           }),
           "single",
         );
