@@ -137,6 +137,12 @@ const appendTag = (base, tag) => {
   return base ? `${base}\n${tag}` : tag;
 };
 
+const normalizeCommentText = (comment) => {
+  if (typeof comment === "string") return comment;
+  if (comment && typeof comment.text === "string") return comment.text;
+  return "";
+};
+
 const stripRiskBlock = (comment) => {
   return (comment ?? "")
     .replace(/\n?\[Risks:\s*\{[\s\S]*?\}\s*\]/m, "")
@@ -293,81 +299,81 @@ app.get("/api/issues", async (req, res) => {
   }
 });
 
-app.post("/api/add_time", async (req, res) => {
-  let { token, issueId, start, duration, comment } = req.body;
+// app.post("/api/add_time", async (req, res) => {
+//   let { token, issueId, start, duration, comment } = req.body;
 
-  try {
-    // Добавляем новый worklog
-    const url = `https://api.tracker.yandex.net/v2/issues/${issueId}/worklog`;
-    const { data } = await axios.post(
-      url,
-      { start, duration, comment },
-      headers(token),
-    );
+//   try {
+//     // Добавляем новый worklog
+//     const url = `https://api.tracker.yandex.net/v2/issues/${issueId}/worklog`;
+//     const { data } = await axios.post(
+//       url,
+//       { start, duration, comment },
+//       headers(token),
+//     );
 
-    res.json(data);
-  } catch (error) {
-    console.error("[Ошибка в методе /api/add_time]:", error);
-    res.status(error.response?.status || 500).json({ error: error.message });
-  }
-});
+//     res.json(data);
+//   } catch (error) {
+//     console.error("[Ошибка в методе /api/add_time]:", error);
+//     res.status(error.response?.status || 500).json({ error: error.message });
+//   }
+// });
 
-app.patch("/api/edit_time", async (req, res) => {
-  let { token, issueId, worklogId, duration, comment } = req.body;
-  try {
-    if (!token) {
-      return res.status(400).json({ error: "token not passed" });
-    }
-    if (!issueId || !worklogId || !duration) {
-      return res
-        .status(400)
-        .json({ error: "issueId, worklogId and duration are required" });
-    }
+// app.patch("/api/edit_time", async (req, res) => {
+//   let { token, issueId, worklogId, duration, comment } = req.body;
+//   try {
+//     if (!token) {
+//       return res.status(400).json({ error: "token not passed" });
+//     }
+//     if (!issueId || !worklogId || !duration) {
+//       return res
+//         .status(400)
+//         .json({ error: "issueId, worklogId and duration are required" });
+//     }
 
-    const url = `https://api.tracker.yandex.net/v2/issues/${issueId}/worklog/${worklogId}`;
-    const payload = {
-      duration,
-      comment,
-    };
-    const response = await axios.patch(url, payload, headers(token));
-    res.json(response.data);
-  } catch (error) {
-    console.error("[Ошибка в методе /api/edit_time]:", error.message);
-    res.status(error.response?.status || 500).json({ error: error.message });
-  }
-});
+//     const url = `https://api.tracker.yandex.net/v2/issues/${issueId}/worklog/${worklogId}`;
+//     const payload = {
+//       duration,
+//       comment,
+//     };
+//     const response = await axios.patch(url, payload, headers(token));
+//     res.json(response.data);
+//   } catch (error) {
+//     console.error("[Ошибка в методе /api/edit_time]:", error.message);
+//     res.status(error.response?.status || 500).json({ error: error.message });
+//   }
+// });
 
-app.post("/api/delete_all", async (req, res) => {
-  let { token, issueId, ids } = req.body;
+// app.post("/api/delete_all", async (req, res) => {
+//   let { token, issueId, ids } = req.body;
 
-  try {
-    if (!token) {
-      return res.status(400).json({ error: "token not passed" });
-    }
+//   try {
+//     if (!token) {
+//       return res.status(400).json({ error: "token not passed" });
+//     }
 
-    if (Array.isArray(ids) && ids.length) {
-      // Удаляем старые worklogs с обработкой ошибок
-      await Promise.all(
-        ids.map((id) =>
-          axios
-            .delete(
-              `https://api.tracker.yandex.net/v2/issues/${issueId}/worklog/${id}`,
-              headers(token),
-            )
-            .catch((err) => {
-              console.error(`Ошибка удаления worklog ${id}:`, err.message);
-              throw err;
-            }),
-        ),
-      );
-    }
+//     if (Array.isArray(ids) && ids.length) {
+//       // Удаляем старые worklogs с обработкой ошибок
+//       await Promise.all(
+//         ids.map((id) =>
+//           axios
+//             .delete(
+//               `https://api.tracker.yandex.net/v2/issues/${issueId}/worklog/${id}`,
+//               headers(token),
+//             )
+//             .catch((err) => {
+//               console.error(`Ошибка удаления worklog ${id}:`, err.message);
+//               throw err;
+//             }),
+//         ),
+//       );
+//     }
 
-    res.json(true);
-  } catch (error) {
-    console.error("[Ошибка в методе /api/add_time]:", error.message);
-    res.status(error.response?.status || 500).json({ error: error.message });
-  }
-});
+//     res.json(true);
+//   } catch (error) {
+//     console.error("[Ошибка в методе /api/add_time]:", error.message);
+//     res.status(error.response?.status || 500).json({ error: error.message });
+//   }
+// });
 
 app.post("/api/worklog_update", async (req, res) => {
   try {
@@ -387,10 +393,9 @@ app.post("/api/worklog_update", async (req, res) => {
       makeTaskFaster,
       issueTypeLabel,
       workPlanId,
-      ids,
       items,
     } = req.body ?? {};
-
+    console.log("delete items =", items);
     const hasToken = typeof token === "string" && token.length > 0;
     const resolvedDurationMinutes = resolveDurationMinutes(duration);
     if (typeof taskKey !== "string" || taskKey.length === 0) {
@@ -591,9 +596,7 @@ app.post("/api/worklog_update", async (req, res) => {
             );
             const existingData = existing?.data ?? {};
             existingComment =
-              typeof existingData?.comment === "string"
-                ? existingData.comment
-                : (existingData?.comment?.text ?? null);
+              normalizeCommentText(existingData?.comment) || null;
             existingWorkPlanId = extractWorkPlanIdFromComment(existingComment);
             existingWorklogId = extractWorklogIdFromComment(existingComment);
           } catch (error) {
@@ -693,6 +696,7 @@ app.post("/api/worklog_update", async (req, res) => {
                   trackerResponse?.data?.worklogId,
               );
 
+        let updatedTrackerComment = null;
         if (Number.isFinite(trackerWorklogId)) {
           const commentWithInternalTag = buildInternalComment(
             comment,
@@ -707,6 +711,7 @@ app.post("/api/worklog_update", async (req, res) => {
               { comment: commentWithInternalTag },
               headers(token),
             );
+            updatedTrackerComment = commentWithInternalTag;
 
             await sendInternal(
               buildInternalPayload({
@@ -730,13 +735,19 @@ app.post("/api/worklog_update", async (req, res) => {
           );
         }
 
-        return res.json(trackerResponse.data);
+        const responseData =
+          updatedTrackerComment == null
+            ? trackerResponse.data
+            : { ...(trackerResponse.data ?? {}), comment: updatedTrackerComment };
+        return res.json(responseData);
       }
       // Action: Delete
       case 2: {
-        const isBatch = Array.isArray(ids) && ids.length > 0;
+        const isBatch = Array.isArray(items) && items.length > 0;
         const deleteIds = isBatch
-          ? ids.map((id) => Number(id)).filter((id) => Number.isInteger(id))
+          ? items
+              .map((item) => Number(item?.worklogId))
+              .filter((id) => Number.isInteger(id))
           : [];
 
         if (!isBatch && !Number.isInteger(Number(worklogId))) {
@@ -781,16 +792,18 @@ app.post("/api/worklog_update", async (req, res) => {
 
           await Promise.all(
             items.map((item) => {
-              const internalWorklogId = extractWorklogIdFromComment(
-                item.comment ?? "",
-              );
+              console.log("item.comment", item.comment);
+              const commentText = normalizeCommentText(item.comment);
+              const internalWorklogId =
+                extractWorklogIdFromComment(commentText);
+              console.log("internalWorklogId", internalWorklogId);
               if (internalWorklogId) {
                 return sendInternalLogged(
                   buildInternalPayload({
                     duration: resolveDurationMinutes(item.duration),
                     startDate: item.startDate,
                     comment: buildInternalComment(
-                      item.comment ?? "",
+                      commentText,
                       internalWorklogId,
                     ),
                     action: 2,
@@ -805,7 +818,6 @@ app.post("/api/worklog_update", async (req, res) => {
               }
             }),
           );
-
           return res.json(true);
         }
 

@@ -594,13 +594,11 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
 
   // --- Удаление
   const handleConfirmDeleteAll = useCallback(() => {
-    const ids = (menuState.durations ?? []).map((i) => i.id);
-    if (ids.length) {
+    if (menuState.durations?.length) {
       deleteData({
         token,
         dispatch,
         issueId: menuState.issueId,
-        ids,
         durations: menuState.durations ?? undefined,
         trackerUid,
       });
@@ -625,7 +623,6 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
         token,
         dispatch,
         issueId: menuState.issueId,
-        ids: [item.id],
         durations: [item],
         trackerUid,
       });

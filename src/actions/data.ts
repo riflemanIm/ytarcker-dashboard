@@ -368,7 +368,6 @@ export interface DeleteDataArgs {
   token: string | null;
   dispatch: AppDispatch;
   issueId: string | null;
-  ids: string[];
   durations?: DurationItem[] | null;
   trackerUid?: string | null;
   checklistItemId?: string | null;
@@ -381,7 +380,6 @@ export const deleteData = async ({
   token,
   dispatch,
   issueId,
-  ids,
   durations,
   trackerUid,
   checklistItemId,
@@ -423,21 +421,19 @@ export const deleteData = async ({
   try {
     const items =
       Array.isArray(durations) && durations.length
-        ? durations
-            .filter((item) => ids.includes(item.id))
-            .map((item) => ({
-              worklogId: item.id,
-              duration: item.duration,
-              startDate: dayjs(item.start).format("YYYY-MM-DD"),
-              comment: item.comment ?? "",
-            }))
+        ? durations.map((item) => ({
+            worklogId: item.id,
+            duration: item.duration,
+            startDate: dayjs(item.start).format("YYYY-MM-DD"),
+            comment: item.comment ?? "",
+          }))
         : [];
+    const ids = items.map((item) => item.worklogId);
 
     const payload = {
       token,
       taskKey: issueId,
       action: 2,
-      ids,
       items,
       trackerUid,
       checklistItemId,
@@ -445,6 +441,8 @@ export const deleteData = async ({
       needUpgradeEstimate: needUpgradeEstimate ?? false,
       makeTaskFaster: makeTaskFaster ?? false,
     };
+    console.log("payload", payload);
+    //return;
     const res = await axios.post(`${apiUrl}/api/worklog_update`, payload);
     if (res.status !== 200) {
       throw new Error("Ошибка удаления данных");
