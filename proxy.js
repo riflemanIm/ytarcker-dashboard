@@ -409,7 +409,10 @@ app.post("/api/worklog_update", async (req, res) => {
     };
 
     const requireInternalFields = (payload) => {
-      if (typeof payload.duration !== "number" || !Number.isFinite(payload.duration)) {
+      if (
+        typeof payload.duration !== "number" ||
+        !Number.isFinite(payload.duration)
+      ) {
         return "Missing or invalid field 'duration'. It must be a number.";
       }
       if (
@@ -653,6 +656,17 @@ app.post("/api/worklog_update", async (req, res) => {
               `https://api.tracker.yandex.net/v2/issues/${taskKey}/worklog/${trackerWorklogId}`,
               { comment: commentWithInternalTag },
               headers(token),
+            );
+
+            await sendInternal(
+              buildInternalPayload({
+                duration: resolvedDurationMinutes,
+                startDate,
+                comment: commentWithInternalTag,
+                action: 1,
+                checklistItemId,
+                worklogId: internalWorklogId,
+              }),
             );
           }
         } else if (!Number.isFinite(trackerWorklogId)) {
