@@ -684,7 +684,7 @@ app.post("/api/worklog_update", async (req, res) => {
         }
 
         const internalWorklogId = internalResponse?.data?.YT_TL_WORKLOG_ID;
-        const internalWorklogIdNum = Number(internalWorklogId);
+
         const trackerWorklogId =
           action === 1
             ? Number(worklogId)
@@ -716,7 +716,7 @@ app.post("/api/worklog_update", async (req, res) => {
                 comment: commentWithInternalTag,
                 action: 1,
                 checklistItemId,
-                worklogId: internalWorklogIdNum,
+                worklogId: internalWorklogId,
               }),
             );
           }
