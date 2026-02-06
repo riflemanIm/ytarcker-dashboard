@@ -708,18 +708,17 @@ app.post("/api/worklog_update", async (req, res) => {
               { comment: commentWithInternalTag },
               headers(token),
             );
-            if (Number.isFinite(internalWorklogIdNum)) {
-              await sendInternal(
-                buildInternalPayload({
-                  duration: resolvedDurationMinutes,
-                  startDate,
-                  comment: commentWithInternalTag,
-                  action: 1,
-                  checklistItemId,
-                  worklogId: internalWorklogIdNum,
-                }),
-              );
-            }
+
+            await sendInternal(
+              buildInternalPayload({
+                duration: resolvedDurationMinutes,
+                startDate,
+                comment: commentWithInternalTag,
+                action: 1,
+                checklistItemId,
+                worklogId: internalWorklogIdNum,
+              }),
+            );
           }
         } else if (!Number.isFinite(trackerWorklogId)) {
           console.warn(
