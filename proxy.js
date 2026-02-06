@@ -684,7 +684,6 @@ app.post("/api/worklog_update", async (req, res) => {
         }
 
         const internalWorklogId = internalResponse?.data?.YT_TL_WORKLOG_ID;
-
         const trackerWorklogId =
           action === 1
             ? Number(worklogId)
@@ -785,8 +784,7 @@ app.post("/api/worklog_update", async (req, res) => {
               const internalWorklogId = extractWorklogIdFromComment(
                 item.comment ?? "",
               );
-              const internalWorklogIdNum = Number(internalWorklogId);
-              if (Number.isFinite(internalWorklogIdNum)) {
+              if (internalWorklogId) {
                 return sendInternalLogged(
                   buildInternalPayload({
                     duration: resolveDurationMinutes(item.duration),
@@ -797,7 +795,10 @@ app.post("/api/worklog_update", async (req, res) => {
                     ),
                     action: 2,
                     checklistItemId: item.checklistItemId ?? checklistItemId,
-                    worklogId: internalWorklogIdNum,
+                    worklogId:
+                      internalWorklogId != null
+                        ? Number(internalWorklogId)
+                        : undefined,
                   }),
                   "batch",
                 );
@@ -827,7 +828,6 @@ app.post("/api/worklog_update", async (req, res) => {
         );
 
         const internalWorklogId = extractWorklogIdFromComment(comment);
-        const internalWorklogIdNum = Number(internalWorklogId);
         await sendInternalLogged(
           buildInternalPayload({
             duration: resolvedDurationMinutes,
@@ -835,9 +835,8 @@ app.post("/api/worklog_update", async (req, res) => {
             comment: buildInternalComment(comment, internalWorklogId),
             action: 2,
             checklistItemId,
-            worklogId: Number.isFinite(internalWorklogIdNum)
-              ? internalWorklogIdNum
-              : undefined,
+            worklogId:
+              internalWorklogId != null ? Number(internalWorklogId) : undefined,
           }),
           "single",
         );
