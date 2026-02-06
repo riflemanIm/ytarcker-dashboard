@@ -458,11 +458,7 @@ app.post("/api/worklog_update", async (req, res) => {
       return null;
     };
 
-    const buildInternalComment = (
-      value,
-      worklogIdValue,
-      workPlanIdValue,
-    ) =>
+    const buildInternalComment = (value, worklogIdValue, workPlanIdValue) =>
       buildCommentWithTags(
         value,
         issueTypeLabel ?? undefined,
@@ -597,7 +593,7 @@ app.post("/api/worklog_update", async (req, res) => {
             existingComment =
               typeof existingData?.comment === "string"
                 ? existingData.comment
-                : existingData?.comment?.text ?? null;
+                : (existingData?.comment?.text ?? null);
             existingWorkPlanId = extractWorkPlanIdFromComment(existingComment);
             existingWorklogId = extractWorklogIdFromComment(existingComment);
           } catch (error) {
@@ -609,7 +605,9 @@ app.post("/api/worklog_update", async (req, res) => {
         }
 
         const resolvedWorkPlanId =
-          action === 1 ? existingWorkPlanId : workPlanId ?? existingWorkPlanId;
+          action === 1
+            ? existingWorkPlanId
+            : (workPlanId ?? existingWorkPlanId);
         const resolvedWorklogId = action === 1 ? existingWorklogId : undefined;
         const commentWithTags = buildInternalComment(
           comment,
@@ -686,6 +684,7 @@ app.post("/api/worklog_update", async (req, res) => {
         }
 
         const internalWorklogId = internalResponse?.data?.YT_TL_WORKLOG_ID;
+        const internalWorklogIdNum = Number(internalWorklogId);
         const trackerWorklogId =
           action === 1
             ? Number(worklogId)
@@ -709,17 +708,18 @@ app.post("/api/worklog_update", async (req, res) => {
               { comment: commentWithInternalTag },
               headers(token),
             );
-
-            await sendInternal(
-              buildInternalPayload({
-                duration: resolvedDurationMinutes,
-                startDate,
-                comment: commentWithInternalTag,
-                action: 1,
-                checklistItemId,
-                worklogId: internalWorklogId,
-              }),
-            );
+            if (Number.isFinite(internalWorklogIdNum)) {
+              await sendInternal(
+                buildInternalPayload({
+                  duration: resolvedDurationMinutes,
+                  startDate,
+                  comment: commentWithInternalTag,
+                  action: 1,
+                  checklistItemId,
+                  worklogId: internalWorklogIdNum,
+                }),
+              );
+            }
           }
         } else if (!Number.isFinite(trackerWorklogId)) {
           console.warn(
@@ -786,23 +786,23 @@ app.post("/api/worklog_update", async (req, res) => {
               const internalWorklogId = extractWorklogIdFromComment(
                 item.comment ?? "",
               );
-              return sendInternalLogged(
-                buildInternalPayload({
-                  duration: resolveDurationMinutes(item.duration),
-                  startDate: item.startDate,
-                  comment: buildInternalComment(
-                    item.comment ?? "",
-                    internalWorklogId,
-                  ),
-                  action: 2,
-                  checklistItemId: item.checklistItemId ?? checklistItemId,
-                  worklogId:
-                    internalWorklogId != null
-                      ? Number(internalWorklogId)
-                      : undefined,
-                }),
-                "batch",
-              );
+              const internalWorklogIdNum = Number(internalWorklogId);
+              if (Number.isFinite(internalWorklogIdNum)) {
+                return sendInternalLogged(
+                  buildInternalPayload({
+                    duration: resolveDurationMinutes(item.duration),
+                    startDate: item.startDate,
+                    comment: buildInternalComment(
+                      item.comment ?? "",
+                      internalWorklogId,
+                    ),
+                    action: 2,
+                    checklistItemId: item.checklistItemId ?? checklistItemId,
+                    worklogId: internalWorklogIdNum,
+                  }),
+                  "batch",
+                );
+              }
             }),
           );
 
@@ -828,6 +828,7 @@ app.post("/api/worklog_update", async (req, res) => {
         );
 
         const internalWorklogId = extractWorklogIdFromComment(comment);
+        const internalWorklogIdNum = Number(internalWorklogId);
         await sendInternalLogged(
           buildInternalPayload({
             duration: resolvedDurationMinutes,
@@ -835,8 +836,9 @@ app.post("/api/worklog_update", async (req, res) => {
             comment: buildInternalComment(comment, internalWorklogId),
             action: 2,
             checklistItemId,
-            worklogId:
-              internalWorklogId != null ? Number(internalWorklogId) : undefined,
+            worklogId: Number.isFinite(internalWorklogIdNum)
+              ? internalWorklogIdNum
+              : undefined,
           }),
           "single",
         );
