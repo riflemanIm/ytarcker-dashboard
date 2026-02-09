@@ -539,12 +539,16 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
   const columns: GridColDef[] = [
     {
       field: "issue",
-      headerName: "Название",
+      headerName: "Key + Название",
       flex: 4,
-      sortable: false,
+      minWidth: 420,
+      sortable: true,
+      filterable: false,
+      disableColumnMenu: true,
       renderCell: (params: GridRenderCellParams) =>
         params.row.id !== "total" ? (
           <IssueDisplay
+            taskKey={params.row.issueId}
             taskName={params.value.display}
             href={params.value.href}
             fio={params.value.fio}
@@ -553,7 +557,6 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
           params.value.display
         ),
     },
-    { field: "issueId", headerName: "Key", flex: 1.5, sortable: true },
 
     ...fieldKeys.map((field) => {
       const dateForHeader = getDateForField(field);
