@@ -3,6 +3,7 @@ import { workMinutesToDurationInput } from "@/helpers";
 import { useTableTimePlanSelectors } from "@/hooks/useTableTimePlanSelectors";
 import { TaskListItem, TaskPlanInfoItem } from "@/types/global";
 import InfoIcon from "@mui/icons-material/Info";
+import PlaylistAddIcon from "@mui/icons-material/PlaylistAdd";
 import {
   Alert,
   Box,
@@ -86,7 +87,9 @@ const TableCheckPlan: FC = () => {
           ...state,
           dialogOpen: action.open,
           selectedIssue:
-            action.open === false ? null : action.issue ?? state.selectedIssue,
+            action.open === false
+              ? null
+              : (action.issue ?? state.selectedIssue),
         };
       case "setFilter":
         return { ...state, filterText: action.value };
@@ -98,14 +101,7 @@ const TableCheckPlan: FC = () => {
   };
 
   const [state, dispatchState] = useReducer(reducer, initialState);
-  const {
-    rows,
-    loading,
-    dialogOpen,
-    selectedIssue,
-    filterText,
-    info,
-  } = state;
+  const { rows, loading, dialogOpen, selectedIssue, filterText, info } = state;
   const theme = useTheme();
   const isXlUp = useMediaQuery(theme.breakpoints.up("xl"));
   const isLgUp = useMediaQuery(theme.breakpoints.up("lg"));
@@ -117,9 +113,9 @@ const TableCheckPlan: FC = () => {
     return workMinutesToDurationInput(num);
   };
   const nameMinWidth = useMemo(() => {
-    if (isXlUp) return 520;
-    if (isLgUp) return 380;
-    if (isMdUp) return 620;
+    if (isXlUp) return 620;
+    if (isLgUp) return 480;
+    if (isMdUp) return 720;
     if (isSmUp) return 480;
     return 400;
   }, [isLgUp, isMdUp, isSmUp, isXlUp]);
@@ -187,35 +183,38 @@ const TableCheckPlan: FC = () => {
     () => [
       {
         field: "TaskName",
-        headerName: "Название",
+        headerName: "Key + Название",
         flex: 1,
         minWidth: nameMinWidth,
-        sortable: false,
+        sortable: true,
         filterable: false,
         disableColumnMenu: true,
+        valueGetter: (_value, row) => row.TaskKey,
         renderCell: (params: GridRenderCellParams) => {
           const workName = params.row.WorkName ?? "";
           const workType = params.row.WorkNameDict ?? "";
-          const title =
-            [params.value, workName, workType].filter(Boolean).join(" / ") ||
-            "-";
+          const hintParts = [
+            workName ? `Работа: ${workName}` : null,
+            workType ? `Тип работы: ${workType}` : null,
+          ].filter(Boolean);
+          const hint = hintParts.length ? (
+            <Box sx={{ whiteSpace: "pre-line" }}>{hintParts.join("\n")}</Box>
+          ) : null;
           return (
-            <Tooltip title={title}>
-              <span>
-                <IssueDisplay
-                  display={params.value}
-                  href={`https://tracker.yandex.ru/${params.row.TaskKey}`}
-                  fio={params.row.CheckListAssignee ?? ""}
-                />
-              </span>
-            </Tooltip>
+            <IssueDisplay
+              taskKey={params.row.TaskKey}
+              taskName={params.row.TaskName}
+              href={`https://tracker.yandex.ru/${params.row.TaskKey}`}
+              fio={params.row.CheckListAssignee ?? ""}
+              hint={hint}
+            />
           );
         },
       },
       {
         field: "TaskKey",
         headerName: "В План",
-        minWidth: 196,
+        minWidth: 76,
         flex: 1,
         sortable: false,
         filterable: false,
@@ -228,22 +227,24 @@ const TableCheckPlan: FC = () => {
             justifyContent="space-between"
             sx={{ height: "100%" }}
           >
-            <Tooltip title="В План">
-              <Button
-                size="small"
-                variant="outlined"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  dispatchState({
-                    type: "setDialog",
-                    open: true,
-                    issue: params.row,
-                  });
-                }}
-                disabled={!sprintId}
-              >
-                {params.value}
-              </Button>
+            <Tooltip title={params.value}>
+              <span>
+                <IconButton
+                  size="small"
+                  sx={(theme) => ({ color: theme.palette.primary.main })}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    dispatchState({
+                      type: "setDialog",
+                      open: true,
+                      issue: params.row,
+                    });
+                  }}
+                  disabled={!sprintId}
+                >
+                  <PlaylistAddIcon fontSize="small" />
+                </IconButton>
+              </span>
             </Tooltip>
             <Tooltip title="Показать информацию по задаче">
               <IconButton

@@ -26,7 +26,6 @@ import { useAppContext } from "./context/AppContext";
 import isEmpty, {
   aggregateDurations,
   getWeekRange,
-  isSuperLogin,
 } from "./helpers";
 import { DataItem } from "./types/global";
 
@@ -157,16 +156,17 @@ const YandexTracker: FC = () => {
     const result = await getTlUserInfo({
       email: userInfoEmail ?? undefined,
       trackerUid: trackerUidCandidate ?? undefined,
+      login: login ?? undefined,
       dispatch,
     });
     if (result.errorStatus === 500) {
       setUserInfoStatus("failed");
-      dispatch({
+          dispatch({
         type: "setAlert",
         payload: {
           open: true,
           severity: "error",
-          message: "Вы не подключены к офисной сети.",
+          message: "Подключитесь к корпоративному VPN.",
         },
       });
       return false;
@@ -330,7 +330,7 @@ const YandexTracker: FC = () => {
   };
 
   console.log("state", state);
-  const isSuperUser = !!(state.isAdmin || (login && isSuperLogin(login)));
+  const isSuperUser = !!state.isAdmin;
   const shouldShowAddDialog =
     viewMode === "table_time_spend" &&
     !state.showAdminControls &&

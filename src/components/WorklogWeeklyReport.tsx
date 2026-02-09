@@ -86,7 +86,7 @@ export default function WorklogWeeklyReport({
         renderCell: (params: GridRenderCellParams) =>
           params.row.id !== "__total__" ? (
             <IssueDisplay
-              display={params.value}
+              taskName={params.row.issueTitle}
               href={`https://tracker.yandex.ru/${params.row.issueKey}`}
               fio={params.row.fio ?? ""}
             />

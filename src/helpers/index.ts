@@ -15,36 +15,40 @@ dayjs.extend(isSameOrBefore);
 dayjs.locale("ru");
 
 const ADMIN_LOGINS = [
-  "e.nikolaev",
-  "l.musaeva",
-  "s.ermakov",
-  "a.smirnov",
-  "o.lambin",
-  "i.modenov",
-  "a.solnyshkin",
-  "d.malakhov",
-  "s.zykov",
-  "d.orlinskiy",
-  "y.zinovev",
-  "a.perushkin",
-  "a.fedorov",
-  "a.lupanov",
-  "o.galay",
-  "i.shcheglov",
-  "v.beseda",
-  "a.lazareva",
-  "s.boldin",
-  "y.dubovtsev",
-  "n.kovalevskaya",
-  "e.pavlova",
-  "y.akhatov",
-  "d.karelin",
-  "v.zyryanov",
-  "e.boyarkina",
-  "e.sigalaeva",
-  "a.trofimtsev",
-  "d.ermakova",
+  { login: "e.nikolaev", isAdmin: true, planEditMode: true },
+  { login: "l.musaeva", isAdmin: true, planEditMode: true },
+  { login: "s.ermakov", isAdmin: true, planEditMode: true },
+  { login: "a.smirnov", isAdmin: true, planEditMode: true },
+  { login: "o.lambin", isAdmin: true, planEditMode: true },
+  { login: "i.modenov", isAdmin: true, planEditMode: true },
+  { login: "a.solnyshkin", isAdmin: true, planEditMode: true },
+  { login: "d.malakhov", isAdmin: true, planEditMode: true },
+  { login: "s.zykov", isAdmin: true, planEditMode: true },
+  { login: "d.orlinskiy", isAdmin: true, planEditMode: true },
+  { login: "y.zinovev", isAdmin: true, planEditMode: true },
+  { login: "a.perushkin", isAdmin: true, planEditMode: true },
+  { login: "a.fedorov", isAdmin: true, planEditMode: true },
+  { login: "a.lupanov", isAdmin: true, planEditMode: true },
+  { login: "o.galay", isAdmin: true, planEditMode: true },
+  { login: "i.shcheglov", isAdmin: true, planEditMode: true },
+  { login: "v.beseda", isAdmin: true, planEditMode: true },
+  { login: "a.lazareva", isAdmin: true, planEditMode: true },
+  { login: "s.boldin", isAdmin: true, planEditMode: true },
+  { login: "y.dubovtsev", isAdmin: true, planEditMode: true },
+  { login: "n.kovalevskaya", isAdmin: true, planEditMode: true },
+  { login: "e.pavlova", isAdmin: true, planEditMode: true },
+  { login: "y.akhatov", isAdmin: true, planEditMode: true },
+  { login: "d.karelin", isAdmin: true, planEditMode: true },
+  { login: "v.zyryanov", isAdmin: true, planEditMode: true },
+  { login: "e.boyarkina", isAdmin: true, planEditMode: true },
+  { login: "e.sigalaeva", isAdmin: true, planEditMode: true },
+  { login: "a.trofimtsev", isAdmin: true, planEditMode: true },
+  { login: "d.ermakova", isAdmin: true, planEditMode: true },
 ];
+export const getLocalAdmin = (login: string | null | undefined) => {
+  if (!login) return null;
+  return ADMIN_LOGINS.find((item) => item.login === login) ?? null;
+};
 /** ===== Общие хелперы для дат/форматов/агрегаций ===== */
 
 // === CONFIG: целевой пояс для UI (MSK по умолчанию) ===
@@ -376,10 +380,6 @@ export function normalizeWorklogItem(
   };
 }
 
-export const isSuperLogin = (login: string | null | undefined): boolean => {
-  if (!login) return false;
-  return ADMIN_LOGINS.includes(login);
-};
 /**
  * Парсит ISO-8601 duration, например "PT2H30M", в общее число секунд.
  */

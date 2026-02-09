@@ -545,7 +545,7 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
       renderCell: (params: GridRenderCellParams) =>
         params.row.id !== "total" ? (
           <IssueDisplay
-            display={params.value.display}
+            taskName={params.value.display}
             href={params.value.href}
             fio={params.value.fio}
           />

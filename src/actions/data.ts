@@ -2,7 +2,7 @@ import dayjs, { Dayjs } from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import axios from "axios";
-import isEmpty, { parseISODurationToSeconds } from "@/helpers";
+import isEmpty, { getLocalAdmin, parseISODurationToSeconds } from "@/helpers";
 import {
   AppState,
   DataItem,
@@ -116,10 +116,12 @@ export const getData = async ({
 export const getTlUserInfo = async ({
   trackerUid,
   email,
+  login,
   dispatch,
 }: {
   trackerUid?: string | null;
   email?: string | null;
+  login?: string | null;
   dispatch: AppDispatch;
 }): Promise<{ info: TlUserInfo | null; errorStatus?: number | null }> => {
   if (!trackerUid && !email) {
@@ -137,13 +139,18 @@ export const getTlUserInfo = async ({
     const info = res.data[0] ?? null;
     if (!info) return { info: null };
 
+    const localAdmin = getLocalAdmin(login ?? null);
     dispatch({
       type: "setState",
       payload: (prev) => ({
         ...prev,
         loginUid: info.trackerUid ?? prev.loginUid ?? null,
-        isAdmin: info.isAdmin ?? prev.isAdmin ?? false,
-        planEditMode: info.planEditMode ?? prev.planEditMode ?? false,
+        isAdmin: localAdmin?.isAdmin ?? info.isAdmin ?? prev.isAdmin ?? false,
+        planEditMode:
+          localAdmin?.planEditMode ??
+          info.planEditMode ??
+          prev.planEditMode ??
+          false,
       }),
     });
 

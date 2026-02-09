@@ -336,9 +336,6 @@ const SearchIssues = ({ token }: SearchIssuesProps) => {
           {results.length > 0 && (
             <List disablePadding>
               {results.map((issue, index) => {
-                const displayText = issue.summary
-                  ? `${issue.key} — ${issue.summary}`
-                  : issue.key;
                 const descriptionSnippet = buildSnippet(
                   issue.description ?? "",
                   appliedQuery,
@@ -352,10 +349,13 @@ const SearchIssues = ({ token }: SearchIssuesProps) => {
                     <ListItem alignItems="flex-start">
                       <Stack spacing={1} sx={{ width: "100%" }}>
                         <IssueDisplay
-                          display={
-                            appliedQuery
-                              ? highlightText(displayText, appliedQuery)
-                              : displayText
+                          taskKey={issue.key}
+                          taskName={
+                            issue.summary
+                              ? appliedQuery
+                                ? highlightText(issue.summary, appliedQuery)
+                                : issue.summary
+                              : undefined
                           }
                           href={`https://tracker.yandex.ru/${issue.key}`}
                           fio={

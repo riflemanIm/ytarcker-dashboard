@@ -1,20 +1,26 @@
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
-import { IconButton, Typography } from "@mui/material";
+import { Box, IconButton, Tooltip, Typography } from "@mui/material";
 import { FC, ReactNode } from "react";
 
 export interface IssueDisplayProps {
-  display: ReactNode;
+  display?: ReactNode;
+  taskKey?: ReactNode;
+  taskName?: ReactNode;
   href?: string | null;
   fio?: ReactNode;
+  hint?: ReactNode;
 }
 
 const IssueDisplay: FC<IssueDisplayProps> = ({
   display,
+  taskKey,
+  taskName,
   href = null,
   fio = null,
-}) => (
-  <>
-    <Typography variant="subtitle1" sx={{ position: "relative", left: -7 }}>
+  hint = null,
+}) => {
+  const content = (
+    <Typography variant="body1" sx={{ position: "relative", left: -7 }}>
       {href && (
         <IconButton
           component="a"
@@ -31,18 +37,41 @@ const IssueDisplay: FC<IssueDisplayProps> = ({
           <OpenInNewIcon fontSize="small" />
         </IconButton>
       )}
-      {display}
+      {taskKey || taskName ? (
+        <>
+          {taskKey && (
+            <Box component="span" sx={{ fontWeight: 700, mr: 1 }}>
+              {taskKey}
+            </Box>
+          )}
+          <Box component="span">{taskName ?? null}</Box>
+        </>
+      ) : (
+        display
+      )}
     </Typography>
-    {fio && (
-      <Typography
-        variant="subtitle2"
-        color="text.secondary"
-        sx={{ position: "relative", top: -5, left: 30 }}
-      >
-        {fio}
-      </Typography>
-    )}
-  </>
-);
+  );
+
+  return (
+    <>
+      {hint ? (
+        <Tooltip title={hint}>
+          <span>{content}</span>
+        </Tooltip>
+      ) : (
+        content
+      )}
+      {fio && (
+        <Typography
+          variant="subtitle2"
+          color="text.secondary"
+          sx={{ position: "relative", top: -5, left: 30 }}
+        >
+          {fio}
+        </Typography>
+      )}
+    </>
+  );
+};
 
 export default IssueDisplay;

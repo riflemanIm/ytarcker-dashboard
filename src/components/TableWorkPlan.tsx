@@ -109,14 +109,14 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
           ...state,
           editOpen: action.open,
           selectedRow:
-            action.open === false ? null : action.row ?? state.selectedRow,
+            action.open === false ? null : (action.row ?? state.selectedRow),
         };
       case "setDelete":
         return {
           ...state,
           deleteOpen: action.open,
           deleteTarget:
-            action.open === false ? null : action.row ?? state.deleteTarget,
+            action.open === false ? null : (action.row ?? state.deleteTarget),
         };
       case "setDeleteLoading":
         return { ...state, deleteLoading: action.loading };
@@ -125,7 +125,7 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
           ...state,
           addTimeOpen: action.open,
           addTimeIssue:
-            action.open === false ? null : action.issue ?? state.addTimeIssue,
+            action.open === false ? null : (action.issue ?? state.addTimeIssue),
         };
       case "setInfo":
         return { ...state, info: { ...state.info, ...action.payload } };
@@ -183,43 +183,41 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
   const columns = useMemo<GridColDef<WorkPlanItem | { id: string }>[]>(() => {
     const baseColumns: GridColDef<WorkPlanItem | { id: string }>[] = [
       {
-        field: "TaskName",
-        headerName: "Название",
-        flex: 1,
-        minWidth: 220,
-        sortable: false,
+        field: "TaskKey",
+        headerName: "Key + Название",
+        flex: 1.6,
+        minWidth: 520,
+        sortable: true,
         filterable: false,
         disableColumnMenu: true,
+        valueGetter: (_value, row) => (row as WorkPlanItem).TaskKey,
         renderCell: (params: GridRenderCellParams) => {
           if ((params.row as any).id === "__total__") {
-            return <Typography variant="subtitle1">{params.value}</Typography>;
+            return (
+              <Typography variant="subtitle1">
+                {(params.row as any).TaskName ?? params.value}
+              </Typography>
+            );
           }
           const row = params.row as WorkPlanItem;
-          const title =
-            [params.value, row.WorkName, row.WorkNameDict]
-              .filter(Boolean)
-              .join(" / ") || "-";
+          const hintParts = [
+            row.WorkName ? `Работа: ${row.WorkName}` : null,
+            row.WorkNameDict ? `Тип работы: ${row.WorkNameDict}` : null,
+            row.Comment ? `Комментарий: ${row.Comment}` : null,
+          ].filter(Boolean);
+          const hint = hintParts.length ? (
+            <Box sx={{ whiteSpace: "pre-line" }}>{hintParts.join("\n")}</Box>
+          ) : null;
           return (
-            <Tooltip title={title}>
-              <span>
-                <IssueDisplay
-                  display={params.value}
-                  href={`https://tracker.yandex.ru/${row.TaskKey}`}
-                  fio={row.CheckListAssignee ?? ""}
-                />
-              </span>
-            </Tooltip>
+            <IssueDisplay
+              taskKey={row.TaskKey}
+              taskName={row.TaskName}
+              href={`https://tracker.yandex.ru/${row.TaskKey}`}
+              fio={row.CheckListAssignee ?? ""}
+              hint={hint}
+            />
           );
         },
-      },
-      {
-        field: "TaskKey",
-        headerName: "Key",
-        minWidth: 100,
-        flex: 0.4,
-        sortable: false,
-        filterable: false,
-        disableColumnMenu: true,
       },
     ];
 
@@ -266,16 +264,16 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
                         type: "setAddTime",
                         open: true,
                         issue: {
-                        key: row.TaskKey,
-                        summary: row.TaskName,
-                        remainTimeMinutes: row.RemainTimeMinutes,
-                        checklistItemId: row.checklistItemId ?? null,
-                        YT_TL_WORKPLAN_ID: row.YT_TL_WORKPLAN_ID ?? null,
-                        YT_TL_WORKLOG_ID: row.YT_TL_WORKLOG_ID ?? null,
-                        TaskName: row.TaskName,
-                        TaskKey: row.TaskKey,
-                        WorkName: row.WorkName,
-                        WorkNameDict: row.WorkNameDict,
+                          key: row.TaskKey,
+                          summary: row.TaskName,
+                          remainTimeMinutes: row.RemainTimeMinutes,
+                          checklistItemId: row.checklistItemId ?? null,
+                          YT_TL_WORKPLAN_ID: row.YT_TL_WORKPLAN_ID ?? null,
+                          YT_TL_WORKLOG_ID: row.YT_TL_WORKLOG_ID ?? null,
+                          TaskName: row.TaskName,
+                          TaskKey: row.TaskKey,
+                          WorkName: row.WorkName,
+                          WorkNameDict: row.WorkNameDict,
                         },
                       });
                     }}
@@ -324,46 +322,37 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
     };
 
     const tailColumns: GridColDef<WorkPlanItem | { id: string }>[] = [
-      { field: "WorkName", headerName: "Работа", flex: 1, minWidth: 120 },
       {
-        field: "WorkDone",
-        headerName: "Сделано",
-        flex: 0.6,
-        minWidth: 70,
-        valueFormatter: (value: WorkPlanItem["WorkDone"]) =>
-          value ? "Да" : "Нет",
+        field: "Deadline",
+        headerName: "Дедлайн",
+        flex: 0.8,
+        minWidth: 110,
+        valueFormatter: (value: WorkPlanItem["Deadline"]) =>
+          value && dayjs(value).isValid()
+            ? dayjs(value).format("DD.MM.YYYY")
+            : "-",
       },
       {
-        field: "StatusName",
-        headerName: "Статус",
-        flex: 0.9,
-        minWidth: 120,
+        field: "WorkName",
+        headerName: "Работа",
+        flex: 1.4,
+        minWidth: 200,
+        renderCell: (params: GridRenderCellParams) => {
+          const row = params.row as WorkPlanItem;
+          const title =
+            [row.WorkName, row.WorkNameDict].filter(Boolean).join(" / ") || "-";
+          return (
+            <Tooltip title={title}>
+              <span>{params.value ?? "-"}</span>
+            </Tooltip>
+          );
+        },
       },
-      {
-        field: "Comment",
-        headerName: "Комментарий",
-        flex: 1.2,
-        minWidth: 160,
-      },
-      {
-        field: "WorkNameDict",
-        headerName: "Тип работы",
-        flex: 0.9,
-        minWidth: 120,
-      },
-      { field: "IsPlan", headerName: "План", flex: 0.5, minWidth: 70 },
-      {
-        field: "CheckListAssignee",
-        headerName: "Сотрудник",
-        flex: 1.5,
-        minWidth: 160,
-      },
-      { field: "ProjectName", headerName: "Проект", flex: 1.2, minWidth: 150 },
       {
         field: "EstimateTimeMinutes",
         headerName: "Оценка.",
         flex: 0.7,
-        minWidth: 90,
+        minWidth: 100,
         valueFormatter: (value: WorkPlanItem["EstimateTimeMinutes"]) =>
           formatWorkMinutes(value),
       },
@@ -371,7 +360,7 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
         field: "SpentTimeMinutes",
         headerName: "Потрачено.",
         flex: 0.8,
-        minWidth: 100,
+        minWidth: 110,
         valueFormatter: (value: WorkPlanItem["SpentTimeMinutes"]) =>
           formatWorkMinutes(value),
       },
@@ -379,20 +368,28 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
         field: "RemainTimeMinutes",
         headerName: "Остаток.",
         flex: 0.8,
-        minWidth: 100,
+        minWidth: 110,
         valueFormatter: (value: WorkPlanItem["RemainTimeMinutes"]) =>
           formatWorkMinutes(value),
       },
       {
-        field: "Deadline",
-        headerName: "Дедлайн",
-        flex: 0.7,
-        minWidth: 90,
-        valueFormatter: (value: WorkPlanItem["Deadline"]) =>
-          value && dayjs(value).isValid()
-            ? dayjs(value).format("DD.MM.YYYY")
-            : "-",
+        field: "CheckListAssignee",
+        headerName: "Тек.Исполнитель",
+        flex: 1.2,
+        minWidth: 160,
       },
+      {
+        field: "StatusName",
+        headerName: "Статус",
+        flex: 1,
+        minWidth: 140,
+        renderCell: (params: GridRenderCellParams) => (
+          <Typography sx={{ whiteSpace: "normal", lineHeight: 1.2 }}>
+            {params.value ?? "-"}
+          </Typography>
+        ),
+      },
+      { field: "ProjectName", headerName: "Проект", flex: 1.1, minWidth: 150 },
     ];
 
     return [...baseColumns, actionColumn, ...tailColumns];
@@ -530,7 +527,7 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
         value={filterText}
         onChange={(value) => dispatchState({ type: "setFilter", value })}
         label="Фильтр"
-        placeholder="Название, Key, Работа, Тип работы, Проект, Сотрудник, Статус, Комментарий"
+        placeholder="Название, Key, Работа, Проект, Сотрудник, Статус, Комментарий"
         disabled={loading || rows.length === 0}
       />
       <DataGrid
