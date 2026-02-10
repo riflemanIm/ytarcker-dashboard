@@ -74,7 +74,8 @@ const AppHeader: FC<AppHeaderProps> = ({
       >
         <Box sx={{ minWidth: 200, mr: "auto", display: "flex" }}>
           <ToggleViewButton
-            showAdminControls={canShowAdminControls && showAdminControls}
+            isAdmin={!!isSuperUser}
+            planEditMode={!!state.state.planEditMode}
             viewMode={viewMode}
             onChange={onViewModeChange}
           />

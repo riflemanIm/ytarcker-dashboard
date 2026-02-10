@@ -15,7 +15,8 @@ import { ViewMode } from "../types/global";
 export interface ToggleViewButtonProps {
   viewMode: ViewMode;
   onChange: (mode: ViewMode) => void;
-  showAdminControls: boolean;
+  isAdmin: boolean;
+  planEditMode: boolean;
 }
 
 type IconComponent = typeof TodayIcon;
@@ -60,9 +61,16 @@ const VIEW_MODE_OPTIONS: Array<{
 export default function ToggleViewButton({
   viewMode,
   onChange,
-  showAdminControls,
+  isAdmin,
+  planEditMode,
 }: ToggleViewButtonProps) {
   const [anchorEl, setAnchorEl] = React.useState<HTMLElement | null>(null);
+
+  React.useEffect(() => {
+    if (isAdmin && planEditMode && viewMode === "table_time_spend") {
+      onChange("table_time_plan");
+    }
+  }, [isAdmin, planEditMode, viewMode, onChange]);
 
   const currentOption =
     VIEW_MODE_OPTIONS.find((option) => option.mode === viewMode) ||
@@ -116,9 +124,17 @@ export default function ToggleViewButton({
         anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
         transformOrigin={{ vertical: "top", horizontal: "center" }}
       >
-        {VIEW_MODE_OPTIONS.filter(
-          (option) => showAdminControls || !option.isAdminOnly,
-        ).map((option) => {
+        {VIEW_MODE_OPTIONS.filter((option) => {
+          if (option.isAdminOnly && !isAdmin) return false;
+          if (
+            option.mode === "table_time_spend" &&
+            isAdmin &&
+            planEditMode
+          ) {
+            return false;
+          }
+          return true;
+        }).map((option) => {
           const OptionIcon = option.icon;
           return (
             <MenuItem
