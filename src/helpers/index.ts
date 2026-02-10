@@ -19,7 +19,7 @@ const ADMIN_LOGINS = [
   { login: "l.musaeva", isAdmin: true, planEditMode: true },
   { login: "s.ermakov", isAdmin: true, planEditMode: true },
   { login: "a.smirnov", isAdmin: true, planEditMode: true },
-  //{ login: "o.lambin", isAdmin: true, planEditMode: true },
+  { login: "o.lambin", isAdmin: true, planEditMode: true },
   { login: "i.modenov", isAdmin: true, planEditMode: true },
   { login: "a.solnyshkin", isAdmin: true, planEditMode: true },
   { login: "d.malakhov", isAdmin: true, planEditMode: true },
