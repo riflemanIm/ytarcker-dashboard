@@ -17,7 +17,7 @@ dayjs.locale("ru");
 const ADMIN_LOGINS = [
   { login: "e.nikolaev", isAdmin: true, planEditMode: true },
   { login: "l.musaeva", isAdmin: true, planEditMode: true },
-  { login: "s.ermakov", isAdmin: true, planEditMode: true },
+  //{ login: "s.ermakov", isAdmin: true, planEditMode: true },
   //{ login: "a.smirnov", isAdmin: true, planEditMode: true },
   //{ login: "o.lambin", isAdmin: true, planEditMode: true },
   { login: "i.modenov", isAdmin: true, planEditMode: true },
@@ -43,7 +43,7 @@ const ADMIN_LOGINS = [
   { login: "e.boyarkina", isAdmin: true, planEditMode: true },
   { login: "e.sigalaeva", isAdmin: true, planEditMode: true },
   { login: "a.trofimtsev", isAdmin: true, planEditMode: true },
-  { login: "d.ermakova", isAdmin: true, planEditMode: true },
+  //{ login: "d.ermakova", isAdmin: true, planEditMode: true },
 ];
 export const getLocalAdmin = (login: string | null | undefined) => {
   if (!login) return null;
