@@ -83,8 +83,9 @@ const TableCellInfoPopover: FC<BaseCellMenuProps> = ({
                 stripRiskBlock(comment ?? ""),
               );
               const startLabel = displayStartTime(start);
+              const rowKey = `${id}-${start ?? "no-start"}`;
               return (
-                <ListItem key={id} alignItems="flex-start" disableGutters>
+                <ListItem key={rowKey} alignItems="flex-start" disableGutters>
                   <ListItemText
                     primary={
                       <Stack

@@ -13,23 +13,16 @@ import {
   sumDurations,
   toTarget, // ⬅️ добавили
 } from "@/helpers";
-import { parseFirstIssueTypeLabel } from "@/helpers/issueTypeComment";
-import AddIcon from "@mui/icons-material/Add";
-import { Box, Chip, IconButton, Paper, Typography } from "@mui/material";
-import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
+import { GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import dayjs, { Dayjs } from "dayjs";
 import utc from "dayjs/plugin/utc";
 import React, {
   FC,
   useCallback,
-  useEffect,
   useMemo,
-  useRef,
-  useState,
 } from "react";
 import {
   DayOfWeek,
-  MenuState,
   TaskItem,
   TaskItemIssue,
   TransformedTaskRow,
@@ -37,20 +30,12 @@ import {
 import IssueDisplay from "./IssueDisplay";
 import TableCellInfoPopover from "./TableCellInfoPopover";
 import SetTimeSpend from "./SetTimeSpend";
+import TimeSpendCell from "./TimeSpendCell";
+import { useTimeSpendCellControls } from "@/hooks/useTimeSpendCellControls";
+import TableTimeDataGrid from "./TableTimeDataGrid";
 
 dayjs.locale("ru");
 dayjs.extend(utc);
-
-const createEmptyMenuState = (): MenuState => ({
-  anchorEl: null,
-  issue: null,
-  field: null,
-  issueId: null,
-  checklistItemId: null,
-  remainTimeMinutes: undefined,
-  durations: null,
-  dateField: null,
-});
 
 export const durationComparator = (a: string, b: string): number =>
   parseISODurationToSeconds(a) - parseISODurationToSeconds(b);
@@ -270,43 +255,6 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
     });
   }, [data, rangeEnd, rangeMode, rangeStart, viewStart]);
 
-  // --- 2) Проверка тегов для ячейки (внутри этой недели) ---
-  const cellHasAllTags = useCallback(
-    (rowId: string | number, field: string): boolean => {
-      if (!dataForRange) return true;
-
-      const norm = (s: string) => s.replace(/[\u00A0\u202F]/g, " ");
-      const BAD_TAG_RE =
-        /\[\s*ProjectControlWT\s*:\s*Временно\s+не\s*определ[её]н\s*\]/i;
-
-      const rawItems = dataForRange.filter(
-        (r) => r.key === rowId && fieldKeyForDate(dayjs(r.start)) === field,
-      );
-
-      if (rawItems.length === 0) return false;
-
-      for (const r of rawItems) {
-        const durations =
-          Array.isArray((r as any).durations) && (r as any).durations.length
-            ? (r as any).durations
-            : [r as any];
-
-        for (const d of durations) {
-          const commentRaw = (d?.comment ?? "").toString();
-          const comment = norm(commentRaw).trim();
-
-          if (!comment) return false;
-          if (BAD_TAG_RE.test(comment)) return false;
-
-          const tag = parseFirstIssueTypeLabel(comment);
-          if (!tag) return false;
-        }
-      }
-      return true;
-    },
-    [dataForRange, fieldKeyForDate],
-  );
-
   // --- 3) Строим строки по отфильтрованным данным ---
   const tableRows = useMemo(
     () => transformData(dataForRange, issueMeta, fieldKeys, fieldKeyForDate),
@@ -334,152 +282,24 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
     return "";
   }, [rangeEnd, rangeMode, rangeStart, viewStart]);
 
-  // --- 5) Контекстное меню по клику на ячейку ---
-  const [menuState, setMenuState] = useState<MenuState>(createEmptyMenuState);
-  const [infoState, setInfoState] = useState<MenuState>(createEmptyMenuState);
-  const [infoOpen, setInfoOpen] = useState(false);
-  const popoverPaperRef = useRef<HTMLDivElement | null>(null);
-  const infoCloseTimer = useRef<number | null>(null);
-
-  const clearInfoCloseTimer = useCallback(() => {
-    if (infoCloseTimer.current != null) {
-      window.clearTimeout(infoCloseTimer.current);
-      infoCloseTimer.current = null;
-    }
-  }, []);
-
-  const closeInfo = useCallback(() => {
-    clearInfoCloseTimer();
-    setInfoOpen(false);
-    setInfoState(createEmptyMenuState());
-  }, [clearInfoCloseTimer, setInfoOpen, setInfoState]);
-
-  const scheduleInfoClose = useCallback(() => {
-    clearInfoCloseTimer();
-    infoCloseTimer.current = window.setTimeout(() => {
-      infoCloseTimer.current = null;
-      const anchorHovered = infoState.anchorEl?.matches?.(":hover");
-      const popoverHovered = popoverPaperRef.current?.matches?.(":hover");
-      if (anchorHovered || popoverHovered) {
-        return;
-      }
-      closeInfo();
-    }, 15000);
-  }, [clearInfoCloseTimer, closeInfo, infoState.anchorEl]);
-
-  const handleMenuOpen = useCallback(
-    (event: React.MouseEvent<HTMLElement>, params: GridRenderCellParams) => {
-      clearInfoCloseTimer();
-      const anchor = event.currentTarget as HTMLElement;
-      const foundRow =
-        dataForRange != null
-          ? dataForRange.find(
-              (row) =>
-                fieldKeyForDate(dayjs(row.start)) === params.field &&
-                row.key === params.id,
-            )?.durations
-          : null;
-      console.log("params.row", params.row);
-      setMenuState({
-        anchorEl: anchor,
-        issue: params.row.issue.display,
-        field: params.field as string,
-        issueId: params.row.issueId,
-        checklistItemId: params.row.checklistItemId ?? null,
-        remainTimeMinutes: params.row.remainTimeMinutes,
-        durations: foundRow ?? null,
-        dateField: getDateForField(params.field as string),
-      });
-    },
-    [dataForRange, fieldKeyForDate, getDateForField, setMenuState],
-  );
-
-  const handleMenuClose = useCallback(() => {
-    setMenuState(createEmptyMenuState());
-  }, [setMenuState]);
-
-  const handleInfoOpen = useCallback(
-    (event: React.MouseEvent<HTMLElement>, params: GridRenderCellParams) => {
-      clearInfoCloseTimer();
-      const anchor = event.currentTarget as HTMLElement;
-      const foundRow =
-        dataForRange != null
-          ? dataForRange.find(
-              (row) =>
-                fieldKeyForDate(dayjs(row.start)) === params.field &&
-                row.key === params.id,
-            )?.durations
-          : null;
-
-      if (!foundRow || foundRow.length === 0) {
-        closeInfo();
-        return;
-      }
-
-      // закрываем предыдущий поповер, если он открыт
-      closeInfo();
-
-      const nextState: MenuState = {
-        anchorEl: anchor,
-        issue: params.row.issue.display,
-        field: params.field as string,
-        issueId: params.row.issueId,
-        checklistItemId: params.row.checklistItemId ?? null,
-        remainTimeMinutes: params.row.remainTimeMinutes,
-        durations: foundRow,
-        dateField: getDateForField(params.field as string),
-      };
-
-      setInfoState(nextState);
-      setInfoOpen(true);
-    },
-    [
-      dataForRange,
-      fieldKeyForDate,
-      getDateForField,
-      closeInfo,
-      setInfoState,
-      setInfoOpen,
-      clearInfoCloseTimer,
-    ],
-  );
-
-  const handleCellInfoLeave = useCallback(
-    (event?: React.MouseEvent<HTMLElement>) => {
-      const nextTarget = event?.relatedTarget as Node | null;
-      if (
-        event &&
-        nextTarget &&
-        popoverPaperRef.current?.contains(nextTarget)
-      ) {
-        return;
-      }
-      scheduleInfoClose();
-    },
-    [scheduleInfoClose],
-  );
-
-  const handlePopoverMouseLeave = useCallback(
-    (event: React.MouseEvent<HTMLElement>) => {
-      const nextTarget = event.relatedTarget as Node | null;
-      const anchor = infoState.anchorEl;
-      if (anchor && nextTarget && anchor.contains(nextTarget)) {
-        return;
-      }
-      scheduleInfoClose();
-    },
-    [infoState.anchorEl, scheduleInfoClose],
-  );
-
-  const handlePopoverMouseEnter = useCallback(() => {
-    clearInfoCloseTimer();
-  }, [clearInfoCloseTimer]);
-
-  useEffect(() => {
-    return () => {
-      clearInfoCloseTimer();
-    };
-  }, [clearInfoCloseTimer]);
+  const {
+    cellHasAllTags,
+    menuState,
+    infoState,
+    infoOpen,
+    popoverPaperRef,
+    handleMenuOpen,
+    handleMenuClose,
+    handleInfoOpen,
+    handleCellInfoLeave,
+    handlePopoverMouseEnter,
+    handlePopoverMouseLeave,
+    closeInfo,
+  } = useTimeSpendCellControls({
+    dataForRange,
+    fieldKeyForDate,
+    getDateForField,
+  });
 
   // --- 6) Сохранение времени в выбранный день диапазона ---
   const handleCellEdit = useCallback(
@@ -585,101 +405,16 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
         headerClassName: field === todayKey ? "current-column-header" : "",
         cellClassName: (params: GridRenderCellParams) =>
           params.field === todayKey ? "current-column-cell" : "",
-        renderCell: (params: GridRenderCellParams) => {
-          const val = displayDuration(params.value);
-          if (params.row.id === "total") return val;
-          if (val === "" && isEditable && !isAddable) {
-            return "";
-          }
-          if (val === "" && isEditable && isAddable) {
-            return (
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  width: "100%",
-                  height: "100%",
-                  margin: "0 auto",
-                }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget.firstChild as HTMLElement).style.opacity =
-                    "1";
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget.firstChild as HTMLElement).style.opacity =
-                    "0";
-                }}
-              >
-                <IconButton
-                  sx={(theme) => ({
-                    opacity: 0,
-                    transition: "opacity 0.3s",
-                    color: theme.palette.primary.main,
-                    width: "100%",
-                    height: "100%",
-                  })}
-                >
-                  <AddIcon />
-                </IconButton>
-              </div>
-            );
-          }
-
-          if (val === "" && isEditable && !isAddable) {
-            return <Typography variant="body2">{val}</Typography>;
-          }
-
-          const allTagged = cellHasAllTags(params.id, params.field);
-
-          if (isEditable) {
-            return (
-              <Chip
-                label={val}
-                variant="outlined"
-                clickable
-                color={allTagged ? "success" : "error"}
-                onClick={(e) => handleMenuOpen(e, params)}
-              />
-            );
-          }
-
-          if (val === "") {
-            return (
-              <Typography
-                variant="body2"
-                sx={(theme) => ({
-                  color: allTagged
-                    ? theme.palette.success.main
-                    : theme.palette.error.main,
-                  fontWeight: 500,
-                })}
-              >
-                {val}
-              </Typography>
-            );
-          }
-
-          return (
-            <Box
-              //onMouseEnter={(e) => handleInfoOpen(e, params)}
-              onClick={(e) => handleInfoOpen(e, params)}
-              //onMouseLeave={handleCellInfoLeave}
-            >
-              <Typography
-                variant="button"
-                sx={(theme) => ({
-                  color: allTagged
-                    ? theme.palette.success.main
-                    : theme.palette.error.main,
-                  fontWeight: 600,
-                })}
-              >
-                {val}
-              </Typography>
-            </Box>
-          );
-        },
+        renderCell: (params: GridRenderCellParams) => (
+          <TimeSpendCell
+            params={params}
+            isEditable={isEditable}
+            isAddable={isAddable}
+            cellHasAllTags={cellHasAllTags}
+            onMenuOpen={handleMenuOpen}
+            onInfoOpen={handleInfoOpen}
+          />
+        ),
       } as GridColDef;
     }),
 
@@ -724,61 +459,41 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
   };
 
   return (
-    <Paper
-      variant="elevation"
-      sx={(theme) => ({
-        p: { xs: 1, sm: 2 },
-        borderRadius: { xs: 1, sm: 2 },
-        border: `1px solid ${theme.palette.divider}`,
-        boxShadow: "0px 10px 15px rgba(15, 23, 42, 0.04)",
-      })}
-    >
-      <DataGrid
+    <>
+      <TableTimeDataGrid
         rows={[...tableRows, totalRow]}
         columns={columns}
         loading={dataTimeSpendLoading}
-        disableColumnMenu
-        pageSizeOptions={[15]}
-        onCellClick={(params, event) => {
-          if (
-            isEditable &&
-            isAddable &&
-            params.row.id !== "total" &&
-            fieldKeys.includes(params.field as string) &&
-            isEmptyDurationValue(params.value) &&
-            (event as React.MouseEvent).detail === 1
-          ) {
-            handleMenuOpen(
-              event as React.MouseEvent<HTMLElement>,
-              params as GridRenderCellParams,
-            );
-          }
-        }}
-        processRowUpdate={(updatedRow, originalRow) => {
-          const changedField = Object.keys(updatedRow).find(
-            (key) => (updatedRow as any)[key] !== (originalRow as any)[key],
-          ) as string;
-          return handleCellEdit(
-            changedField,
-            (updatedRow as any)[changedField],
-            updatedRow.issueId,
-            (updatedRow as any).checklistItemId,
-          )
-            ? updatedRow
-            : originalRow;
-        }}
-        getRowClassName={(params) => (params.id === "total" ? "no-hover" : "")}
-        sx={{
-          "& .no-hover:hover": { backgroundColor: "transparent !important" },
-          "& .current-column-header": {
-            backgroundColor: "rgba(200, 220, 255, 0.5)",
-          },
-          "& .current-column-cell": {
-            backgroundColor: "rgba(200, 230, 255, 0.2)",
-          },
-          height: "81vh",
-        }}
-      />
+      onCellClick={(params, event) => {
+        if (
+          isEditable &&
+          isAddable &&
+          params.row.id !== "total" &&
+          fieldKeys.includes(params.field as string) &&
+          isEmptyDurationValue(params.value) &&
+          (event as React.MouseEvent).detail === 1
+        ) {
+          handleMenuOpen(
+            event as React.MouseEvent<HTMLElement>,
+            params as GridRenderCellParams,
+          );
+        }
+      }}
+      processRowUpdate={(updatedRow, originalRow) => {
+        const changedField = Object.keys(updatedRow).find(
+          (key) => (updatedRow as any)[key] !== (originalRow as any)[key],
+        ) as string;
+        return handleCellEdit(
+          changedField,
+          (updatedRow as any)[changedField],
+          updatedRow.issueId,
+          (updatedRow as any).checklistItemId,
+        )
+          ? updatedRow
+          : originalRow;
+      }}
+      getRowClassName={(params) => (params.id === "total" ? "no-hover" : "")}
+    />
       <SetTimeSpend
         key={`${menuState.issueId}-${menuState.field}-${menuState.dateField?.toISOString()}`}
         open={Boolean(menuState.anchorEl)}
@@ -797,7 +512,7 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
         onCloseButtonClick={() => handleCellInfoLeave()}
         paperRef={popoverPaperRef}
       />
-    </Paper>
+    </>
   );
 };
 
