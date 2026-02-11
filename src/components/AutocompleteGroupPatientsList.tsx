@@ -169,17 +169,21 @@ const AutocompleteGroupPatientsList: React.FC<
       isOptionEqualToValue={(option: TlGroupPatient, value: TlGroupPatient) =>
         option.trackerUid === value.trackerUid
       }
-      renderOption={(props, option: TlGroupPatient) => (
-        <Box
-          component="li"
-          {...props}
-          sx={{ display: "flex", alignItems: "center", gap: 1.5 }}
-        >
+      renderOption={(props, option: TlGroupPatient) => {
+        const { key, ...rest } = props;
+        return (
+          <Box
+            component="li"
+            key={key}
+            {...rest}
+            sx={{ display: "flex", alignItems: "center", gap: 1.5 }}
+          >
           <Typography variant="body1" whiteSpace="wrap">
             {option.patients_fio}
           </Typography>
-        </Box>
-      )}
+          </Box>
+        );
+      }}
       noOptionsText={"Введите имя сотрудника"}
       renderInput={(params) => (
         <TextField
