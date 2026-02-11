@@ -139,16 +139,17 @@ export const getTlUserInfo = async ({
     const info = res.data[0] ?? null;
     if (!info) return { info: null };
 
+    console.log("info", info);
     const localAdmin = getLocalAdmin(login ?? null);
     dispatch({
       type: "setState",
       payload: (prev) => ({
         ...prev,
         loginUid: info.trackerUid ?? prev.loginUid ?? null,
-        isAdmin: localAdmin?.isAdmin ?? info.isAdmin ?? prev.isAdmin ?? false,
+        isAdmin: info.isAdmin ?? localAdmin?.isAdmin ?? prev.isAdmin ?? false,
         planEditMode:
-          localAdmin?.planEditMode ??
           info.planEditMode ??
+          localAdmin?.planEditMode ??
           prev.planEditMode ??
           false,
       }),
