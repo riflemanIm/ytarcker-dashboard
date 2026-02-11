@@ -58,9 +58,15 @@ const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
   const filteredData = useMemo(() => {
     if (!planKeys.size) return [];
     return data
-      .filter((item) => planKeys.has(String(item.issueId)))
+      .filter((item) => {
+        const key = String(item.key ?? "");
+        const issueId = String(item.issueId ?? "");
+        return planKeys.has(key) || planKeys.has(issueId);
+      })
       .map((item) => {
-        const meta = planMeta[String(item.issueId)];
+        const key = String(item.key ?? "");
+        const issueId = String(item.issueId ?? "");
+        const meta = planMeta[key] ?? planMeta[issueId];
         return {
           ...item,
           checklistItemId: meta?.checklistItemId ?? null,

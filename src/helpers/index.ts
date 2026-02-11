@@ -17,7 +17,7 @@ dayjs.locale("ru");
 const ADMIN_LOGINS = [
   //{ login: "s.ermakov", isAdmin: true, planEditMode: true },
   //{ login: "a.smirnov", isAdmin: true, planEditMode: true },
-  { login: "olambin", isAdmin: true, planEditMode: true },
+  { login: "o.lambin", isAdmin: true, planEditMode: false },
 ];
 export const getLocalAdmin = (login: string | null | undefined) => {
   if (!login || isEmpty(ADMIN_LOGINS)) return null;
