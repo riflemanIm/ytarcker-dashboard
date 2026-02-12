@@ -47,7 +47,8 @@ const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
 }) => {
   useTableTimePlanSelectors();
   const effectivePlanItems = planItems ?? [];
-
+  console.log("data", data);
+  console.log("planItems", planItems);
   const { planKeys, planMeta } = useMemo(() => {
     const next = new Set<string>();
     const meta: Record<
@@ -149,7 +150,8 @@ const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
       return d.isSameOrAfter(s) && d.isSameOrBefore(e);
     });
   }, [filteredData, rangeEnd, rangeMode, rangeStart, start]);
-
+  console.log("planKeys", planKeys);
+  console.log("planMeta", planMeta);
   const fieldKeys = rangeMode
     ? rangeDays
     : [
@@ -277,12 +279,10 @@ const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
       const header = rangeMode
         ? `${
             headerWeekName[
-              dayOfWeekNameByDate(
-                dateForHeader,
-              ) as keyof typeof headerWeekName
+              dayOfWeekNameByDate(dateForHeader) as keyof typeof headerWeekName
             ]
           } ${dateForHeader.format("DD.MM")}`
-        : headerWeekName[field as keyof typeof headerWeekName] ?? field;
+        : (headerWeekName[field as keyof typeof headerWeekName] ?? field);
       return {
         field,
         headerName: header,
@@ -292,9 +292,7 @@ const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
         sortComparator: (v1: string, v2: string, params1, params2) => {
           if (params1.id === "total") return 1;
           if (params2.id === "total") return -1;
-          return (
-            parseISODurationToSeconds(v1) - parseISODurationToSeconds(v2)
-          );
+          return parseISODurationToSeconds(v1) - parseISODurationToSeconds(v2);
         },
         headerClassName: field === todayKey ? "current-column-header" : "",
         cellClassName: (params) =>
@@ -349,9 +347,7 @@ const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
         rows={[...tableRows, totalRow]}
         columns={columns}
         loading={dataTimeSpendLoading}
-        getRowClassName={(params) =>
-          params.id === "total" ? "no-hover" : ""
-        }
+        getRowClassName={(params) => (params.id === "total" ? "no-hover" : "")}
       />
       <SetTimeSpend
         key={`${menuState.issueId}-${menuState.field}-${menuState.dateField?.toISOString()}`}

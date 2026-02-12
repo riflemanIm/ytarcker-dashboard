@@ -56,6 +56,12 @@ export function extractWorkPlanId(comment: string): string | null {
   return match ? match[1] : null;
 }
 
+export function extractWorklogId(comment: string): string | null {
+  if (!comment) return null;
+  const match = comment.match(/\[YT_TL_WORKLOG_ID:([^\]]+)\]/);
+  return match ? match[1] : null;
+}
+
 export function parseRiskBlock(comment: string): {
   deadlineOk: boolean;
   needUpgradeEstimate: boolean;

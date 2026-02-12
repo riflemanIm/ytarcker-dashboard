@@ -16,11 +16,7 @@ import {
 import { GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import dayjs, { Dayjs } from "dayjs";
 import utc from "dayjs/plugin/utc";
-import React, {
-  FC,
-  useCallback,
-  useMemo,
-} from "react";
+import React, { FC, useCallback, useMemo } from "react";
 import {
   DayOfWeek,
   TaskItem,
@@ -163,16 +159,8 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
     (appState.state.issues ?? []).forEach((issue: any) => {
       const key = issue?.key ?? issue?.issueId ?? issue?.id;
       if (!key) return;
-      const checklistItemId =
-        issue?.checklistItemId ??
-        issue?.ChecklistItemId ??
-        issue?.checklist_item_id ??
-        issue?.checklistItem?.id ??
-        null;
-      const remainTimeMinutes =
-        issue?.remainTimeMinutes ??
-        issue?.RemainTimeMinutes ??
-        issue?.remain_time_days;
+      const checklistItemId = issue?.checklistItemId ?? null;
+      const remainTimeMinutes = issue?.remainTimeMinutes;
       map.set(String(key), { checklistItemId, remainTimeMinutes });
     });
     return map;
@@ -464,36 +452,36 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
         rows={[...tableRows, totalRow]}
         columns={columns}
         loading={dataTimeSpendLoading}
-      onCellClick={(params, event) => {
-        if (
-          isEditable &&
-          isAddable &&
-          params.row.id !== "total" &&
-          fieldKeys.includes(params.field as string) &&
-          isEmptyDurationValue(params.value) &&
-          (event as React.MouseEvent).detail === 1
-        ) {
-          handleMenuOpen(
-            event as React.MouseEvent<HTMLElement>,
-            params as GridRenderCellParams,
-          );
-        }
-      }}
-      processRowUpdate={(updatedRow, originalRow) => {
-        const changedField = Object.keys(updatedRow).find(
-          (key) => (updatedRow as any)[key] !== (originalRow as any)[key],
-        ) as string;
-        return handleCellEdit(
-          changedField,
-          (updatedRow as any)[changedField],
-          updatedRow.issueId,
-          (updatedRow as any).checklistItemId,
-        )
-          ? updatedRow
-          : originalRow;
-      }}
-      getRowClassName={(params) => (params.id === "total" ? "no-hover" : "")}
-    />
+        onCellClick={(params, event) => {
+          if (
+            isEditable &&
+            isAddable &&
+            params.row.id !== "total" &&
+            fieldKeys.includes(params.field as string) &&
+            isEmptyDurationValue(params.value) &&
+            (event as React.MouseEvent).detail === 1
+          ) {
+            handleMenuOpen(
+              event as React.MouseEvent<HTMLElement>,
+              params as GridRenderCellParams,
+            );
+          }
+        }}
+        processRowUpdate={(updatedRow, originalRow) => {
+          const changedField = Object.keys(updatedRow).find(
+            (key) => (updatedRow as any)[key] !== (originalRow as any)[key],
+          ) as string;
+          return handleCellEdit(
+            changedField,
+            (updatedRow as any)[changedField],
+            updatedRow.issueId,
+            (updatedRow as any).checklistItemId,
+          )
+            ? updatedRow
+            : originalRow;
+        }}
+        getRowClassName={(params) => (params.id === "total" ? "no-hover" : "")}
+      />
       <SetTimeSpend
         key={`${menuState.issueId}-${menuState.field}-${menuState.dateField?.toISOString()}`}
         open={Boolean(menuState.anchorEl)}

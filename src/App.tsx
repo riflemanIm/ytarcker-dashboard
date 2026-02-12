@@ -23,10 +23,7 @@ import TableTimeSpend from "./components/TableTimeSpend";
 import ViewTimePlan from "./components/ViewTimePlan";
 import WorklogWeeklyReport from "./components/WorklogWeeklyReport";
 import { useAppContext } from "./context/AppContext";
-import isEmpty, {
-  aggregateDurations,
-  getWeekRange,
-} from "./helpers";
+import isEmpty, { aggregateDurations, getWeekRange } from "./helpers";
 import { DataItem } from "./types/global";
 
 const parseSprintRange = (raw?: string | null) => {
@@ -161,7 +158,7 @@ const YandexTracker: FC = () => {
     });
     if (result.errorStatus === 500) {
       setUserInfoStatus("failed");
-          dispatch({
+      dispatch({
         type: "setAlert",
         payload: {
           open: true,
@@ -329,7 +326,7 @@ const YandexTracker: FC = () => {
     fetchUserIssues();
   };
 
-  console.log("state", state);
+  //console.log("appState", appState);
   const isSuperUser = !!state.isAdmin;
   const shouldShowAddDialog =
     viewMode === "table_time_spend" &&

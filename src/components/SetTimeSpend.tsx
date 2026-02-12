@@ -45,6 +45,7 @@ import isEmpty, {
 } from "@/helpers";
 import {
   extractWorkPlanId,
+  extractWorklogId,
   parseCommentForEditing,
   parseRiskBlock,
 } from "@/helpers/issueTypeComment";
@@ -81,7 +82,7 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
   const {
     state: { loginUid },
   } = state;
-
+  console.log("menuState", menuState);
   const trackerUid = loginUid;
   const [riskState, setRiskState] = useState({
     deadlineOk: true,
@@ -207,12 +208,29 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
     [issueTypes],
   );
 
+  const getWorklogId = useCallback((item: DurationItem): string | null => {
+    const fromComment = extractWorklogId(item.comment ?? "");
+    if (fromComment) return fromComment;
+    if (item.id == null) return null;
+    const id = String(item.id);
+    return id ? id : null;
+  }, []);
+
+  const getDurationKey = useCallback((item: DurationItem): string => {
+    const worklogId = extractWorklogId(item.comment ?? "");
+    if (worklogId) return `wl:${worklogId}`;
+    const idPart = item.id != null ? String(item.id) : "no-id";
+    const startPart = item.start ? String(item.start) : "no-start";
+    const commentPart = item.comment ? String(item.comment) : "no-comment";
+    return `${idPart}:${startPart}:${commentPart}`;
+  }, []);
+
   // Синк rows при изменении durations/issueTypes
   useEffect(() => {
     setRows((prev) => {
       const next: Record<string, RowUI> = {};
       for (const d of durations) {
-        const id = String(d.id);
+        const id = getDurationKey(d);
         const parsed = parseCommentForEditing(d.comment ?? "", issueTypes);
         next[id] = {
           durationRaw: prev[id]?.durationRaw ?? d.duration,
@@ -222,7 +240,7 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
       }
       return next;
     });
-  }, [durations, issueTypes]);
+  }, [durations, getDurationKey, issueTypes]);
 
   // Автоселект единственного типа в РЕДАКТИРОВАНИИ (если не выбран)
   useEffect(() => {
@@ -266,7 +284,7 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
       item: DurationItem,
       e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
     ) => {
-      const id = String(item.id);
+      const id = getDurationKey(item);
       const value = e.target.value ?? "";
       setRows((prev) => ({
         ...prev,
@@ -284,7 +302,7 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
         [id]: validateDurationValue(value),
       }));
     },
-    [validateDurationValue],
+    [getDurationKey, validateDurationValue],
   );
 
   const handleCommentChange = useCallback(
@@ -292,7 +310,7 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
       item: DurationItem,
       e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
     ) => {
-      const id = String(item.id);
+      const id = getDurationKey(item);
       const value = e.target.value ?? "";
       setRows((prev) => ({
         ...prev,
@@ -306,7 +324,7 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
         },
       }));
     },
-    [],
+    [getDurationKey],
   );
 
   const handleIssueTypeChangeForItem = useCallback(
@@ -374,7 +392,7 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
     let anyInvalid = false;
 
     for (const item of durations) {
-      const id = String(item.id);
+      const id = getDurationKey(item);
       const row = rows[id] ?? getRowFromItem(item);
 
       const durErr = validateDurationValue(
@@ -395,14 +413,21 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
 
     setValidationErrors((prev) => ({ ...prev, ...nextErrors }));
     return !anyInvalid;
-  }, [durations, rows, issueTypes, validateDurationValue, getRowFromItem]);
+  }, [
+    durations,
+    rows,
+    issueTypes,
+    validateDurationValue,
+    getRowFromItem,
+    getDurationKey,
+  ]);
 
   const handleSaveAllEdits = useCallback(() => {
     if (!validateAllEditRows()) return;
 
     // Всё валидно — отправляем все строки
     for (const item of durations) {
-      const id = String(item.id);
+      const id = getDurationKey(item);
       const row = rows[id] ?? getRowFromItem(item);
 
       setData({
@@ -412,7 +437,7 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
         issueId: menuState.issueId,
         duration: normalizeDuration(row.durationRaw ?? ""),
         comment: row.cleanComment,
-        worklogId: item.id,
+        worklogId: getWorklogId(item),
         deadlineOk: riskState.deadlineOk,
         needUpgradeEstimate: riskState.needUpgradeEstimate,
         makeTaskFaster: riskState.makeTaskFaster,
@@ -432,6 +457,8 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
     issueTypes,
     riskState,
     getRowFromItem,
+    getDurationKey,
+    getWorklogId,
     setData,
     dispatch,
     token,
@@ -449,7 +476,7 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
 
     // предварительная быстрая проверка перед submit (не заменяет validateAllEditRows)
     for (const item of durations) {
-      const id = String(item.id);
+      const id = getDurationKey(item);
       const row = rows[id] ?? getRowFromItem(item);
 
       const dur = row.durationRaw ?? "";
@@ -465,6 +492,7 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
     issueTypes,
     validateDurationValue,
     getRowFromItem,
+    getDurationKey,
   ]);
 
   const riskSection = (
@@ -595,11 +623,15 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
   // --- Удаление
   const handleConfirmDeleteAll = useCallback(() => {
     if (menuState.durations?.length) {
+      const items = menuState.durations.map((item) => ({
+        ...item,
+        id: getWorklogId(item) ?? item.id,
+      }));
       deleteData({
         token,
         dispatch,
         issueId: menuState.issueId,
-        durations: menuState.durations ?? undefined,
+        durations: items,
         trackerUid,
       });
     }
@@ -614,16 +646,23 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
     onClose,
     trackerUid,
     bumpWorkPlanRefresh,
+    getWorklogId,
   ]);
 
   const handleCancelDeleteAll = useCallback(() => setOpenConfirm(false), []);
   const handleDeleteItem = useCallback(
     (item: DurationItem) => {
+      const worklogId = getWorklogId(item);
       deleteData({
         token,
         dispatch,
         issueId: menuState.issueId,
-        durations: [item],
+        durations: [
+          {
+            ...item,
+            id: worklogId ?? item.id,
+          },
+        ],
         trackerUid,
       });
       bumpWorkPlanRefresh();
@@ -637,6 +676,7 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
       onClose,
       trackerUid,
       bumpWorkPlanRefresh,
+      getWorklogId,
     ],
   );
 
@@ -713,7 +753,7 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
               </Grid>
 
               {durations.map((item) => {
-                const id = String(item.id);
+                const id = getDurationKey(item);
                 const row = rows[id] ?? getRowFromItem(item);
                 const itemError = validationErrors[id];
                 const typeRequired =
@@ -721,7 +761,7 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
 
                 const startLabel = displayStartTime(item.start);
                 return (
-                  <Fragment key={item.id}>
+                  <Fragment key={id}>
                     <Grid size={2}>
                       <Stack spacing={0.5}>
                         <TextField
@@ -775,7 +815,7 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
                           <SelectIssueTypeList
                             issueTypes={issueTypes}
                             handleIssueTypeChange={(label) =>
-                              handleIssueTypeChangeForItem(item.id, label)
+                              handleIssueTypeChangeForItem(id, label)
                             }
                             selectedIssueTypeLabel={row.selectedLabel ?? ""}
                             margin="dense"
@@ -798,11 +838,11 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
                               >
                                 {availableRecentTypes.map((label) =>
                                   renderRecentTypeButton(
-                                    `${item.id}-${label}`,
+                                    `${id}-${label}`,
                                     label,
                                     () =>
                                       handleIssueTypeChangeForItem(
-                                        item.id,
+                                        id,
                                         label,
                                       ),
                                   ),
