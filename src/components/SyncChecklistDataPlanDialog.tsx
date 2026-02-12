@@ -210,7 +210,12 @@ export default function SyncChecklistDataPlanDialog({
         </Tooltip>
       )}
 
-      <Dialog open={resolvedOpen} onClose={handleClose} maxWidth="sm" fullWidth>
+      <Dialog
+        open={resolvedOpen}
+        onClose={handleClose}
+        maxWidth={info.open ? "md" : "sm"}
+        fullWidth
+      >
         <DialogTitle>
           <Stack
             direction="row"
