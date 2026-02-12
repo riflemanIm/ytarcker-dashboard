@@ -17,6 +17,7 @@ import {
 } from "./actions/data";
 import AddDurationIssueDialog from "./components/AddDurationIssueDialog";
 import AppHeader from "./components/AppHeader";
+import AppUpdateDialog from "./components/AppUpdateDialog";
 import DurationAlert from "./components/DurationAlert";
 import SearchIssues from "./components/SearchIssues";
 import TableTimeSpend from "./components/TableTimeSpend";
@@ -334,6 +335,7 @@ const YandexTracker: FC = () => {
     !isEmpty(appState.state.issues);
   return (
     <>
+      <AppUpdateDialog />
       {state.dataTimeSpendLoading && <LinearProgress />}
       <Grid
         container

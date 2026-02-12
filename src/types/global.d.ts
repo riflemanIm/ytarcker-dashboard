@@ -1,5 +1,7 @@
 import { Dayjs } from "dayjs";
 
+declare const __APP_VERSION__: string;
+
 export interface Issue {
   key: string;
   summary: string;
