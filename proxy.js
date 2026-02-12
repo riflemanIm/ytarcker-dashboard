@@ -1703,4 +1703,66 @@ app.post("/api/task_plan_info", async (req, res) => {
   }
 });
 
+app.post("/api/yt_tl_checklist_data", async (req, res) => {
+  try {
+    const { entityKey, updatePlan, rePlan, synchronizePlan } = req.body ?? {};
+
+    if (typeof entityKey !== "string" || entityKey.length === 0) {
+      return res.status(400).json({
+        message: "Missing or invalid field 'entityKey'.",
+      });
+    }
+
+    if (
+      typeof updatePlan !== "undefined" &&
+      typeof updatePlan !== "boolean"
+    ) {
+      return res.status(400).json({
+        message: "Field 'updatePlan' must be a boolean if provided.",
+      });
+    }
+    if (typeof rePlan !== "undefined" && typeof rePlan !== "boolean") {
+      return res.status(400).json({
+        message: "Field 'rePlan' must be a boolean if provided.",
+      });
+    }
+    if (
+      typeof synchronizePlan !== "undefined" &&
+      typeof synchronizePlan !== "boolean"
+    ) {
+      return res.status(400).json({
+        message: "Field 'synchronizePlan' must be a boolean if provided.",
+      });
+    }
+
+    const payload = {
+      entityKey,
+      ...(typeof updatePlan === "boolean" ? { updatePlan } : {}),
+      ...(typeof rePlan === "boolean" ? { rePlan } : {}),
+      ...(typeof synchronizePlan === "boolean" ? { synchronizePlan } : {}),
+    };
+
+    const resp = await axios.post(
+      "http://of-srv-apps-001.pmtech.ru:18005/acceptor/yandextracker/yttlchecklistdata",
+      payload,
+      {
+        timeout: 15000,
+      },
+    );
+
+    res.json(resp.data);
+  } catch (error) {
+    const status = error.response?.status || 500;
+    const payload = {
+      error: error.message,
+      code: error.code,
+      cause: error.cause,
+      upstreamStatus: error.response?.status,
+      upstreamData: error.response?.data,
+    };
+    console.error("[api/yt_tl_checklist_data] upstream error:", payload);
+    res.status(status).json(payload);
+  }
+});
+
 app.listen(4000, () => console.log("Proxy server running on port 4000"));

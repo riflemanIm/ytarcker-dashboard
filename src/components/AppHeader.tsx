@@ -39,7 +39,8 @@ const AppHeader: FC<AppHeaderProps> = ({
 }) => {
   const { state } = useAppContext();
   const { token, login } = state.auth;
-  const canShowAdminControls = !!token && !dataTimeSpendLoading && !!isSuperUser;
+  const canShowAdminControls =
+    !!token && !dataTimeSpendLoading && !!isSuperUser;
   const showRange = !!token && !dataTimeSpendLoading && showRangeControls;
   const theme = useTheme();
 
@@ -72,7 +73,15 @@ const AppHeader: FC<AppHeaderProps> = ({
           flexWrap: { xs: "wrap", sm: "wrap", md: "nowrap" },
         }}
       >
-        <Box sx={{ minWidth: 200, mr: "auto", display: "flex" }}>
+        <Box
+          sx={{
+            minWidth: 200,
+            mr: "auto",
+            display: "flex",
+            alignItems: "center",
+            gap: 1,
+          }}
+        >
           <ToggleViewButton
             isAdmin={!!isSuperUser}
             planEditMode={!!state.state.planEditMode}
@@ -91,6 +100,7 @@ const AppHeader: FC<AppHeaderProps> = ({
           login={login}
           onToggleShowAdminControls={onToggleShowAdminControls}
           dataTimeSpendLoading={dataTimeSpendLoading}
+          onRefresh={onRefresh}
         />
 
         <Stack

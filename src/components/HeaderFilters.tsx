@@ -1,14 +1,15 @@
 import { ViewMode } from "@/types/global";
-import { Alert, Box, Stack } from "@mui/material";
+import { Box, Stack } from "@mui/material";
 import dayjs from "dayjs";
 import { FC } from "react";
-import FetchModeSwitch from "./FetchModeSwitch";
-import ReportDateRange from "./ReportDateRange";
 import AutocompleteGroupList from "./AutocompleteGroupList";
 import AutocompleteGroupPatientsList from "./AutocompleteGroupPatientsList";
 import AutocompleteProjectList from "./AutocompleteProjectList";
 import AutocompleteRoleList from "./AutocompleteRoleList";
+import FetchModeSwitch from "./FetchModeSwitch";
+import ReportDateRange from "./ReportDateRange";
 import SelectSprintList from "./SelectSprintList";
+import SyncChecklistDataPlanDialog from "./SyncChecklistDataPlanDialog";
 import WeekNavigator from "./WeekNavigator";
 
 export interface WeekNavigationProps {
@@ -37,6 +38,7 @@ interface HeaderFiltersProps {
   login: string | null | undefined;
   onToggleShowAdminControls: () => void;
   dataTimeSpendLoading: boolean;
+  onRefresh: () => void | Promise<void>;
 }
 
 const HeaderFilters: FC<HeaderFiltersProps> = ({
@@ -49,6 +51,7 @@ const HeaderFilters: FC<HeaderFiltersProps> = ({
   login,
   onToggleShowAdminControls,
   dataTimeSpendLoading,
+  onRefresh,
 }) => {
   const isLoading = dataTimeSpendLoading;
   const rangeFilters =
@@ -114,13 +117,8 @@ const HeaderFilters: FC<HeaderFiltersProps> = ({
       sx={{ overflowX: "auto", width: "100%", minWidth: 0, flex: "1 1 auto" }}
     >
       {isSuperUser && (
-        <Stack
-          direction="row"
-          spacing={2}
-          alignItems="center"
-          sx={{ flex: "0 0 auto" }}
-        >
-          <Box>
+        <Stack alignItems="center" sx={{ flex: "0 0 auto" }}>
+          <Box sx={{ flex: "1 1 40px", minWidth: 40 }}>
             <FetchModeSwitch
               showAdminControls={showAdminControls}
               login={login ?? ""}
@@ -129,17 +127,19 @@ const HeaderFilters: FC<HeaderFiltersProps> = ({
             />
           </Box>
 
+          {showAdminControls && viewMode !== "table_time_plan" && (
+            <Box sx={{ flex: "1 1 260px", minWidth: 260 }}>
+              <AutocompleteGroupPatientsList />
+            </Box>
+          )}
+
           {showAdminControls &&
-            viewMode !== "table_time_plan" &&
-            (isLoading ? (
-              <Alert severity="info" sx={{ flex: 1, minWidth: 260 }}>
-                Загрузка сотрудников
-              </Alert>
-            ) : (
-              <Box sx={{ flex: "1 1 260px", minWidth: 260 }}>
-                <AutocompleteGroupPatientsList />
+            viewMode === "table_time_plan" &&
+            !dataTimeSpendLoading && (
+              <Box sx={{ flex: "1 1 0", minWidth: 0 }}>
+                <SyncChecklistDataPlanDialog onRefresh={onRefresh} />
               </Box>
-            ))}
+            )}
         </Stack>
       )}
 

@@ -21,6 +21,7 @@ import {
   WorkPlanItem,
   WorkPlanCapacityItem,
   TaskPlanInfoItem,
+  ChecklistDataPlanResult,
 } from "@/types/global";
 import { handleLogout } from "@/components/LogInOut";
 import type { AppAction } from "@/context/AppContext";
@@ -882,5 +883,30 @@ export const getTaskPlanInfo = async (
   } catch (err: any) {
     console.error("[Ошибка в getTaskPlanInfo]:", err.message);
     return [];
+  }
+};
+
+export interface ChecklistDataPlanArgs {
+  entityKey: string;
+  updatePlan?: boolean;
+  rePlan?: boolean;
+  synchronizePlan?: boolean;
+}
+
+export const syncChecklistDataPlan = async (
+  payload: ChecklistDataPlanArgs,
+): Promise<ChecklistDataPlanResult | null> => {
+  try {
+    if (!payload.entityKey) {
+      throw new Error("entityKey is required");
+    }
+    const res = await axios.post<ChecklistDataPlanResult>(
+      `${apiUrl}/api/yt_tl_checklist_data`,
+      payload,
+    );
+    return res.data ?? null;
+  } catch (err: any) {
+    console.error("[Ошибка в syncChecklistDataPlan]:", err.message);
+    return null;
   }
 };

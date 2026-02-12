@@ -117,6 +117,11 @@ export interface TaskPlanInfoItem {
   Hint: string;
 }
 
+export interface ChecklistDataPlanResult {
+  result: boolean;
+  message: string;
+}
+
 export interface WorkPlanCapacityState {
   rows: WorkPlanCapacityItem[];
   loading: boolean;
