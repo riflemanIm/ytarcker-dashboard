@@ -240,21 +240,21 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
           >
             <Tooltip title="Показать информацию по задаче">
               <IconButton
-                size="small"
+                size="medium"
                 sx={(theme) => ({ color: theme.palette.info.main })}
                 onClick={(event) => {
                   event.stopPropagation();
                   handleOpenInfo(params.row as WorkPlanItem);
                 }}
               >
-                <InfoIcon fontSize="small" />
+                <InfoIcon fontSize="medium" />
               </IconButton>
             </Tooltip>
             {canAddTime && (
               <Tooltip title="Добавить отметку времени">
                 <span>
                   <IconButton
-                    size="small"
+                    size="medium"
                     disabled={dataTimeSpendLoading}
                     sx={(theme) => ({ color: theme.palette.success.main })}
                     onClick={() => {
@@ -278,7 +278,7 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
                       });
                     }}
                   >
-                    <AddAlarmIcon fontSize="small" />
+                    <AddAlarmIcon fontSize="medium" />
                   </IconButton>
                 </span>
               </Tooltip>
@@ -286,7 +286,7 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
             {canEditPlan && (
               <>
                 <IconButton
-                  size="small"
+                  size="medium"
                   sx={(theme) => ({ color: theme.palette.primary.main })}
                   disabled={!canEditPlan}
                   onClick={() => {
@@ -298,10 +298,10 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
                     });
                   }}
                 >
-                  <EditIcon fontSize="small" />
+                  <EditIcon fontSize="medium" />
                 </IconButton>
                 <IconButton
-                  size="small"
+                  size="medium"
                   sx={(theme) => ({ color: theme.palette.warning.main })}
                   disabled={!canEditPlan}
                   onClick={() => {
@@ -313,7 +313,7 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
                     });
                   }}
                 >
-                  <DeleteIcon fontSize="small" />
+                  <DeleteIcon fontSize="medium" />
                 </IconButton>
               </>
             )}

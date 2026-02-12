@@ -230,7 +230,7 @@ const TableCheckPlan: FC = () => {
             <Tooltip title={params.value}>
               <span>
                 <IconButton
-                  size="small"
+                  size="medium"
                   sx={(theme) => ({ color: theme.palette.primary.main })}
                   onClick={(event) => {
                     event.stopPropagation();
@@ -242,20 +242,20 @@ const TableCheckPlan: FC = () => {
                   }}
                   disabled={!sprintId}
                 >
-                  <PlaylistAddIcon fontSize="small" />
+                  <PlaylistAddIcon fontSize="medium" />
                 </IconButton>
               </span>
             </Tooltip>
             <Tooltip title="Показать информацию по задаче">
               <IconButton
-                size="small"
+                size="medium"
                 sx={(theme) => ({ color: theme.palette.info.main })}
                 onClick={(event) => {
                   event.stopPropagation();
                   handleOpenInfo(params.row as TaskListItem);
                 }}
               >
-                <InfoIcon fontSize="small" />
+                <InfoIcon fontSize="medium" />
               </IconButton>
             </Tooltip>
           </Stack>
