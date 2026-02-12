@@ -53,7 +53,12 @@ const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
     const next = new Set<string>();
     const meta: Record<
       string,
-      { checklistItemId?: string | null; remainTimeMinutes?: number }
+      {
+        checklistItemId?: string | null;
+        remainTimeMinutes?: number;
+        workPlanId?: number | null;
+        worklogIdInternal?: number | null;
+      }
     > = {};
     effectivePlanItems.forEach((item) => {
       const key = String(item.TaskKey);
@@ -62,6 +67,8 @@ const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
         meta[key] = {
           checklistItemId: item.checklistItemId ?? null,
           remainTimeMinutes: item.RemainTimeMinutes,
+          workPlanId: item.YT_TL_WORKPLAN_ID ?? null,
+          worklogIdInternal: item.YT_TL_WORKLOG_ID ?? null,
         };
       } else if (!meta[key].checklistItemId && item.checklistItemId) {
         meta[key].checklistItemId = item.checklistItemId;
@@ -134,6 +141,8 @@ const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
           ...item,
           checklistItemId: meta?.checklistItemId ?? null,
           remainTimeMinutes: meta?.remainTimeMinutes,
+          workPlanId: meta?.workPlanId ?? null,
+          worklogIdInternal: meta?.worklogIdInternal ?? null,
         };
       });
   }, [normalizedData, planKeys, planMeta]);
@@ -174,6 +183,8 @@ const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
         groupIssue: string;
         checklistItemId?: string | null;
         remainTimeMinutes?: number;
+        workPlanId?: number | null;
+        worklogIdInternal?: number | null;
         fields: Record<string, string[]>;
       }
     > = {};
@@ -194,6 +205,8 @@ const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
           groupIssue: item.groupIssue,
           checklistItemId: item.checklistItemId ?? null,
           remainTimeMinutes: item.remainTimeMinutes,
+          workPlanId: item.workPlanId ?? null,
+          worklogIdInternal: item.worklogIdInternal ?? null,
           fields,
         };
       }
@@ -215,6 +228,8 @@ const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
         groupIssue: row.groupIssue,
         checklistItemId: row.checklistItemId ?? null,
         remainTimeMinutes: row.remainTimeMinutes,
+        workPlanId: row.workPlanId ?? null,
+        worklogIdInternal: row.worklogIdInternal ?? null,
         ...result,
         total: displayDuration(sumDurations(totalsVals)),
       };

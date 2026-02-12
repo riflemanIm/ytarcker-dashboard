@@ -260,6 +260,8 @@ export interface MenuState {
   issueId: string | null;
   checklistItemId?: string | null;
   remainTimeMinutes?: number;
+  workPlanId?: string | number | null;
+  worklogIdInternal?: string | number | null;
   durations: DurationItem[] | null;
   dateField: Dayjs | null;
 }

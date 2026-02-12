@@ -11,6 +11,8 @@ const createEmptyMenuState = (): MenuState => ({
   issueId: null,
   checklistItemId: null,
   remainTimeMinutes: undefined,
+  workPlanId: null,
+  worklogIdInternal: null,
   durations: null,
   dateField: null,
 });
@@ -129,6 +131,8 @@ export const useTimeSpendCellControls = ({
         issueId: params.row.issueId,
         checklistItemId: params.row.checklistItemId ?? null,
         remainTimeMinutes: params.row.remainTimeMinutes,
+        workPlanId: params.row.workPlanId ?? null,
+        worklogIdInternal: params.row.worklogIdInternal ?? null,
         durations: durations ?? null,
         dateField: getDateForField(params.field as string),
       });
@@ -160,6 +164,8 @@ export const useTimeSpendCellControls = ({
         issueId: params.row.issueId,
         checklistItemId: params.row.checklistItemId ?? null,
         remainTimeMinutes: params.row.remainTimeMinutes,
+        workPlanId: params.row.workPlanId ?? null,
+        worklogIdInternal: params.row.worklogIdInternal ?? null,
         durations,
         dateField: getDateForField(params.field as string),
       };

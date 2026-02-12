@@ -208,14 +208,6 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
     [issueTypes],
   );
 
-  const getWorklogId = useCallback((item: DurationItem): string | null => {
-    const fromComment = extractWorklogId(item.comment ?? "");
-    if (fromComment) return fromComment;
-    if (item.id == null) return null;
-    const id = String(item.id);
-    return id ? id : null;
-  }, []);
-
   const getDurationKey = useCallback((item: DurationItem): string => {
     const worklogId = extractWorklogId(item.comment ?? "");
     if (worklogId) return `wl:${worklogId}`;
@@ -437,12 +429,19 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
         issueId: menuState.issueId,
         duration: normalizeDuration(row.durationRaw ?? ""),
         comment: row.cleanComment,
-        worklogId: getWorklogId(item),
+        worklogId: item.id,
+        worklogIdInternal:
+          menuState.worklogIdInternal ??
+          extractWorklogId(item.comment ?? "") ??
+          undefined,
         deadlineOk: riskState.deadlineOk,
         needUpgradeEstimate: riskState.needUpgradeEstimate,
         makeTaskFaster: riskState.makeTaskFaster,
         issueTypeLabel: row.selectedLabel ?? null,
-        workPlanId: extractWorkPlanId(item.comment ?? "") ?? undefined,
+        workPlanId:
+          menuState.workPlanId ??
+          extractWorkPlanId(item.comment ?? "") ??
+          undefined,
         trackerUid,
         checklistItemId: menuState.checklistItemId ?? undefined,
       });
@@ -458,12 +457,13 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
     riskState,
     getRowFromItem,
     getDurationKey,
-    getWorklogId,
     setData,
     dispatch,
     token,
     menuState.issueId,
     menuState.dateField,
+    menuState.workPlanId,
+    menuState.worklogIdInternal,
     trackerUid,
     onClose,
     bumpWorkPlanRefresh,
@@ -599,6 +599,8 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
       issueTypeLabel: selectedIssueTypeLabelNew ?? null,
       trackerUid,
       checklistItemId: menuState.checklistItemId ?? undefined,
+      workPlanId: menuState.workPlanId ?? undefined,
+      worklogIdInternal: menuState.worklogIdInternal ?? undefined,
     });
     setNewEntry({ duration: "", comment: "" });
     setSelectedIssueTypeLabelNew(null);
@@ -613,6 +615,8 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
     setData,
     menuState.dateField,
     menuState.issueId,
+    menuState.workPlanId,
+    menuState.worklogIdInternal,
     dispatch,
     token,
     trackerUid,
@@ -623,15 +627,11 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
   // --- Удаление
   const handleConfirmDeleteAll = useCallback(() => {
     if (menuState.durations?.length) {
-      const items = menuState.durations.map((item) => ({
-        ...item,
-        id: getWorklogId(item) ?? item.id,
-      }));
       deleteData({
         token,
         dispatch,
         issueId: menuState.issueId,
-        durations: items,
+        durations: menuState.durations ?? undefined,
         trackerUid,
       });
     }
@@ -646,23 +646,16 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
     onClose,
     trackerUid,
     bumpWorkPlanRefresh,
-    getWorklogId,
   ]);
 
   const handleCancelDeleteAll = useCallback(() => setOpenConfirm(false), []);
   const handleDeleteItem = useCallback(
     (item: DurationItem) => {
-      const worklogId = getWorklogId(item);
       deleteData({
         token,
         dispatch,
         issueId: menuState.issueId,
-        durations: [
-          {
-            ...item,
-            id: worklogId ?? item.id,
-          },
-        ],
+        durations: [item],
         trackerUid,
       });
       bumpWorkPlanRefresh();
@@ -676,7 +669,6 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
       onClose,
       trackerUid,
       bumpWorkPlanRefresh,
-      getWorklogId,
     ],
   );
 
@@ -841,10 +833,7 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
                                     `${id}-${label}`,
                                     label,
                                     () =>
-                                      handleIssueTypeChangeForItem(
-                                        id,
-                                        label,
-                                      ),
+                                      handleIssueTypeChangeForItem(id, label),
                                   ),
                                 )}
                               </Stack>

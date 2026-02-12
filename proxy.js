@@ -386,6 +386,7 @@ app.post("/api/worklog_update", async (req, res) => {
       startDate,
       comment,
       worklogId,
+      worklogIdInternal,
       trackerUid,
       checklistItemId,
       deadlineOk,
@@ -398,6 +399,11 @@ app.post("/api/worklog_update", async (req, res) => {
     console.log("delete items =", items);
     const hasToken = typeof token === "string" && token.length > 0;
     const resolvedDurationMinutes = resolveDurationMinutes(duration);
+    const internalWorklogIdFromRequest = Number.isInteger(
+      Number(worklogIdInternal),
+    )
+      ? Number(worklogIdInternal)
+      : undefined;
     if (typeof taskKey !== "string" || taskKey.length === 0) {
       return res.status(400).json({
         message: "Missing or invalid field 'taskKey'. It must be a string.",
@@ -511,11 +517,12 @@ app.post("/api/worklog_update", async (req, res) => {
     if (!hasToken) {
       if (
         (action === 1 || action === 2) &&
-        !Number.isInteger(Number(worklogId))
+        !Number.isInteger(Number(worklogId)) &&
+        !Number.isInteger(Number(worklogIdInternal))
       ) {
         return res.status(400).json({
           message:
-            "Field 'worklogId' is required and must be an integer for Edit or Delete actions.",
+            "Field 'worklogIdInternal' or 'worklogId' is required and must be an integer for Edit or Delete actions.",
         });
       }
       const internalError = requireInternalFields({
@@ -531,7 +538,10 @@ app.post("/api/worklog_update", async (req, res) => {
         return res.status(400).json({ message: internalError });
       }
 
-      const commentWithTags = buildInternalComment(comment);
+      const commentWithTags = buildInternalComment(
+        comment,
+        internalWorklogIdFromRequest,
+      );
       const internalResponse = await sendInternalLogged(
         buildInternalPayload({
           duration: resolvedDurationMinutes,
@@ -539,9 +549,9 @@ app.post("/api/worklog_update", async (req, res) => {
           comment: commentWithTags,
           action,
           checklistItemId,
-          worklogId: Number.isInteger(Number(worklogId))
-            ? Number(worklogId)
-            : undefined,
+          worklogId:
+            internalWorklogIdFromRequest ??
+            (Number.isInteger(Number(worklogId)) ? Number(worklogId) : undefined),
         }),
         "internal-only",
       );
@@ -611,7 +621,10 @@ app.post("/api/worklog_update", async (req, res) => {
           action === 1
             ? existingWorkPlanId
             : (workPlanId ?? existingWorkPlanId);
-        const resolvedWorklogId = action === 1 ? existingWorklogId : undefined;
+        const resolvedWorklogId =
+          action === 1
+            ? internalWorklogIdFromRequest ?? existingWorklogId
+            : internalWorklogIdFromRequest ?? undefined;
         const commentWithTags = buildInternalComment(
           comment,
           resolvedWorklogId,
@@ -647,7 +660,10 @@ app.post("/api/worklog_update", async (req, res) => {
               comment: commentWithTags,
               action,
               checklistItemId,
-              worklogId: action === 1 ? Number(worklogId) : undefined,
+              worklogId:
+                action === 1
+                  ? internalWorklogIdFromRequest ?? existingWorklogId
+                  : undefined,
             }),
           );
         } catch (error) {
@@ -686,7 +702,8 @@ app.post("/api/worklog_update", async (req, res) => {
           throw error;
         }
 
-        const internalWorklogId = internalResponse?.data?.YT_TL_WORKLOG_ID;
+        const internalWorklogIdFromResponse =
+          internalResponse?.data?.YT_TL_WORKLOG_ID;
         const trackerWorklogId =
           action === 1
             ? Number(worklogId)
@@ -700,7 +717,7 @@ app.post("/api/worklog_update", async (req, res) => {
         if (Number.isFinite(trackerWorklogId)) {
           const commentWithInternalTag = buildInternalComment(
             comment,
-            internalWorklogId ?? existingWorklogId,
+            internalWorklogIdFromResponse ?? resolvedWorklogId,
             resolvedWorkPlanId,
           );
           console.log("commentWithInternalTag\n\n", commentWithInternalTag);
@@ -720,7 +737,8 @@ app.post("/api/worklog_update", async (req, res) => {
                 comment: commentWithInternalTag,
                 action: 1,
                 checklistItemId,
-                worklogId: internalWorklogId,
+                worklogId:
+                  internalWorklogIdFromResponse ?? resolvedWorklogId ?? undefined,
               }),
             );
           }
@@ -738,7 +756,10 @@ app.post("/api/worklog_update", async (req, res) => {
         const responseData =
           updatedTrackerComment == null
             ? trackerResponse.data
-            : { ...(trackerResponse.data ?? {}), comment: updatedTrackerComment };
+            : {
+                ...(trackerResponse.data ?? {}),
+                comment: updatedTrackerComment,
+              };
         return res.json(responseData);
       }
       // Action: Delete
@@ -839,7 +860,8 @@ app.post("/api/worklog_update", async (req, res) => {
           headers(token),
         );
 
-        const internalWorklogId = extractWorklogIdFromComment(comment);
+        const internalWorklogId =
+          internalWorklogIdFromRequest ?? extractWorklogIdFromComment(comment);
         await sendInternalLogged(
           buildInternalPayload({
             duration: resolvedDurationMinutes,

@@ -174,6 +174,7 @@ export interface SetDataArgs {
   comment?: string;
   planningComment?: string;
   worklogId?: string | null;
+  worklogIdInternal?: string | number | null;
   addEndWorkDayTime?: boolean;
   trackerUid?: string | null;
   checklistItemId?: string | null;
@@ -230,6 +231,7 @@ export const setData = async ({
   comment = "",
   planningComment,
   worklogId = null,
+  worklogIdInternal = null,
   addEndWorkDayTime = true,
   trackerUid,
   checklistItemId,
@@ -311,6 +313,8 @@ export const setData = async ({
       startDate: internalStartDate,
       comment: planningComment ?? comment ?? "",
       worklogId: worklogId ? Number(worklogId) : undefined,
+      worklogIdInternal:
+        worklogIdInternal != null ? Number(worklogIdInternal) : undefined,
       trackerUid,
       checklistItemId,
       deadlineOk: deadlineOk ?? true,
