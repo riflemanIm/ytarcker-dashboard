@@ -551,7 +551,9 @@ app.post("/api/worklog_update", async (req, res) => {
           checklistItemId,
           worklogId:
             internalWorklogIdFromRequest ??
-            (Number.isInteger(Number(worklogId)) ? Number(worklogId) : undefined),
+            (Number.isInteger(Number(worklogId))
+              ? Number(worklogId)
+              : undefined),
         }),
         "internal-only",
       );
@@ -623,8 +625,8 @@ app.post("/api/worklog_update", async (req, res) => {
             : (workPlanId ?? existingWorkPlanId);
         const resolvedWorklogId =
           action === 1
-            ? internalWorklogIdFromRequest ?? existingWorklogId
-            : internalWorklogIdFromRequest ?? undefined;
+            ? (internalWorklogIdFromRequest ?? existingWorklogId)
+            : (internalWorklogIdFromRequest ?? undefined);
         const commentWithTags = buildInternalComment(
           comment,
           resolvedWorklogId,
@@ -660,10 +662,7 @@ app.post("/api/worklog_update", async (req, res) => {
               comment: commentWithTags,
               action,
               checklistItemId,
-              worklogId:
-                action === 1
-                  ? internalWorklogIdFromRequest ?? existingWorklogId
-                  : undefined,
+              worklogId: action === 1 ? Number(worklogId) : undefined,
             }),
           );
         } catch (error) {
@@ -738,7 +737,9 @@ app.post("/api/worklog_update", async (req, res) => {
                 action: 1,
                 checklistItemId,
                 worklogId:
-                  internalWorklogIdFromResponse ?? resolvedWorklogId ?? undefined,
+                  internalWorklogIdFromResponse ??
+                  resolvedWorklogId ??
+                  undefined,
               }),
             );
           }
