@@ -83,22 +83,22 @@ const HeaderFilters: FC<HeaderFiltersProps> = ({
           <SelectSprintList />
         </Box>
         {showAdminControls && (
-          <Box sx={{ flex: "1 1 160px", minWidth: 0 }}>
+          <Box sx={{ flex: "1 1 190px", minWidth: 0 }}>
             <AutocompleteGroupList />
           </Box>
         )}
         {showAdminControls && (
-          <Box sx={{ flex: "1 0 210px", minWidth: 0 }}>
+          <Box sx={{ flex: "1 0 190px", minWidth: 0 }}>
             <AutocompleteGroupPatientsList />
           </Box>
         )}
         {showAdminControls && (
-          <Box sx={{ flex: "0 0 220px", minWidth: 0 }}>
+          <Box sx={{ flex: "0 0 170px", minWidth: 0 }}>
             <AutocompleteRoleList />
           </Box>
         )}
         {showAdminControls && (
-          <Box sx={{ flex: "0 0 260px", minWidth: 0 }}>
+          <Box sx={{ flex: "0 0 170px", minWidth: 0 }}>
             <AutocompleteProjectList />
           </Box>
         )}
