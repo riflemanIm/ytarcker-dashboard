@@ -282,6 +282,10 @@ const YandexTracker: FC = () => {
   }, [fetchForActiveRange]);
 
   useEffect(() => {
+    fetchUserIssues();
+  }, [fetchUserIssues]);
+
+  useEffect(() => {
     if (viewMode !== "table_time_spend") return;
     const defaultGroupId = "4";
     if (
@@ -333,6 +337,7 @@ const YandexTracker: FC = () => {
     viewMode === "table_time_spend" &&
     !state.showAdminControls &&
     !isEmpty(appState.state.issues);
+  console.log("appState.state.issues", appState.state.issues);
   return (
     <>
       <AppUpdateDialog />
