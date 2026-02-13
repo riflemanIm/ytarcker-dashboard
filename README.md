@@ -71,6 +71,44 @@ Below is an overview of all functionality provided by YTracker-Dashboard:
 
 ---
 
+## View Modes (Menu)
+
+The header menu lets you switch between four modes (`ViewMode`):
+
+* **Time Spend Table** (`table_time_spend`) — weekly worklog table with inline add/edit/delete, totals by day and task.
+* **Time Plan** (`table_time_plan`) — sprint planning view with filters (sprint, group, role, project, assignee) and plan/capacity data.
+* **Report** (`report`) — monthly report aggregated by weeks (admin-only).
+* **Search** (`search`) — full‑text search across tasks/queues with task details and comments.
+
+Time Plan tables:
+* **Task Selection** (TableCheckPlan) — list of candidate tasks to include in plan, with filter, task info dialog, and “add to plan” action.
+* **Staff Capacity** (TableWorkPlanCapacity, admin) — capacity vs spent vs remaining by sprint/assignee/role for the selected period.
+* **Work Plan** (TableWorkPlan) — plan items with priorities, deadlines, estimates, spent/remaining, assignee and status; admin can edit/delete plan items; non‑admin can add time for a plan item.
+* **Time Spend by Plan** (TableTimeSpendByPlan) — shows only worklogs linked to plan tasks, with totals per day; editable only in non‑admin mode.
+
+---
+
+## Admin Mode (`isAdmin` / `planEditMode`)
+
+Admin access is defined by `isAdmin` (returned from TL user info).
+
+**If `isAdmin = false`**
+* No admin switch in the header.
+* `report` view is hidden.
+* Plan view shows only **Work Plan** and **Time Spend by Plan** tables; time entries are editable.
+
+**If `isAdmin = true`**
+* Header shows **Admin switch** (FetchModeSwitch) to toggle `showAdminControls`.
+* `report` view is available.
+* In **table_time_spend** you can switch between your own data and a selected employee.
+* In **table_time_plan** you get extra filters (group, patient, role, project) and the **Task Selection** and **Staff Capacity** tables.
+
+**If `planEditMode = true` (admin only)**
+* The UI forces **Time Plan** view (table time spend is hidden in the menu).
+* **Work Plan** becomes editable (add/edit/delete plan items).
+
+---
+
 ## Environment Setup
 
 Create a `.env` file in the project root and add the following variables:
@@ -94,6 +132,9 @@ Where:
 All methods are provided by the proxy server (port 4000).  
 Authentication: pass `token` (OAuth) either as query (GET) or in body (POST/PATCH).
 
+Worklog entries are saved **both** to Yandex Tracker and to the internal PMT system.  
+The `/api/worklog_update` endpoint orchestrates this synchronization.
+
 ### `GET /api/issues`
 Fetch worklog entries within a date range.  
 **Query Parameters**
@@ -115,43 +156,27 @@ Fetch worklog entries within a date range.
 
 ---
 
-### `POST /api/add_time`
-Create a new worklog entry.  
-**Body Parameters**
-- `token` (string, required)  
-- `issueId` (string, required)  
-- `start` (YYYY-MM-DDTHH:mm, required)  
-- `duration` (ISO 8601 duration, required)  
-- `comment` (string, optional)  
+### `POST /api/worklog_update`
+Unified endpoint to add/edit/delete a worklog entry in Yandex Tracker and synchronize internal TL data.
 
-**Response** → created worklog object.
+**Body Parameters (main)**
+- `token` (string, required for Tracker updates; can be omitted for internal-only updates)
+- `taskKey` (string, required)
+- `action` (number, required) — `0` Add, `1` Edit, `2` Delete
+- `duration` (number or string, required for add/edit)
+- `start` (YYYY-MM-DDTHH:mm, required for add)
+- `startDate` (YYYY-MM-DD or YYYY-MM-DDTHH:mm, required for internal updates)
+- `comment` (string, required)
+- `worklogId` (number, required for edit/delete)
+- `worklogIdInternal` (number, optional)
+- `trackerUid` (string, required for internal updates)
+- `checklistItemId` (string, optional)
+- `issueTypeLabel` (string, optional)
+- `workPlanId` (string or number, optional)
+- `deadlineOk`, `needUpgradeEstimate`, `makeTaskFaster` (boolean, required for internal updates)
+- `items` (array, optional) — batch delete payload (objects with `worklogId`, `duration`, `startDate`, `comment`, optional `checklistItemId`)
 
----
-
-### `PATCH /api/edit_time`
-Edit an existing worklog entry.  
-**Body Parameters**
-- `token` (string, required)  
-- `issueId` (string, required)  
-- `worklogId` (string, required)  
-- `duration` (ISO 8601, required)  
-- `comment` (string, optional)  
-
-**Response** → updated worklog object.
-
----
-
-### `POST /api/delete_all`
-Delete multiple worklog entries.  
-**Body Parameters**
-- `token` (string, required)  
-- `issueId` (string, required)  
-- `ids` (array of worklog IDs, required)  
-
-**Response**
-```json
-true
-```
+**Response** → created/updated worklog object, or `true` for delete.
 
 ---
 
@@ -169,6 +194,26 @@ Retrieve issues assigned to or created by a user, merged & deduplicated.
   ]
 }
 ```
+
+---
+
+### `GET /api/queues`
+Return list of available queues.  
+**Query Parameters**: `token` (string, required).  
+**Response** → `{ "queues": [{ "id": "1", "key": "ABC", "name": "Team ABC" }] }`.
+
+---
+
+### `GET /api/search_issues`
+Full‑text search by query and queue.  
+**Query Parameters**
+- `token` (string, required)
+- `search_str` (string, required)
+- `queue` (string, optional, `"all"` to disable filter)
+- `page` (number, optional, default 1)
+- `per_page` or `perPage` (number, optional, max 50)
+
+**Response** → `{ issues, total, page, perPage, hasMore }`.
 
 ---
 
@@ -198,6 +243,74 @@ Retrieve issue type list for a given entity key.
   "upstreamData": { /* raw upstream error */ }
 }
 ```
+
+---
+
+### `POST /api/tl_userinfo`
+Get TL user info by `trackerUid` or `email`.  
+**Body Parameters**: `trackerUid` (string, optional), `email` (string, optional).
+
+---
+
+### `POST /api/tl_sprints`
+Get list of sprints.
+
+---
+
+### `POST /api/tl_groups`
+Get list of groups.
+
+---
+
+### `POST /api/tl_roles`
+Get list of roles.
+
+---
+
+### `POST /api/tl_projects`
+Get list of projects.
+
+---
+
+### `POST /api/tl_group_patients`
+Get group patients by IDs.  
+**Body Parameters**: `groupIds` (array of integers, required).
+
+---
+
+### `POST /api/tl_tasklist`
+Get task list by filters.  
+**Body Parameters**: `trackerUids` (string[]), `projectIds` (int[]), `roleIds` (int[]), `groupIds` (int[]).
+
+---
+
+### `POST /api/tl_workplan`
+Get work plan by sprint and filters.  
+**Body Parameters**: `sprintId` (int, required), `trackerUids` (string[]), `projectIds` (int[]), `roleIds` (int[]), `groupIds` (int[]).
+
+---
+
+### `POST /api/tl_workplan_capacity`
+Get work plan capacity for a date range and filters.  
+**Body Parameters**: `dateStart` (string, required), `dateEnd` (string, required), `trackerUids` (string[]), `projectIds` (int[]), `roleIds` (int[]), `groupIds` (int[]).
+
+---
+
+### `POST /api/setworkplan`
+Create/edit/delete a work plan item.  
+**Body Parameters**: `sprintId` (int, required), `taskKey` (string, required), `trackerUid` (string, required), `action` (0/1/2, required), `workPlanId` (int, required for edit/delete), `checklistItemId`, `workName`, `deadline`, `estimateTimeMinutes`, `priority`.
+
+---
+
+### `POST /api/task_plan_info`
+Get plan info for a task.  
+**Body Parameters**: `taskKey` (string, required).
+
+---
+
+### `POST /api/yt_tl_checklist_data`
+Sync/checklist plan data by entity.  
+**Body Parameters**: `entityKey` (string, required), optional flags `updatePlan`, `rePlan`, `synchronizePlan` (boolean).
 
 ---
 
