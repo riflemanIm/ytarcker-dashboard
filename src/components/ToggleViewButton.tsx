@@ -26,32 +26,38 @@ const VIEW_MODE_OPTIONS: Array<{
   icon: IconComponent;
   tooltip: string;
   menuLabel: string;
-  isAdminOnly?: boolean;
+  access?: (params: {
+    isAdmin: boolean;
+    planEditMode: boolean;
+  }) => boolean;
 }> = [
   {
     mode: "table_time_spend",
     icon: TodayIcon,
     tooltip: "Показать таблицу списания времени за неделю",
     menuLabel: "Списания",
+    access: ({ planEditMode }) => !planEditMode,
   },
   {
     mode: "table_time_plan",
     icon: EventNoteIcon,
     tooltip: "Показать планирования времени",
     menuLabel: "Планирование",
+    access: () => true,
   },
   {
     mode: "report",
     icon: DateRangeIcon,
     tooltip: "Показать месячный отчёт по неделям",
     menuLabel: "Месячный отчёт",
-    isAdminOnly: true,
+    access: ({ isAdmin }) => isAdmin,
   },
   {
     mode: "search",
     icon: SearchIcon,
     tooltip: "Перейти в поиск по задачам",
     menuLabel: "Поиск по задачам",
+    access: () => true,
   },
 ];
 
@@ -67,10 +73,10 @@ export default function ToggleViewButton({
   const [anchorEl, setAnchorEl] = React.useState<HTMLElement | null>(null);
 
   React.useEffect(() => {
-    if (isAdmin && planEditMode && viewMode === "table_time_spend") {
+    if (planEditMode && viewMode === "table_time_spend") {
       onChange("table_time_plan");
     }
-  }, [isAdmin, planEditMode, viewMode, onChange]);
+  }, [planEditMode, viewMode, onChange]);
 
   const currentOption =
     VIEW_MODE_OPTIONS.find((option) => option.mode === viewMode) ||
@@ -125,15 +131,11 @@ export default function ToggleViewButton({
         transformOrigin={{ vertical: "top", horizontal: "center" }}
       >
         {VIEW_MODE_OPTIONS.filter((option) => {
-          if (option.isAdminOnly && !isAdmin) return false;
-          if (
-            option.mode === "table_time_spend" &&
-            isAdmin &&
-            planEditMode
-          ) {
-            return false;
-          }
-          return true;
+          if (!option.access) return true;
+          return option.access({
+            isAdmin,
+            planEditMode,
+          });
         }).map((option) => {
           const OptionIcon = option.icon;
           return (

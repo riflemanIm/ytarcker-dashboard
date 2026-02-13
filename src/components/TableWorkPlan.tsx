@@ -326,7 +326,7 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
         field: "Deadline",
         headerName: "Дедлайн",
         flex: 0.8,
-        minWidth: 110,
+        minWidth: 90,
         valueFormatter: (value: WorkPlanItem["Deadline"]) =>
           value && dayjs(value).isValid()
             ? dayjs(value).format("DD.MM.YYYY")
@@ -352,39 +352,60 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
         field: "EstimateTimeMinutes",
         headerName: "Оценка.",
         flex: 0.7,
-        minWidth: 100,
+        minWidth: 90,
         valueFormatter: (value: WorkPlanItem["EstimateTimeMinutes"]) =>
-          formatWorkMinutes(value),
-      },
-      {
-        field: "SpentTimeMinutes",
-        headerName: "Потрачено.",
-        flex: 0.8,
-        minWidth: 110,
-        valueFormatter: (value: WorkPlanItem["SpentTimeMinutes"]) =>
           formatWorkMinutes(value),
       },
       {
         field: "RemainTimeMinutes",
         headerName: "Остаток.",
         flex: 0.8,
-        minWidth: 110,
+        minWidth: 90,
         valueFormatter: (value: WorkPlanItem["RemainTimeMinutes"]) =>
           formatWorkMinutes(value),
       },
       {
+        field: "Comment",
+        headerName: "Комментарий",
+        flex: 1,
+        minWidth: 280,
+        renderCell: (params: GridRenderCellParams) => (
+          <Typography
+            variant="body2"
+            sx={{
+              whiteSpace: "normal",
+              lineHeight: 1.2,
+              height: "100%",
+              display: "flex",
+              alignItems: "center",
+            }}
+          >
+            {params.value ?? "-"}
+          </Typography>
+        ),
+      },
+      {
         field: "CheckListAssignee",
         headerName: "Тек.Исполнитель",
-        flex: 1.2,
-        minWidth: 160,
+        flex: 1,
+        minWidth: 120,
       },
       {
         field: "StatusName",
         headerName: "Статус",
         flex: 1,
-        minWidth: 140,
+        minWidth: 120,
         renderCell: (params: GridRenderCellParams) => (
-          <Typography sx={{ whiteSpace: "normal", lineHeight: 1.2 }}>
+          <Typography
+            variant="body2"
+            sx={{
+              whiteSpace: "normal",
+              lineHeight: 1.2,
+              height: "100%",
+              display: "flex",
+              alignItems: "center",
+            }}
+          >
             {params.value ?? "-"}
           </Typography>
         ),

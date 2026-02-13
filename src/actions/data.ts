@@ -144,6 +144,16 @@ export const getTlUserInfo = async ({
     const localAdmin = getLocalAdmin(login ?? null);
     dispatch({
       type: "setState",
+      // payload: (prev) => ({
+      //   ...prev,
+      //   loginUid: info.trackerUid ?? prev.loginUid ?? null,
+      //   isAdmin: localAdmin?.isAdmin ?? info.isAdmin ?? prev.isAdmin ?? false,
+      //   planEditMode:
+      //     localAdmin?.planEditMode ??
+      //     info.planEditMode ??
+      //     prev.planEditMode ??
+      //     false,
+      // }),
       payload: (prev) => ({
         ...prev,
         loginUid: info.trackerUid ?? prev.loginUid ?? null,
