@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { Box, Button, Typography } from "@mui/material";
+import { Button } from "@mui/material";
 import axios from "axios";
 
 import { useAppContext } from "@/context/AppContext";
@@ -75,17 +75,7 @@ const LogInOut: React.FC = () => {
     }
   }, []);
 
-  return token ? (
-    <Box textAlign="right">
-      <Button onClick={() => handleLogout()}>Выйти </Button>
-
-      <Typography variant="subtitle1" color="text.secondary">
-        {localStorage.getItem("yandex_login")}
-      </Typography>
-    </Box>
-  ) : (
-    <Button onClick={handleLogin}>Войти</Button>
-  );
+  return token ? null : <Button onClick={handleLogin}>Войти</Button>;
 };
 
 export default LogInOut;

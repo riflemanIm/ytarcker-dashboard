@@ -1,9 +1,7 @@
-import * as React from "react";
 import { FormControlLabel, Switch, Tooltip } from "@mui/material";
 
 export interface FetchModeSwitchProps {
   showAdminControls: boolean;
-  login?: string | null;
   onToggle: () => void;
   disabled?: boolean;
 }
@@ -15,7 +13,6 @@ export interface FetchModeSwitchProps {
  */
 export default function FetchModeSwitch({
   showAdminControls,
-  login,
   onToggle,
   disabled,
 }: FetchModeSwitchProps) {
@@ -34,9 +31,8 @@ export default function FetchModeSwitch({
             disabled={disabled}
           />
         }
-        labelPlacement="bottom"
-        label={!showAdminControls ? login || "" : ""}
         sx={{ m: 0 }}
+        label=""
       />
     </Tooltip>
   );

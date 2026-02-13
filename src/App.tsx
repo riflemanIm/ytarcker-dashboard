@@ -78,17 +78,6 @@ const YandexTracker: FC = () => {
     [dispatch],
   );
 
-  const toggleShowAdminControls = () => {
-    dispatch({
-      type: "setState",
-      payload: (prev) => ({
-        ...prev,
-        showAdminControls: !prev.showAdminControls,
-        dataTimeSpend: [],
-      }),
-    });
-  };
-
   // НЕДЕЛЬНЫЙ РЕЖИМ (TableTimeSpend)
   const { start, end } = useMemo(() => getWeekRange(weekOffset), [weekOffset]);
   const sprintLabel = useMemo(() => {
@@ -332,7 +321,6 @@ const YandexTracker: FC = () => {
   };
 
   //console.log("appState", appState);
-  const isSuperUser = !!state.isAdmin;
   const shouldShowAddDialog =
     viewMode === "table_time_spend" &&
     !state.showAdminControls &&
@@ -354,12 +342,6 @@ const YandexTracker: FC = () => {
       >
         <Grid size={12}>
           <AppHeader
-            isSuperUser={isSuperUser}
-            dataTimeSpendLoading={state.dataTimeSpendLoading}
-            viewMode={viewMode}
-            onViewModeChange={(mode) =>
-              dispatch({ type: "setViewMode", payload: mode })
-            }
             weekNavigation={{
               start,
               end,
@@ -382,11 +364,7 @@ const YandexTracker: FC = () => {
               onThisMonth: handleThisReportMonth,
               onNextMonth: handleNextReportMonth,
             }}
-            showRangeControls={viewMode !== "search"}
-            showAdminControls={state.showAdminControls}
-            onToggleShowAdminControls={toggleShowAdminControls}
             onRefresh={handleRefresh}
-            showRefresh={viewMode !== "search"}
           />
         </Grid>
         {token && (

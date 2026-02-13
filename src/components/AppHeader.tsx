@@ -3,46 +3,51 @@ import { ViewMode } from "@/types/global";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import { Box, IconButton, Paper, Stack, useTheme } from "@mui/material";
 import { FC } from "react";
+import AutocompleteGroupPatientsList from "./AutocompleteGroupPatientsList";
+import FetchModeSwitch from "./FetchModeSwitch";
 import HeaderFilters, {
   ReportRangeProps,
   WeekNavigationProps,
 } from "./HeaderFilters";
-import LogInOut from "./LogInOut";
+import LogInOut, { handleLogout } from "./LogInOut";
+import SyncChecklistDataPlanDialog from "./SyncChecklistDataPlanDialog";
 import ToggleViewButton from "./ToggleViewButton";
 
 interface AppHeaderProps {
-  isSuperUser: boolean;
-  showAdminControls: boolean;
-  dataTimeSpendLoading: boolean;
-  viewMode: ViewMode;
-  onViewModeChange: (mode: ViewMode) => void;
   weekNavigation: WeekNavigationProps;
   reportRange: ReportRangeProps;
-  showRangeControls: boolean;
-  onToggleShowAdminControls: () => void;
   onRefresh: () => void;
-  showRefresh: boolean;
 }
 
 const AppHeader: FC<AppHeaderProps> = ({
-  isSuperUser,
-  showAdminControls,
-  dataTimeSpendLoading,
-  viewMode,
-  onViewModeChange,
   weekNavigation,
   reportRange,
-  showRangeControls,
-  onToggleShowAdminControls,
   onRefresh,
-  showRefresh,
 }) => {
-  const { state } = useAppContext();
-  const { token, login } = state.auth;
-  const canShowAdminControls =
-    !!token && !dataTimeSpendLoading && !!isSuperUser;
-  const showRange = !!token && !dataTimeSpendLoading && showRangeControls;
+  const { state: appState, dispatch } = useAppContext();
+  const { auth, state, viewMode } = appState;
+  const { token, login } = auth;
+  const { isAdmin, showAdminControls, dataTimeSpendLoading, planEditMode } =
+    state;
+  const showRange = !!token && !dataTimeSpendLoading && viewMode !== "search";
+  const showRefresh = viewMode !== "search";
   const theme = useTheme();
+  const isLoading = dataTimeSpendLoading;
+
+  const handleViewModeChange = (mode: ViewMode) => {
+    dispatch({ type: "setViewMode", payload: mode });
+  };
+
+  const handleToggleShowAdminControls = () => {
+    dispatch({
+      type: "setState",
+      payload: (prev) => ({
+        ...prev,
+        showAdminControls: !prev.showAdminControls,
+        dataTimeSpend: [],
+      }),
+    });
+  };
 
   return (
     <Paper
@@ -76,31 +81,44 @@ const AppHeader: FC<AppHeaderProps> = ({
         <Box
           sx={{
             minWidth: 200,
-            mr: "auto",
-            display: "flex",
-            alignItems: "center",
-            gap: 1,
           }}
         >
           <ToggleViewButton
-            isAdmin={!!isSuperUser}
-            planEditMode={!!state.state.planEditMode}
+            isAdmin={!!isAdmin}
+            planEditMode={!!planEditMode}
             viewMode={viewMode}
-            onChange={onViewModeChange}
+            onChange={handleViewModeChange}
+            login={login}
+            showLogout={!!token}
+            onLogout={handleLogout}
           />
         </Box>
 
+        {isAdmin && (
+          <Box>
+            <FetchModeSwitch
+              showAdminControls={showAdminControls}
+              onToggle={handleToggleShowAdminControls}
+              disabled={isLoading}
+            />
+          </Box>
+        )}
+        {showAdminControls && viewMode !== "table_time_plan" && (
+          <Box
+            sx={{
+              minWidth: 250,
+              pr: 1,
+            }}
+          >
+            <AutocompleteGroupPatientsList />
+          </Box>
+        )}
         <HeaderFilters
-          isSuperUser={canShowAdminControls}
           showAdminControls={showAdminControls}
           showRange={showRange}
           viewMode={viewMode}
           weekNavigation={weekNavigation}
           reportRange={reportRange}
-          login={login}
-          onToggleShowAdminControls={onToggleShowAdminControls}
-          dataTimeSpendLoading={dataTimeSpendLoading}
-          onRefresh={onRefresh}
         />
 
         <Stack
@@ -116,6 +134,13 @@ const AppHeader: FC<AppHeaderProps> = ({
           <Box sx={{ display: "flex", justifyContent: "flex-end", flex: 1 }}>
             <LogInOut />
           </Box>
+          {showAdminControls &&
+            viewMode === "table_time_plan" &&
+            !dataTimeSpendLoading && (
+              <Box sx={{ flex: "1 1 0", minWidth: 0 }}>
+                <SyncChecklistDataPlanDialog onRefresh={onRefresh} />
+              </Box>
+            )}
           {showRefresh && !!token && !dataTimeSpendLoading && (
             <IconButton
               onClick={onRefresh}

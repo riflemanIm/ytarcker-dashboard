@@ -6,10 +6,8 @@ import AutocompleteGroupList from "./AutocompleteGroupList";
 import AutocompleteGroupPatientsList from "./AutocompleteGroupPatientsList";
 import AutocompleteProjectList from "./AutocompleteProjectList";
 import AutocompleteRoleList from "./AutocompleteRoleList";
-import FetchModeSwitch from "./FetchModeSwitch";
 import ReportDateRange from "./ReportDateRange";
 import SelectSprintList from "./SelectSprintList";
-import SyncChecklistDataPlanDialog from "./SyncChecklistDataPlanDialog";
 import WeekNavigator from "./WeekNavigator";
 
 export interface WeekNavigationProps {
@@ -29,31 +27,20 @@ export interface ReportRangeProps {
 }
 
 interface HeaderFiltersProps {
-  isSuperUser: boolean;
   showAdminControls: boolean;
   showRange: boolean;
   viewMode: ViewMode;
   weekNavigation: WeekNavigationProps;
   reportRange: ReportRangeProps;
-  login: string | null | undefined;
-  onToggleShowAdminControls: () => void;
-  dataTimeSpendLoading: boolean;
-  onRefresh: () => void | Promise<void>;
 }
 
 const HeaderFilters: FC<HeaderFiltersProps> = ({
-  isSuperUser,
   showAdminControls,
   showRange,
   viewMode,
   weekNavigation,
   reportRange,
-  login,
-  onToggleShowAdminControls,
-  dataTimeSpendLoading,
-  onRefresh,
 }) => {
-  const isLoading = dataTimeSpendLoading;
   const rangeFilters =
     viewMode === "table_time_spend" ? (
       <WeekNavigator
@@ -83,12 +70,12 @@ const HeaderFilters: FC<HeaderFiltersProps> = ({
           <SelectSprintList />
         </Box>
         {showAdminControls && (
-          <Box sx={{ flex: "1 1 190px", minWidth: 0 }}>
+          <Box sx={{ flex: "1 1 270px", minWidth: 0 }}>
             <AutocompleteGroupList />
           </Box>
         )}
         {showAdminControls && (
-          <Box sx={{ flex: "1 0 190px", minWidth: 0 }}>
+          <Box sx={{ flex: "1 1 250px", minWidth: 0 }}>
             <AutocompleteGroupPatientsList />
           </Box>
         )}
@@ -116,33 +103,6 @@ const HeaderFilters: FC<HeaderFiltersProps> = ({
       flexWrap="nowrap"
       sx={{ overflowX: "auto", width: "100%", minWidth: 0, flex: "1 1 auto" }}
     >
-      {isSuperUser && (
-        <Stack alignItems="center" sx={{ flex: "0 0 auto" }}>
-          <Box sx={{ flex: "1 1 40px", minWidth: 40 }}>
-            <FetchModeSwitch
-              showAdminControls={showAdminControls}
-              login={login ?? ""}
-              onToggle={onToggleShowAdminControls}
-              disabled={isLoading}
-            />
-          </Box>
-
-          {showAdminControls && viewMode !== "table_time_plan" && (
-            <Box sx={{ flex: "1 1 260px", minWidth: 260 }}>
-              <AutocompleteGroupPatientsList />
-            </Box>
-          )}
-
-          {showAdminControls &&
-            viewMode === "table_time_plan" &&
-            !dataTimeSpendLoading && (
-              <Box sx={{ flex: "1 1 0", minWidth: 0 }}>
-                <SyncChecklistDataPlanDialog onRefresh={onRefresh} />
-              </Box>
-            )}
-        </Stack>
-      )}
-
       {showRange && rangeFilters && (
         <Box
           sx={{

@@ -1,13 +1,17 @@
 import DateRangeIcon from "@mui/icons-material/DateRange";
 import EventNoteIcon from "@mui/icons-material/EventNote";
+import LogoutIcon from "@mui/icons-material/Logout";
 import SearchIcon from "@mui/icons-material/Search";
 import TodayIcon from "@mui/icons-material/Today";
 import {
+  Box,
   Button,
+  Divider,
   ListItemIcon,
   ListItemText,
   Menu,
   MenuItem,
+  Typography,
 } from "@mui/material";
 import * as React from "react";
 import { ViewMode } from "../types/global";
@@ -17,6 +21,9 @@ export interface ToggleViewButtonProps {
   onChange: (mode: ViewMode) => void;
   isAdmin: boolean;
   planEditMode: boolean;
+  login?: string | null;
+  showLogout?: boolean;
+  onLogout?: () => void;
 }
 
 type IconComponent = typeof TodayIcon;
@@ -26,10 +33,7 @@ const VIEW_MODE_OPTIONS: Array<{
   icon: IconComponent;
   tooltip: string;
   menuLabel: string;
-  access?: (params: {
-    isAdmin: boolean;
-    planEditMode: boolean;
-  }) => boolean;
+  access?: (params: { isAdmin: boolean; planEditMode: boolean }) => boolean;
 }> = [
   {
     mode: "table_time_spend",
@@ -69,6 +73,9 @@ export default function ToggleViewButton({
   onChange,
   isAdmin,
   planEditMode,
+  login,
+  showLogout = false,
+  onLogout,
 }: ToggleViewButtonProps) {
   const [anchorEl, setAnchorEl] = React.useState<HTMLElement | null>(null);
 
@@ -105,6 +112,7 @@ export default function ToggleViewButton({
           borderRadius: 2.5,
           px: 2.5,
           py: 1.25,
+          minWidth: 190,
           textTransform: "none",
           fontWeight: 500,
           fontSize: 15,
@@ -120,7 +128,18 @@ export default function ToggleViewButton({
           },
         })}
       >
-        {currentOption.menuLabel}
+        <Box sx={{ display: "flex", flexDirection: "column", lineHeight: 1.1 }}>
+          <span>{currentOption.menuLabel}</span>
+          {login && (
+            <Typography
+              component="span"
+              variant="caption"
+              sx={{ color: "inherit" }}
+            >
+              {login}
+            </Typography>
+          )}
+        </Box>
       </Button>
 
       <Menu
@@ -151,6 +170,20 @@ export default function ToggleViewButton({
             </MenuItem>
           );
         })}
+        {showLogout && onLogout && <Divider />}
+        {showLogout && onLogout && (
+          <MenuItem
+            onClick={() => {
+              handleClose();
+              onLogout();
+            }}
+          >
+            <ListItemIcon>
+              <LogoutIcon fontSize="medium" />
+            </ListItemIcon>
+            <ListItemText primary="Выйти" />
+          </MenuItem>
+        )}
       </Menu>
     </>
   );
