@@ -133,18 +133,20 @@ const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
 
   const filteredData = useMemo(() => {
     if (!planKeys.size) return [];
-    return normalizedData
-      .filter((item) => planKeys.has(String(item.issueId)))
-      .map((item) => {
-        const meta = planMeta[String(item.issueId)];
-        return {
-          ...item,
-          checklistItemId: meta?.checklistItemId ?? null,
-          remainTimeMinutes: meta?.remainTimeMinutes,
-          workPlanId: meta?.workPlanId ?? null,
-          worklogIdInternal: meta?.worklogIdInternal ?? null,
-        };
-      });
+    return (
+      normalizedData
+        //.filter((item) => planKeys.has(String(item.issueId)))
+        .map((item) => {
+          const meta = planMeta[String(item.issueId)];
+          return {
+            ...item,
+            checklistItemId: meta?.checklistItemId ?? null,
+            remainTimeMinutes: meta?.remainTimeMinutes,
+            workPlanId: meta?.workPlanId ?? null,
+            worklogIdInternal: meta?.worklogIdInternal ?? null,
+          };
+        })
+    );
   }, [normalizedData, planKeys, planMeta]);
 
   const dataForRange = useMemo(() => {
