@@ -40,6 +40,12 @@ const Palette = (mode: PaletteMode) => {
         white: '#fff'
       },
       ...paletteColor,
+      error: isDarkMode
+        ? {
+            ...paletteColor.error,
+            main: '#ff8c42'
+          }
+        : paletteColor.error,
       text: {
         primary: isDarkMode ? paletteColor.grey[50] : paletteColor.grey[700],
         secondary: isDarkMode ? paletteColor.grey[300] : paletteColor.grey[500],
