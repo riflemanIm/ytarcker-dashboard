@@ -333,7 +333,7 @@ const YandexTracker: FC = () => {
       <Grid
         container
         sx={{
-          background: "white",
+          backgroundColor: "background.default",
           height: "100vh",
 
           justifyContent: "center",
@@ -370,7 +370,12 @@ const YandexTracker: FC = () => {
         {token && (
           <Grid
             size={12}
-            sx={{ height: "87vh", background: "white", mx: "auto", mt: 2 }}
+            sx={{
+              height: "87vh",
+              backgroundColor: "background.default",
+              mx: "auto",
+              mt: 2,
+            }}
           >
             {viewMode === "search" ? (
               <SearchIssues token={token} />

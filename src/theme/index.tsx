@@ -2,6 +2,7 @@ import { ReactNode, useMemo } from 'react';
 
 // material-ui
 import { Components, CssBaseline, StyledEngineProvider, ThemeOptions, ThemeProvider, createTheme } from '@mui/material';
+import { useAppContext } from '@/context/AppContext';
 
 // project import
 import componentsOverride from './overrides';
@@ -12,8 +13,10 @@ import Typography from './typography';
 // ==============================|| DEFAULT THEME - MAIN  ||============================== //
 
 export default function ThemeCustomization(props: { children: ReactNode }) {
-  // const theme = Palette('light', 'default');
-  const theme = Palette('light');
+  const {
+    state: { paletteMode }
+  } = useAppContext();
+  const theme = useMemo(() => Palette(paletteMode), [paletteMode]);
 
   const themeTypography = Typography(`'Public Sans', sans-serif`);
   const themeCustomShadows = useMemo(() => CustomShadows(theme), [theme]);

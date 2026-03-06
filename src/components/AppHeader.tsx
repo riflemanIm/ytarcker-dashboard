@@ -1,7 +1,14 @@
 import { useAppContext } from "@/context/AppContext";
 import { ViewMode } from "@/types/global";
 import RefreshIcon from "@mui/icons-material/Refresh";
-import { Box, IconButton, Paper, Stack, useTheme } from "@mui/material";
+import {
+  Box,
+  IconButton,
+  PaletteMode,
+  Paper,
+  Stack,
+  useTheme,
+} from "@mui/material";
 import { FC } from "react";
 import AutocompleteGroupPatientsList from "./AutocompleteGroupPatientsList";
 import FetchModeSwitch from "./FetchModeSwitch";
@@ -25,7 +32,7 @@ const AppHeader: FC<AppHeaderProps> = ({
   onRefresh,
 }) => {
   const { state: appState, dispatch } = useAppContext();
-  const { auth, state, viewMode } = appState;
+  const { auth, state, viewMode, paletteMode } = appState;
   const { token, login } = auth;
   const { isAdmin, showAdminControls, dataTimeSpendLoading, planEditMode } =
     state;
@@ -36,6 +43,9 @@ const AppHeader: FC<AppHeaderProps> = ({
 
   const handleViewModeChange = (mode: ViewMode) => {
     dispatch({ type: "setViewMode", payload: mode });
+  };
+  const handlePaletteModeChange = (mode: PaletteMode) => {
+    dispatch({ type: "setPaletteMode", payload: mode });
   };
 
   const handleToggleShowAdminControls = () => {
@@ -91,6 +101,8 @@ const AppHeader: FC<AppHeaderProps> = ({
             login={login}
             showLogout={!!token}
             onLogout={handleLogout}
+            paletteMode={paletteMode}
+            onTogglePaletteMode={handlePaletteModeChange}
           />
         </Box>
 

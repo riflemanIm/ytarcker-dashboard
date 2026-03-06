@@ -11,6 +11,8 @@ import {
   ListItemText,
   Menu,
   MenuItem,
+  PaletteMode,
+  Switch,
   Typography,
 } from "@mui/material";
 import * as React from "react";
@@ -24,6 +26,8 @@ export interface ToggleViewButtonProps {
   login?: string | null;
   showLogout?: boolean;
   onLogout?: () => void;
+  paletteMode: PaletteMode;
+  onTogglePaletteMode: (mode: PaletteMode) => void;
 }
 
 type IconComponent = typeof TodayIcon;
@@ -76,6 +80,8 @@ export default function ToggleViewButton({
   login,
   showLogout = false,
   onLogout,
+  paletteMode,
+  onTogglePaletteMode,
 }: ToggleViewButtonProps) {
   const [anchorEl, setAnchorEl] = React.useState<HTMLElement | null>(null);
 
@@ -171,6 +177,34 @@ export default function ToggleViewButton({
           );
         })}
         {showLogout && onLogout && <Divider />}
+        {showLogout && onLogout && (
+          <MenuItem
+            disableRipple
+            onClick={(event) => {
+              event.preventDefault();
+            }}
+            sx={{
+              cursor: "default",
+              "&.MuiMenuItem-root:hover": {
+                backgroundColor: "transparent",
+              },
+            }}
+          >
+            <ListItemText primary="Тёмная тема" />
+            <Switch
+              edge="end"
+              checked={paletteMode === "dark"}
+              onChange={(event) => {
+                event.stopPropagation();
+                onTogglePaletteMode(
+                  paletteMode === "dark" ? "light" : "dark",
+                );
+              }}
+              onClick={(event) => event.stopPropagation()}
+              color="primary"
+            />
+          </MenuItem>
+        )}
         {showLogout && onLogout && (
           <MenuItem
             onClick={() => {

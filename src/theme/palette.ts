@@ -30,6 +30,7 @@ const Palette = (mode: PaletteMode) => {
   colors.grey = [...greyPrimary, ...greyAscent, ...greyConstant];
 
   const paletteColor = Theme(colors);
+  const isDarkMode = mode === 'dark';
 
   return createTheme({
     palette: {
@@ -40,17 +41,17 @@ const Palette = (mode: PaletteMode) => {
       },
       ...paletteColor,
       text: {
-        primary: paletteColor.grey[700],
-        secondary: paletteColor.grey[500],
-        disabled: paletteColor.grey[400]
+        primary: isDarkMode ? paletteColor.grey[50] : paletteColor.grey[700],
+        secondary: isDarkMode ? paletteColor.grey[300] : paletteColor.grey[500],
+        disabled: isDarkMode ? paletteColor.grey[600] : paletteColor.grey[400]
       },
       action: {
-        disabled: paletteColor.grey[300]
+        disabled: isDarkMode ? paletteColor.grey[700] : paletteColor.grey[300]
       },
-      divider: paletteColor.grey[200],
+      divider: isDarkMode ? paletteColor.grey[800] : paletteColor.grey[200],
       background: {
-        paper: paletteColor.grey[0],
-        default: paletteColor.grey.A50
+        paper: isDarkMode ? '#1e1e1e' : paletteColor.grey[0],
+        default: isDarkMode ? '#121212' : paletteColor.grey.A50
       }
     }
   });

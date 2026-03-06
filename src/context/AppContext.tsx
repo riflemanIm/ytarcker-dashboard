@@ -9,6 +9,7 @@ import {
   type SetStateAction,
 } from "react";
 import dayjs from "dayjs";
+import type { PaletteMode } from "@mui/material";
 import type {
   AlertState,
   AppState,
@@ -27,6 +28,7 @@ export type AppContextState = {
   auth: AuthState;
   state: AppState;
   alert: AlertState;
+  paletteMode: PaletteMode;
   viewMode: ViewMode;
   weekOffset: number;
   reportFrom: dayjs.Dayjs;
@@ -39,6 +41,7 @@ export type AppAction =
   | { type: "setAuth"; payload: SetStateAction<AuthState> }
   | { type: "setState"; payload: SetStateAction<AppState> }
   | { type: "setAlert"; payload: SetStateAction<AlertState> }
+  | { type: "setPaletteMode"; payload: SetStateAction<PaletteMode> }
   | { type: "setViewMode"; payload: SetStateAction<ViewMode> }
   | { type: "setWeekOffset"; payload: SetStateAction<number> }
   | { type: "setReportFrom"; payload: SetStateAction<dayjs.Dayjs> }
@@ -82,6 +85,13 @@ const initialAlert: AlertState = {
   open: false,
   severity: "",
   message: "",
+};
+
+const THEME_MODE_STORAGE_KEY = "theme_mode";
+const getInitialPaletteMode = (): PaletteMode => {
+  if (typeof window === "undefined") return "light";
+  const raw = window.localStorage.getItem(THEME_MODE_STORAGE_KEY);
+  return raw === "dark" ? "dark" : "light";
 };
 
 const initialViewMode: ViewMode = "table_time_spend";
@@ -140,6 +150,7 @@ const initAppContextState = (): AppContextState => ({
   auth: getInitialAuth(),
   state: initialState,
   alert: initialAlert,
+  paletteMode: getInitialPaletteMode(),
   viewMode: initialViewMode,
   weekOffset: initialWeekOffset,
   reportFrom: initialReportFrom,
@@ -159,6 +170,13 @@ function appReducer(
       return { ...state, state: applySetState(state.state, action.payload) };
     case "setAlert":
       return { ...state, alert: applySetState(state.alert, action.payload) };
+    case "setPaletteMode": {
+      const paletteMode = applySetState(state.paletteMode, action.payload);
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(THEME_MODE_STORAGE_KEY, paletteMode);
+      }
+      return { ...state, paletteMode };
+    }
     case "setViewMode":
       return {
         ...state,
