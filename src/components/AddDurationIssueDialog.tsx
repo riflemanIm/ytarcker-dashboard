@@ -6,6 +6,7 @@ import AddIcon from "@mui/icons-material/Add";
 import CloseIcon from "@mui/icons-material/Close";
 import {
   Button,
+  CircularProgress,
   Checkbox,
   Dialog,
   DialogActions,
@@ -64,6 +65,7 @@ export default function AddDurationIssueDialog({
     tableTimePlanState,
     state: { loginUid },
   } = state;
+  const isLoading = state.state.dataTimeSpendLoading;
 
   const [internalOpen, setInternalOpen] = useState(false);
   const [riskState, setRiskState] = useState({
@@ -171,11 +173,11 @@ export default function AddDurationIssueDialog({
       },
     });
 
+    handleClose();
     onSaved?.();
     if (onWorkPlanRefresh) {
       await onWorkPlanRefresh();
     }
-    handleClose();
   };
 
   const {
@@ -384,6 +386,7 @@ export default function AddDurationIssueDialog({
             )}
             <IconButton
               onClick={handleClose}
+              disabled={isLoading}
               sx={(theme) => ({
                 borderRadius: "50%",
                 p: 2,
@@ -402,126 +405,134 @@ export default function AddDurationIssueDialog({
         </DialogTitle>
 
         <DialogContent>
-          <Grid container spacing={2}>
-            {!hasTaskKey && (
-              <Grid size={12}>
-                <Autocomplete
-                  options={issues}
-                  getOptionLabel={(opt) => `[${opt.key}] ${opt.summary}`}
-                  value={values.issue}
-                  onChange={(_, val) => {
-                    const newVals = { ...values, issue: val, comment: "" };
-                    // при смене задачи сбрасываем комментарий и пересчитываем ошибки
+          {isLoading ? (
+            <Stack alignItems="center" justifyContent="center" sx={{ py: 4 }}>
+              <CircularProgress />
+            </Stack>
+          ) : (
+            <Grid container spacing={2}>
+              {!hasTaskKey && (
+                <Grid size={12}>
+                  <Autocomplete
+                    options={issues}
+                    getOptionLabel={(opt) => `[${opt.key}] ${opt.summary}`}
+                    value={values.issue}
+                    onChange={(_, val) => {
+                      const newVals = { ...values, issue: val, comment: "" };
+                      // при смене задачи сбрасываем комментарий и пересчитываем ошибки
+                      setValues(newVals);
+                      setErrors(validate(newVals));
+                    }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Задача"
+                        error={Boolean(errors.issue)}
+                        helperText={errors.issue}
+                        fullWidth
+                      />
+                    )}
+                    renderOption={(props, option) => (
+                      // ВАЖНО: props должны быть на li, а не на Grid
+                      <Grid container spacing={2} component="li" {...props}>
+                        <Grid size={3} component="div">
+                          <Typography variant="subtitle2" color="text.secondary">
+                            [{option.key}]
+                          </Typography>
+                        </Grid>
+                        <Grid size={9} component="div">
+                          <Typography variant="subtitle1">
+                            {option.summary}
+                          </Typography>
+                        </Grid>
+                      </Grid>
+                    )}
+                  />
+                </Grid>
+              )}
+
+              <Grid size={6}>
+                <MuiUIPicker
+                  value={values.dateTime ?? null}
+                  handleDateChange={(date) =>
+                    handleDateChange(dayjs(date), "dateTime")
+                  }
+                  label="Дата"
+                  errorText={errors.dateTime}
+                  name="dateTime"
+                  view="day"
+                />
+              </Grid>
+
+              <Grid size={6}>
+                <TextField
+                  label="Длительность"
+                  value={values.duration ?? ""}
+                  onChange={(e) => {
+                    const raw = e.target.value ?? "";
+                    const newVals = { ...values, duration: raw };
                     setValues(newVals);
                     setErrors(validate(newVals));
                   }}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      label="Задача"
-                      error={Boolean(errors.issue)}
-                      helperText={errors.issue}
-                      fullWidth
-                    />
-                  )}
-                  renderOption={(props, option) => (
-                    // ВАЖНО: props должны быть на li, а не на Grid
-                    <Grid container spacing={2} component="li" {...props}>
-                      <Grid size={3} component="div">
-                        <Typography variant="subtitle2" color="text.secondary">
-                          [{option.key}]
-                        </Typography>
-                      </Grid>
-                      <Grid size={9} component="div">
-                        <Typography variant="subtitle1">
-                          {option.summary}
-                        </Typography>
-                      </Grid>
-                    </Grid>
-                  )}
+                  margin="normal"
+                  error={Boolean(errors.duration)}
+                  helperText={errors.duration}
+                  fullWidth
                 />
               </Grid>
-            )}
 
-            <Grid size={6}>
-              <MuiUIPicker
-                value={values.dateTime ?? null}
-                handleDateChange={(date) =>
-                  handleDateChange(dayjs(date), "dateTime")
-                }
-                label="Дата"
-                errorText={errors.dateTime}
-                name="dateTime"
-                view="day"
-              />
-            </Grid>
-
-            <Grid size={6}>
-              <TextField
-                label="Длительность"
-                value={values.duration ?? ""}
-                onChange={(e) => {
-                  const raw = e.target.value ?? "";
-                  const newVals = { ...values, duration: raw };
-                  setValues(newVals);
-                  setErrors(validate(newVals));
-                }}
-                margin="normal"
-                error={Boolean(errors.duration)}
-                helperText={errors.duration}
-                fullWidth
-              />
-            </Grid>
-
-            <Grid size={12}>
-              <TextField
-                label="Комментарий"
-                name="comment"
-                multiline
-                minRows={3}
-                value={values.comment ?? ""} // ВСЕГДА чистый (без тегов)
-                onChange={(e) => {
-                  const newVals = { ...values, comment: e.target.value ?? "" };
-                  setValues(newVals);
-                  setErrors(validate(newVals));
-                }}
-                error={Boolean(errors.comment)}
-                helperText={errors.comment}
-                fullWidth
-              />
-            </Grid>
-
-            {values.issue && (
               <Grid size={12}>
-                <SelectIssueTypeList
-                  issueTypes={issueTypesState.issue_type_list}
-                  handleIssueTypeChange={(label) => {
-                    setSelectedIssueType(label || null);
+                <TextField
+                  label="Комментарий"
+                  name="comment"
+                  multiline
+                  minRows={3}
+                  value={values.comment ?? ""} // ВСЕГДА чистый (без тегов)
+                  onChange={(e) => {
+                    const newVals = { ...values, comment: e.target.value ?? "" };
+                    setValues(newVals);
+                    setErrors(validate(newVals));
                   }}
-                  selectedIssueTypeLabel={selectedIssueType ?? ""}
-                  margin="dense"
-                  required
-                  error={showTypeError}
-                  helperText={showTypeError ? "Укажите тип задачи" : ""}
-                  loading={!issueTypesState.loaded}
+                  error={Boolean(errors.comment)}
+                  helperText={errors.comment}
+                  fullWidth
                 />
               </Grid>
-            )}
 
-            <PlanningInfoSection
-              remainTimeMinutes={remainTimeMinutes}
-              duration={values.duration ?? ""}
-              riskSection={riskSection}
-            />
-          </Grid>
+              {values.issue && (
+                <Grid size={12}>
+                  <SelectIssueTypeList
+                    issueTypes={issueTypesState.issue_type_list}
+                    handleIssueTypeChange={(label) => {
+                      setSelectedIssueType(label || null);
+                    }}
+                    selectedIssueTypeLabel={selectedIssueType ?? ""}
+                    margin="dense"
+                    required
+                    error={showTypeError}
+                    helperText={showTypeError ? "Укажите тип задачи" : ""}
+                    loading={!issueTypesState.loaded}
+                  />
+                </Grid>
+              )}
+
+              <PlanningInfoSection
+                remainTimeMinutes={remainTimeMinutes}
+                duration={values.duration ?? ""}
+                riskSection={riskSection}
+              />
+            </Grid>
+          )}
         </DialogContent>
 
         <DialogActions>
-          <Button onClick={handleClose}>Отмена</Button>
+          <Button onClick={handleClose} disabled={isLoading}>
+            Отмена
+          </Button>
           <Button
             variant="contained"
             onClick={handleSubmit}
-            disabled={isSaveDisabled}
+            disabled={isLoading || isSaveDisabled}
           >
             Сохранить
           </Button>

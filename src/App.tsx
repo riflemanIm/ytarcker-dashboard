@@ -153,7 +153,7 @@ const YandexTracker: FC = () => {
         payload: {
           open: true,
           severity: "error",
-          message: "Подключитесь к корпоративному VPN.",
+          message: "Запрос вернулся с ошибкой (500) попробуйте еще раз",
         },
       });
       return false;

@@ -6,6 +6,7 @@ import InfoIcon from "@mui/icons-material/Info";
 import SyncAltIcon from "@mui/icons-material/SyncAlt";
 import {
   Button,
+  CircularProgress,
   Checkbox,
   Dialog,
   DialogActions,
@@ -102,9 +103,9 @@ export default function SyncChecklistDataPlanDialog({
           message: res.message || "Данные обновлены успешно",
         },
       });
+      handleClose();
       await onRefresh?.();
       await onSaved?.();
-      handleClose();
       return;
     }
 
@@ -227,6 +228,7 @@ export default function SyncChecklistDataPlanDialog({
             </Typography>
             <IconButton
               onClick={handleClose}
+              disabled={isLoading}
               sx={(theme) => ({
                 borderRadius: "50%",
                 p: 2,
@@ -245,106 +247,114 @@ export default function SyncChecklistDataPlanDialog({
         </DialogTitle>
 
         <DialogContent>
-          <Grid container spacing={2}>
-            <Grid size={12}>
-              <Stack direction="row" spacing={1} alignItems="top" py={2}>
-                <TextField
-                  label="Ключ задачи"
-                  name="entityKey"
-                  value={values.entityKey ?? ""}
-                  onChange={handleChange}
-                  error={Boolean(errors.entityKey)}
-                  helperText={errors.entityKey}
-                  fullWidth
-                  sx={{
-                    my: 2,
-                  }}
-                />
-                <Tooltip title="Показать информацию по задаче">
-                  <IconButton
-                    sx={(theme) => ({
-                      borderRadius: "50%",
-                      mt: 2,
-                      color: theme.palette.background.default,
-                      background: theme.palette.primary.light,
-                      "&:hover": {
-                        color: theme.palette.background.default,
-                        background: theme.palette.primary.main,
-                      },
-                    })}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      handleOpenInfo();
-                    }}
-                    disabled={info.loading || !(values.entityKey ?? "").trim()}
-                  >
-                    <InfoIcon fontSize="large" />
-                  </IconButton>
-                </Tooltip>
-              </Stack>
-            </Grid>
-            {info.open && (
+          {isLoading ? (
+            <Stack alignItems="center" justifyContent="center" sx={{ py: 4 }}>
+              <CircularProgress />
+            </Stack>
+          ) : (
+            <Grid container spacing={2}>
               <Grid size={12}>
-                <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                  Информация по задаче • {info.taskKey ?? "-"}
-                </Typography>
-                <TableTaskPlanInfo rows={info.rows} loading={info.loading} />
+                <Stack direction="row" spacing={1} alignItems="top" py={2}>
+                  <TextField
+                    label="Ключ задачи"
+                    name="entityKey"
+                    value={values.entityKey ?? ""}
+                    onChange={handleChange}
+                    error={Boolean(errors.entityKey)}
+                    helperText={errors.entityKey}
+                    fullWidth
+                    sx={{
+                      my: 2,
+                    }}
+                  />
+                  <Tooltip title="Показать информацию по задаче">
+                    <IconButton
+                      sx={(theme) => ({
+                        borderRadius: "50%",
+                        mt: 2,
+                        color: theme.palette.background.default,
+                        background: theme.palette.primary.light,
+                        "&:hover": {
+                          color: theme.palette.background.default,
+                          background: theme.palette.primary.main,
+                        },
+                      })}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        handleOpenInfo();
+                      }}
+                      disabled={info.loading || !(values.entityKey ?? "").trim()}
+                    >
+                      <InfoIcon fontSize="large" />
+                    </IconButton>
+                  </Tooltip>
+                </Stack>
               </Grid>
-            )}
-            <Grid size={12}>
-              <Typography variant="subtitle1">
-                Параметры планирования
-              </Typography>
-              <Stack spacing={1} mt={1} direction="row">
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={values.updatePlan ?? false}
-                      onChange={(e) =>
-                        setValues((prev) => ({
-                          ...prev,
-                          updatePlan: e.target.checked,
-                        }))
-                      }
-                    />
-                  }
-                  label="Обновить план"
-                />
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={values.rePlan ?? false}
-                      onChange={(e) =>
-                        setValues((prev) => ({
-                          ...prev,
-                          rePlan: e.target.checked,
-                        }))
-                      }
-                    />
-                  }
-                  label="Перепланировать"
-                />
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={values.synchronizePlan ?? false}
-                      onChange={(e) =>
-                        setValues((prev) => ({
-                          ...prev,
-                          synchronizePlan: e.target.checked,
-                        }))
-                      }
-                    />
-                  }
-                  label="Синхронизировать план"
-                />
-              </Stack>
+              {info.open && (
+                <Grid size={12}>
+                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                    Информация по задаче • {info.taskKey ?? "-"}
+                  </Typography>
+                  <TableTaskPlanInfo rows={info.rows} loading={info.loading} />
+                </Grid>
+              )}
+              <Grid size={12}>
+                <Typography variant="subtitle1">
+                  Параметры планирования
+                </Typography>
+                <Stack spacing={1} mt={1} direction="row">
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={values.updatePlan ?? false}
+                        onChange={(e) =>
+                          setValues((prev) => ({
+                            ...prev,
+                            updatePlan: e.target.checked,
+                          }))
+                        }
+                      />
+                    }
+                    label="Обновить план"
+                  />
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={values.rePlan ?? false}
+                        onChange={(e) =>
+                          setValues((prev) => ({
+                            ...prev,
+                            rePlan: e.target.checked,
+                          }))
+                        }
+                      />
+                    }
+                    label="Перепланировать"
+                  />
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={values.synchronizePlan ?? false}
+                        onChange={(e) =>
+                          setValues((prev) => ({
+                            ...prev,
+                            synchronizePlan: e.target.checked,
+                          }))
+                        }
+                      />
+                    }
+                    label="Синхронизировать план"
+                  />
+                </Stack>
+              </Grid>
             </Grid>
-          </Grid>
+          )}
         </DialogContent>
 
         <DialogActions>
-          <Button onClick={handleClose}>Отмена</Button>
+          <Button onClick={handleClose} disabled={isLoading}>
+            Отмена
+          </Button>
           <Button
             variant="contained"
             onClick={handleSubmit}
