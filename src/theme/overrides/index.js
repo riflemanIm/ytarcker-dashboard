@@ -9,6 +9,7 @@ import Button from './Button';
 import CardContent from './CardContent';
 import Checkbox from './Checkbox';
 import Chip from './Chip';
+import Dialog from './Dialog';
 import DialogTitle from './DialogTitle';
 import IconButton from './IconButton';
 import InputLabel from './InputLabel';
@@ -16,6 +17,7 @@ import LinearProgress from './LinearProgress';
 import Link from './Link';
 import ListItemIcon from './ListItemIcon';
 import OutlinedInput from './OutlinedInput';
+import Popover from './Popover';
 import Tab from './Tab';
 import TableCell from './TableCell';
 import Tabs from './Tabs';
@@ -32,6 +34,7 @@ export default function ComponentsOverrides(theme) {
     CardContent(),
     Checkbox(theme),
     Chip(theme),
+    Dialog(theme),
     DialogTitle(),
     IconButton(theme),
     InputLabel(theme),
@@ -39,6 +42,7 @@ export default function ComponentsOverrides(theme) {
     Link(),
     ListItemIcon(),
     OutlinedInput(theme),
+    Popover(theme),
     Tab(theme),
     TableCell(theme),
     Tabs(),
