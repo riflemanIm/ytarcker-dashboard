@@ -9,10 +9,10 @@ import {
   toTarget,
 } from "@/helpers";
 import { TaskItem, WorkPlanItem } from "@/types/global";
-import { Alert } from "@mui/material";
+import { Alert, FormControlLabel, Stack, Switch } from "@mui/material";
 import { GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import dayjs, { Dayjs } from "dayjs";
-import { FC, useMemo } from "react";
+import { FC, useMemo, useState } from "react";
 import IssueDisplay from "./IssueDisplay";
 import SetTimeSpend from "./SetTimeSpend";
 import TableCellInfoPopover from "./TableCellInfoPopover";
@@ -47,6 +47,7 @@ const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
 }) => {
   useTableTimePlanSelectors();
   const effectivePlanItems = planItems ?? [];
+  const [filterByPlanOnly, setFilterByPlanOnly] = useState(false);
   console.log("data", data);
   console.log("planItems", planItems);
   const { planKeys, planMeta } = useMemo(() => {
@@ -132,22 +133,22 @@ const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
   }, [data]);
 
   const filteredData = useMemo(() => {
-    if (!planKeys.size) return [];
+    const source = filterByPlanOnly
+      ? normalizedData.filter((item) => planKeys.has(String(item.issueId)))
+      : normalizedData;
     return (
-      normalizedData
-        //.filter((item) => planKeys.has(String(item.issueId)))
-        .map((item) => {
-          const meta = planMeta[String(item.issueId)];
-          return {
-            ...item,
-            checklistItemId: meta?.checklistItemId ?? null,
-            remainTimeMinutes: meta?.remainTimeMinutes,
-            workPlanId: meta?.workPlanId ?? null,
-            worklogIdInternal: meta?.worklogIdInternal ?? null,
-          };
-        })
+      source.map((item) => {
+        const meta = planMeta[String(item.issueId)];
+        return {
+          ...item,
+          checklistItemId: meta?.checklistItemId ?? null,
+          remainTimeMinutes: meta?.remainTimeMinutes,
+          workPlanId: meta?.workPlanId ?? null,
+          worklogIdInternal: meta?.worklogIdInternal ?? null,
+        };
+      })
     );
-  }, [normalizedData, planKeys, planMeta]);
+  }, [filterByPlanOnly, normalizedData, planKeys, planMeta]);
 
   const dataForRange = useMemo(() => {
     const s =
@@ -350,22 +351,32 @@ const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
     };
   }, [fieldKeys, tableRows]);
 
-  if (tableRows.length === 0) {
-    return (
-      <Alert severity="warning">
-        Нет ни одной отметки времени за выбранный период
-      </Alert>
-    );
-  }
-
   return (
     <>
-      <TableTimeDataGrid
-        rows={[...tableRows, totalRow]}
-        columns={columns}
-        loading={dataTimeSpendLoading}
-        getRowClassName={(params) => (params.id === "total" ? "no-hover" : "")}
-      />
+      <Stack direction="row" justifyContent="flex-end">
+        <FormControlLabel
+          control={
+            <Switch
+              checked={filterByPlanOnly}
+              onChange={(_, checked) => setFilterByPlanOnly(checked)}
+            />
+          }
+          label="Только задачи из плана"
+          sx={{ mr: 0 }}
+        />
+      </Stack>
+      {tableRows.length === 0 ? (
+        <Alert severity="warning">
+          Нет ни одной отметки времени за выбранный период
+        </Alert>
+      ) : (
+        <TableTimeDataGrid
+          rows={[...tableRows, totalRow]}
+          columns={columns}
+          loading={dataTimeSpendLoading}
+          getRowClassName={(params) => (params.id === "total" ? "no-hover" : "")}
+        />
+      )}
       <SetTimeSpend
         key={`${menuState.issueId}-${menuState.field}-${menuState.dateField?.toISOString()}`}
         open={Boolean(menuState.anchorEl)}
