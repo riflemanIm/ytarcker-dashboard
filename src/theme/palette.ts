@@ -31,6 +31,18 @@ const Palette = (mode: PaletteMode) => {
 
   const paletteColor = Theme(colors);
   const isDarkMode = mode === 'dark';
+  const ytDark = {
+    bgDefault: '#1f2028',
+    bgPaper: '#2a2b35',
+    divider: '#3a3c49',
+    textPrimary: '#e3e7f2',
+    textSecondary: '#a7afc3',
+    textDisabled: '#72798b',
+    primaryMain: '#4f86f7',
+    primaryLight: '#6ea0ff',
+    primaryDark: '#3d73e0',
+    hover: 'rgba(110, 160, 255, 0.12)'
+  };
 
   return createTheme({
     palette: {
@@ -40,6 +52,14 @@ const Palette = (mode: PaletteMode) => {
         white: '#fff'
       },
       ...paletteColor,
+      primary: isDarkMode
+        ? {
+            ...paletteColor.primary,
+            main: ytDark.primaryMain,
+            light: ytDark.primaryLight,
+            dark: ytDark.primaryDark
+          }
+        : paletteColor.primary,
       error: isDarkMode
         ? {
             ...paletteColor.error,
@@ -47,17 +67,18 @@ const Palette = (mode: PaletteMode) => {
           }
         : paletteColor.error,
       text: {
-        primary: isDarkMode ? paletteColor.grey[50] : paletteColor.grey[700],
-        secondary: isDarkMode ? paletteColor.grey[300] : paletteColor.grey[500],
-        disabled: isDarkMode ? paletteColor.grey[600] : paletteColor.grey[400]
+        primary: isDarkMode ? ytDark.textPrimary : paletteColor.grey[700],
+        secondary: isDarkMode ? ytDark.textSecondary : paletteColor.grey[500],
+        disabled: isDarkMode ? ytDark.textDisabled : paletteColor.grey[400]
       },
       action: {
+        hover: isDarkMode ? ytDark.hover : 'rgba(0, 0, 0, 0.04)',
         disabled: isDarkMode ? paletteColor.grey[700] : paletteColor.grey[300]
       },
-      divider: isDarkMode ? paletteColor.grey[800] : paletteColor.grey[200],
+      divider: isDarkMode ? ytDark.divider : paletteColor.grey[200],
       background: {
-        paper: isDarkMode ? '#1e1e1e' : paletteColor.grey[0],
-        default: isDarkMode ? '#121212' : paletteColor.grey.A50
+        paper: isDarkMode ? ytDark.bgPaper : paletteColor.grey[0],
+        default: isDarkMode ? ytDark.bgDefault : paletteColor.grey.A50
       }
     }
   });
