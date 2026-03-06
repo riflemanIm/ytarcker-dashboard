@@ -1,4 +1,5 @@
 import { Paper } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 import {
   DataGrid,
   GridColDef,
@@ -42,16 +43,22 @@ const TableTimeDataGrid = <T extends GridValidRowModel>({
       onCellClick={onCellClick}
       processRowUpdate={processRowUpdate}
       getRowClassName={getRowClassName}
-      sx={{
+      sx={(theme) => ({
         "& .no-hover:hover": { backgroundColor: "transparent !important" },
         "& .current-column-header": {
-          backgroundColor: "rgba(200, 220, 255, 0.5)",
+          backgroundColor: alpha(
+            theme.palette.info.main,
+            theme.palette.mode === "dark" ? 0.3 : 0.24,
+          ),
         },
         "& .current-column-cell": {
-          backgroundColor: "rgba(200, 230, 255, 0.2)",
+          backgroundColor: alpha(
+            theme.palette.info.main,
+            theme.palette.mode === "dark" ? 0.2 : 0.14,
+          ),
         },
         height: "81vh",
-      }}
+      })}
     />
   </Paper>
 );
