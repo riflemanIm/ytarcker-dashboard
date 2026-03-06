@@ -51,6 +51,7 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
 
   const canAddTime = !showAdminControls;
   const canEditPlan = showAdminControls && !!planEditMode;
+  const actionsDisabled = loading;
 
   //console.log("canAddTime", canAddTime);
 
@@ -241,8 +242,10 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
             <Tooltip title="Показать информацию по задаче">
               <IconButton
                 size="medium"
+                disabled={actionsDisabled}
                 sx={(theme) => ({ color: theme.palette.info.main })}
                 onClick={(event) => {
+                  if (actionsDisabled) return;
                   event.stopPropagation();
                   handleOpenInfo(params.row as WorkPlanItem);
                 }}
@@ -255,10 +258,10 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
                 <span>
                   <IconButton
                     size="medium"
-                    disabled={dataTimeSpendLoading}
+                    disabled={actionsDisabled || dataTimeSpendLoading}
                     sx={(theme) => ({ color: theme.palette.success.main })}
                     onClick={() => {
-                      if (dataTimeSpendLoading) return;
+                      if (actionsDisabled || dataTimeSpendLoading) return;
                       const row = params.row as WorkPlanItem;
                       dispatchState({
                         type: "setAddTime",
@@ -288,9 +291,9 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
                 <IconButton
                   size="medium"
                   sx={(theme) => ({ color: theme.palette.primary.main })}
-                  disabled={!canEditPlan}
+                  disabled={!canEditPlan || actionsDisabled}
                   onClick={() => {
-                    if (!canEditPlan) return;
+                    if (!canEditPlan || actionsDisabled) return;
                     dispatchState({
                       type: "setEdit",
                       open: true,
@@ -303,9 +306,9 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
                 <IconButton
                   size="medium"
                   sx={(theme) => ({ color: theme.palette.warning.main })}
-                  disabled={!canEditPlan}
+                  disabled={!canEditPlan || actionsDisabled}
                   onClick={() => {
-                    if (!canEditPlan) return;
+                    if (!canEditPlan || actionsDisabled) return;
                     dispatchState({
                       type: "setDelete",
                       open: true,
@@ -419,7 +422,9 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
     canEditPlan,
     dataTimeSpendLoading,
     handleOpenInfo,
+    loading,
     showAdminControls,
+    actionsDisabled,
   ]);
 
   const filteredRows = useMemo(() => {
