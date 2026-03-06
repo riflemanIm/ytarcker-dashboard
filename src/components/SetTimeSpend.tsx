@@ -208,21 +208,22 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
     [issueTypes],
   );
 
-  const getDurationKey = useCallback((item: DurationItem): string => {
-    const worklogId = extractWorklogId(item.comment ?? "");
-    if (worklogId) return `wl:${worklogId}`;
-    const idPart = item.id != null ? String(item.id) : "no-id";
-    const startPart = item.start ? String(item.start) : "no-start";
-    const commentPart = item.comment ? String(item.comment) : "no-comment";
-    return `${idPart}:${startPart}:${commentPart}`;
-  }, []);
+  const getDurationKey = useCallback(
+    (item: DurationItem, index?: number): string => {
+      const idPart = item.id != null ? String(item.id) : "no-id";
+      const startPart = item.start ? String(item.start) : "no-start";
+      const baseKey = `${idPart}:${startPart}`;
+      return index == null ? baseKey : `${baseKey}:${index}`;
+    },
+    [],
+  );
 
   // Синк rows при изменении durations/issueTypes
   useEffect(() => {
     setRows((prev) => {
       const next: Record<string, RowUI> = {};
-      for (const d of durations) {
-        const id = getDurationKey(d);
+      for (const [index, d] of durations.entries()) {
+        const id = getDurationKey(d, index);
         const parsed = parseCommentForEditing(d.comment ?? "", issueTypes);
         next[id] = {
           durationRaw: prev[id]?.durationRaw ?? d.duration,
@@ -273,15 +274,14 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
   // --- handlers: редактирование (поля)
   const handleDurationChange = useCallback(
     (
-      item: DurationItem,
+      rowId: string,
       e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
     ) => {
-      const id = getDurationKey(item);
       const value = e.target.value ?? "";
       setRows((prev) => ({
         ...prev,
-        [id]: {
-          ...(prev[id] ?? {
+        [rowId]: {
+          ...(prev[rowId] ?? {
             cleanComment: "",
             selectedLabel: null,
             durationRaw: "",
@@ -291,23 +291,22 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
       }));
       setValidationErrors((prev) => ({
         ...prev,
-        [id]: validateDurationValue(value),
+        [rowId]: validateDurationValue(value),
       }));
     },
-    [getDurationKey, validateDurationValue],
+    [validateDurationValue],
   );
 
   const handleCommentChange = useCallback(
     (
-      item: DurationItem,
+      rowId: string,
       e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
     ) => {
-      const id = getDurationKey(item);
       const value = e.target.value ?? "";
       setRows((prev) => ({
         ...prev,
-        [id]: {
-          ...(prev[id] ?? {
+        [rowId]: {
+          ...(prev[rowId] ?? {
             cleanComment: "",
             selectedLabel: null,
             durationRaw: "",
@@ -316,7 +315,7 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
         },
       }));
     },
-    [getDurationKey],
+    [],
   );
 
   const handleIssueTypeChangeForItem = useCallback(
@@ -383,8 +382,8 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
     const nextErrors: Record<string, string> = {};
     let anyInvalid = false;
 
-    for (const item of durations) {
-      const id = getDurationKey(item);
+    durations.forEach((item, index) => {
+      const id = getDurationKey(item, index);
       const row = rows[id] ?? getRowFromItem(item);
 
       const durErr = validateDurationValue(
@@ -393,7 +392,7 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
       if (durErr) {
         nextErrors[id] = durErr;
         anyInvalid = true;
-        continue;
+        return;
       }
 
       // Тип обязателен, если список типов есть
@@ -401,7 +400,7 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
         nextErrors[id] = "Укажите тип работы";
         anyInvalid = true;
       }
-    }
+    });
 
     setValidationErrors((prev) => ({ ...prev, ...nextErrors }));
     return !anyInvalid;
@@ -418,8 +417,8 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
     if (!validateAllEditRows()) return;
 
     // Всё валидно — отправляем все строки
-    for (const item of durations) {
-      const id = getDurationKey(item);
+    durations.forEach((item, index) => {
+      const id = getDurationKey(item, index);
       const row = rows[id] ?? getRowFromItem(item);
 
       setData({
@@ -445,7 +444,7 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
         trackerUid,
         checklistItemId: menuState.checklistItemId ?? undefined,
       });
-    }
+    });
 
     bumpWorkPlanRefresh();
     onClose();
@@ -475,8 +474,8 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
     if (isEmpty(durations)) return true;
 
     // предварительная быстрая проверка перед submit (не заменяет validateAllEditRows)
-    for (const item of durations) {
-      const id = getDurationKey(item);
+    for (const [index, item] of durations.entries()) {
+      const id = getDurationKey(item, index);
       const row = rows[id] ?? getRowFromItem(item);
 
       const dur = row.durationRaw ?? "";
@@ -744,8 +743,8 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
                 </Typography>
               </Grid>
 
-              {durations.map((item) => {
-                const id = getDurationKey(item);
+              {durations.map((item, index) => {
+                const id = getDurationKey(item, index);
                 const row = rows[id] ?? getRowFromItem(item);
                 const itemError = validationErrors[id];
                 const typeRequired =
@@ -761,7 +760,7 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
                           label="Длительность"
                           name="duration"
                           value={displayDuration(row.durationRaw)}
-                          onChange={(e) => handleDurationChange(item, e)}
+                          onChange={(e) => handleDurationChange(id, e)}
                           error={Boolean(itemError)}
                           fullWidth
                           onKeyDown={(e) => {
@@ -785,7 +784,7 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
                       <TextField
                         name="comment"
                         value={row.cleanComment}
-                        onChange={(e) => handleCommentChange(item, e)}
+                        onChange={(e) => handleCommentChange(id, e)}
                         aria-label="minimum height"
                         placeholder="Комментарий"
                         fullWidth
