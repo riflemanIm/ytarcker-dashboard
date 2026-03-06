@@ -43,6 +43,18 @@ const Palette = (mode: PaletteMode) => {
     primaryDark: '#3d73e0',
     hover: 'rgba(110, 160, 255, 0.12)'
   };
+  const ytLight = {
+    bgDefault: '#f3f4f6',
+    bgPaper: '#ffffff',
+    divider: '#e2e5ea',
+    textPrimary: '#252a34',
+    textSecondary: '#5d6678',
+    textDisabled: '#98a1b2',
+    primaryMain: '#3f7ae0',
+    primaryLight: '#5d93ef',
+    primaryDark: '#2f65c2',
+    hover: 'rgba(63, 122, 224, 0.08)'
+  };
 
   return createTheme({
     palette: {
@@ -59,7 +71,12 @@ const Palette = (mode: PaletteMode) => {
             light: ytDark.primaryLight,
             dark: ytDark.primaryDark
           }
-        : paletteColor.primary,
+        : {
+            ...paletteColor.primary,
+            main: ytLight.primaryMain,
+            light: ytLight.primaryLight,
+            dark: ytLight.primaryDark
+          },
       error: isDarkMode
         ? {
             ...paletteColor.error,
@@ -67,18 +84,18 @@ const Palette = (mode: PaletteMode) => {
           }
         : paletteColor.error,
       text: {
-        primary: isDarkMode ? ytDark.textPrimary : paletteColor.grey[700],
-        secondary: isDarkMode ? ytDark.textSecondary : paletteColor.grey[500],
-        disabled: isDarkMode ? ytDark.textDisabled : paletteColor.grey[400]
+        primary: isDarkMode ? ytDark.textPrimary : ytLight.textPrimary,
+        secondary: isDarkMode ? ytDark.textSecondary : ytLight.textSecondary,
+        disabled: isDarkMode ? ytDark.textDisabled : ytLight.textDisabled
       },
       action: {
-        hover: isDarkMode ? ytDark.hover : 'rgba(0, 0, 0, 0.04)',
+        hover: isDarkMode ? ytDark.hover : ytLight.hover,
         disabled: isDarkMode ? paletteColor.grey[700] : paletteColor.grey[300]
       },
-      divider: isDarkMode ? ytDark.divider : paletteColor.grey[200],
+      divider: isDarkMode ? ytDark.divider : ytLight.divider,
       background: {
-        paper: isDarkMode ? ytDark.bgPaper : paletteColor.grey[0],
-        default: isDarkMode ? ytDark.bgDefault : paletteColor.grey.A50
+        paper: isDarkMode ? ytDark.bgPaper : ytLight.bgPaper,
+        default: isDarkMode ? ytDark.bgDefault : ytLight.bgDefault
       }
     }
   });
