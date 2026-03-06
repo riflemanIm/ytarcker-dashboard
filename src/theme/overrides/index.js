@@ -2,7 +2,9 @@
 import { merge } from 'lodash';
 
 // project import
+import Autocomplete from './Autocomplete';
 import Badge from './Badge';
+import DataGrid from './DataGrid';
 import Button from './Button';
 import CardContent from './CardContent';
 import Checkbox from './Checkbox';
@@ -23,8 +25,10 @@ import Typography from './Typography';
 
 export default function ComponentsOverrides(theme) {
   return merge(
+    Autocomplete(theme),
     Button(theme),
     Badge(theme),
+    DataGrid(theme),
     CardContent(),
     Checkbox(theme),
     Chip(theme),
