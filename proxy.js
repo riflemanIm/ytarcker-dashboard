@@ -1,9 +1,24 @@
+import "dotenv/config";
 import express from "express";
 import axios from "axios";
 import cors from "cors";
 import https from "https";
 
 const MSK_OFFSET_MS = 3 * 60 * 60 * 1000;
+const normalizeBaseUrl = (value, fallback) =>
+  (value && value.trim() ? value.trim() : fallback).replace(/\/+$/, "");
+const TRACKER_API_V2_BASE_URL = normalizeBaseUrl(
+  process.env.YT_API_V2_BASE_URL,
+  "https://api.tracker.yandex.net/v2/",
+);
+const TRACKER_API_V3_BASE_URL = /\/v2$/.test(TRACKER_API_V2_BASE_URL)
+  ? TRACKER_API_V2_BASE_URL.replace(/\/v2$/, "/v3")
+  : `${TRACKER_API_V2_BASE_URL}/v3`;
+const INTERNAL_API_BASE_URL = normalizeBaseUrl(
+  process.env.YT_INTERNAL_API_BASE_URL,
+  "http://of-srv-apps-001.pmtech.ru:18005",
+);
+const TRACKER_API_HOST = new URL(TRACKER_API_V2_BASE_URL).host;
 
 function normalizeOffset(str) {
   if (!str) return str;
@@ -91,7 +106,7 @@ const headers = (token) => ({
   headers: {
     Authorization: `OAuth ${token}`,
     "X-Org-ID": "8063720",
-    Host: "api.tracker.yandex.net",
+    Host: TRACKER_API_HOST,
   },
 });
 
@@ -264,7 +279,7 @@ app.get("/api/issues", async (req, res) => {
       }
 
       const url =
-        "https://api.tracker.yandex.net/v2/worklog/_search?perPage=10000";
+        `${TRACKER_API_V2_BASE_URL}/worklog/_search?perPage=10000`;
       const response = await axios.post(url, requestBody, headers(token));
 
       // Фильтрация данных с использованием уже вычисленных timestamp'ов
@@ -304,7 +319,7 @@ app.get("/api/issues", async (req, res) => {
 
 //   try {
 //     // Добавляем новый worklog
-//     const url = `https://api.tracker.yandex.net/v2/issues/${issueId}/worklog`;
+//     const url = `${TRACKER_API_V2_BASE_URL}/issues/${issueId}/worklog`;
 //     const { data } = await axios.post(
 //       url,
 //       { start, duration, comment },
@@ -330,7 +345,7 @@ app.get("/api/issues", async (req, res) => {
 //         .json({ error: "issueId, worklogId and duration are required" });
 //     }
 
-//     const url = `https://api.tracker.yandex.net/v2/issues/${issueId}/worklog/${worklogId}`;
+//     const url = `${TRACKER_API_V2_BASE_URL}/issues/${issueId}/worklog/${worklogId}`;
 //     const payload = {
 //       duration,
 //       comment,
@@ -357,7 +372,7 @@ app.get("/api/issues", async (req, res) => {
 //         ids.map((id) =>
 //           axios
 //             .delete(
-//               `https://api.tracker.yandex.net/v2/issues/${issueId}/worklog/${id}`,
+//               `${TRACKER_API_V2_BASE_URL}/issues/${issueId}/worklog/${id}`,
 //               headers(token),
 //             )
 //             .catch((err) => {
@@ -492,7 +507,7 @@ app.post("/api/worklog_update", async (req, res) => {
         return { data: { skipped: true } };
       }
       return axios.post(
-        "http://of-srv-apps-001.pmtech.ru:18005/acceptor/yandextracker/tlworklogupdate",
+        `${INTERNAL_API_BASE_URL}/acceptor/yandextracker/tlworklogupdate`,
         payload,
         { timeout: 15000 },
       );
@@ -603,7 +618,7 @@ app.post("/api/worklog_update", async (req, res) => {
         if (action === 1) {
           try {
             const existing = await axios.get(
-              `https://api.tracker.yandex.net/v2/issues/${taskKey}/worklog/${worklogId}`,
+              `${TRACKER_API_V2_BASE_URL}/issues/${taskKey}/worklog/${worklogId}`,
               headers(token),
             );
             const existingData = existing?.data ?? {};
@@ -634,8 +649,8 @@ app.post("/api/worklog_update", async (req, res) => {
         );
         const trackerUrl =
           action === 0
-            ? `https://api.tracker.yandex.net/v2/issues/${taskKey}/worklog`
-            : `https://api.tracker.yandex.net/v2/issues/${taskKey}/worklog/${worklogId}`;
+            ? `${TRACKER_API_V2_BASE_URL}/issues/${taskKey}/worklog`
+            : `${TRACKER_API_V2_BASE_URL}/issues/${taskKey}/worklog/${worklogId}`;
         const trackerPayload =
           action === 0
             ? {
@@ -675,7 +690,7 @@ app.post("/api/worklog_update", async (req, res) => {
             if (Number.isFinite(trackerWorklogId)) {
               try {
                 await axios.delete(
-                  `https://api.tracker.yandex.net/v2/issues/${taskKey}/worklog/${trackerWorklogId}`,
+                  `${TRACKER_API_V2_BASE_URL}/issues/${taskKey}/worklog/${trackerWorklogId}`,
                   headers(token),
                 );
               } catch (cleanupError) {
@@ -723,7 +738,7 @@ app.post("/api/worklog_update", async (req, res) => {
           console.log("-----------\n\n");
           if (commentWithInternalTag !== commentWithTags) {
             await axios.patch(
-              `https://api.tracker.yandex.net/v2/issues/${taskKey}/worklog/${trackerWorklogId}`,
+              `${TRACKER_API_V2_BASE_URL}/issues/${taskKey}/worklog/${trackerWorklogId}`,
               { comment: commentWithInternalTag },
               headers(token),
             );
@@ -806,7 +821,7 @@ app.post("/api/worklog_update", async (req, res) => {
           await Promise.all(
             deleteIds.map((id) =>
               axios.delete(
-                `https://api.tracker.yandex.net/v2/issues/${taskKey}/worklog/${id}`,
+                `${TRACKER_API_V2_BASE_URL}/issues/${taskKey}/worklog/${id}`,
                 headers(token),
               ),
             ),
@@ -857,7 +872,7 @@ app.post("/api/worklog_update", async (req, res) => {
         }
 
         await axios.delete(
-          `https://api.tracker.yandex.net/v2/issues/${taskKey}/worklog/${worklogId}`,
+          `${TRACKER_API_V2_BASE_URL}/issues/${taskKey}/worklog/${worklogId}`,
           headers(token),
         );
 
@@ -918,7 +933,7 @@ const trackerSearchRequest = async (token, body, options = {}) => {
     Math.min(MAX_TRACKER_PER_PAGE, Math.floor(requestedPerPage)),
   );
 
-  const url = `https://api.tracker.yandex.net/v3/issues/_search?perPage=${perPage}&page=${page}`;
+  const url = `${TRACKER_API_V3_BASE_URL}/issues/_search?perPage=${perPage}&page=${page}`;
   const response = await withRetries(
     () => axios.post(url, body, headers(token)),
     { retries: 4, baseDelay: 600 },
@@ -997,7 +1012,7 @@ const fetchIssueComments = async (token, issueId) => {
     const { data } = await withRetries(
       () =>
         axios.get(
-          `https://api.tracker.yandex.net/v2/issues/${issueId}/comments`,
+          `${TRACKER_API_V2_BASE_URL}/issues/${issueId}/comments`,
           headers(token),
         ),
       { retries: 4, baseDelay: 600 },
@@ -1060,7 +1075,7 @@ app.get("/api/queues", async (req, res) => {
 
   try {
     const response = await axios.get(
-      "https://api.tracker.yandex.net/v2/queues?perPage=1000",
+      `${TRACKER_API_V2_BASE_URL}/queues?perPage=1000`,
       headers(token),
     );
     const payload = Array.isArray(response.data) ? response.data : [];
@@ -1171,7 +1186,7 @@ app.get("/api/issue_type_list", async (req, res) => {
     const httpsAgent = new https.Agent({ rejectUnauthorized: false });
 
     const resp = await axios.post(
-      "http://of-srv-apps-001.pmtech.ru:18005/acceptor/yandextracker/projectcontrolwtlist",
+      `${INTERNAL_API_BASE_URL}/acceptor/yandextracker/projectcontrolwtlist`,
       { entityKey, email },
       {
         httpsAgent,
@@ -1213,7 +1228,7 @@ app.post("/api/tl_userinfo", async (req, res) => {
     }
 
     const resp = await axios.post(
-      "http://of-srv-apps-001.pmtech.ru:18005/acceptor/yandextracker/gettluserinfo",
+      `${INTERNAL_API_BASE_URL}/acceptor/yandextracker/gettluserinfo`,
       {
         trackerUid: trackerUidValue ?? undefined,
         email: emailValue ?? undefined,
@@ -1241,7 +1256,7 @@ app.post("/api/tl_userinfo", async (req, res) => {
 app.post("/api/tl_sprints", async (req, res) => {
   try {
     const resp = await axios.post(
-      "http://of-srv-apps-001.pmtech.ru:18005/acceptor/yandextracker/gettlsprint",
+      `${INTERNAL_API_BASE_URL}/acceptor/yandextracker/gettlsprint`,
       {},
       {
         timeout: 15000,
@@ -1266,7 +1281,7 @@ app.post("/api/tl_sprints", async (req, res) => {
 app.post("/api/tl_groups", async (req, res) => {
   try {
     const resp = await axios.post(
-      "http://of-srv-apps-001.pmtech.ru:18005/acceptor/yandextracker/gettlgroup",
+      `${INTERNAL_API_BASE_URL}/acceptor/yandextracker/gettlgroup`,
       {},
       {
         timeout: 15000,
@@ -1291,7 +1306,7 @@ app.post("/api/tl_groups", async (req, res) => {
 app.post("/api/tl_roles", async (req, res) => {
   try {
     const resp = await axios.post(
-      "http://of-srv-apps-001.pmtech.ru:18005/acceptor/yandextracker/gettldictroles",
+      `${INTERNAL_API_BASE_URL}/acceptor/yandextracker/gettldictroles`,
       {},
       {
         timeout: 15000,
@@ -1316,7 +1331,7 @@ app.post("/api/tl_roles", async (req, res) => {
 app.post("/api/tl_projects", async (req, res) => {
   try {
     const resp = await axios.post(
-      "http://of-srv-apps-001.pmtech.ru:18005/acceptor/yandextracker/gettlprojects",
+      `${INTERNAL_API_BASE_URL}/acceptor/yandextracker/gettlprojects`,
       {},
       {
         timeout: 15000,
@@ -1352,7 +1367,7 @@ app.post("/api/tl_group_patients", async (req, res) => {
     }
 
     const resp = await axios.post(
-      "http://of-srv-apps-001.pmtech.ru:18005/acceptor/yandextracker/gettlgrouppatients",
+      `${INTERNAL_API_BASE_URL}/acceptor/yandextracker/gettlgrouppatients`,
       { groupIds },
       {
         timeout: 15000,
@@ -1416,7 +1431,7 @@ app.post("/api/tl_tasklist", async (req, res) => {
     }
 
     const resp = await axios.post(
-      "http://of-srv-apps-001.pmtech.ru:18005/acceptor/yandextracker/gettasklist",
+      `${INTERNAL_API_BASE_URL}/acceptor/yandextracker/gettasklist`,
       { trackerUids, projectIds, roleIds, groupIds },
       {
         timeout: 15000,
@@ -1487,7 +1502,7 @@ app.post("/api/tl_workplan", async (req, res) => {
     }
 
     const resp = await axios.post(
-      "http://of-srv-apps-001.pmtech.ru:18005/acceptor/yandextracker/getworkplan",
+      `${INTERNAL_API_BASE_URL}/acceptor/yandextracker/getworkplan`,
       {
         sprintId,
         trackerUids,
@@ -1570,7 +1585,7 @@ app.post("/api/tl_workplan_capacity", async (req, res) => {
     }
 
     const resp = await axios.post(
-      "http://of-srv-apps-001.pmtech.ru:18005/acceptor/yandextracker/getworkplancapacity",
+      `${INTERNAL_API_BASE_URL}/acceptor/yandextracker/getworkplancapacity`,
       { dateStart, dateEnd, trackerUids, projectIds, roleIds, groupIds },
       {
         timeout: 15000,
@@ -1635,7 +1650,7 @@ const handleSetWorkPlan = async (req, res) => {
     }
 
     const resp = await axios.post(
-      "http://of-srv-apps-001.pmtech.ru:18005/acceptor/yandextracker/setworkplan",
+      `${INTERNAL_API_BASE_URL}/acceptor/yandextracker/setworkplan`,
       {
         sprintId,
         taskKey,
@@ -1681,7 +1696,7 @@ app.post("/api/task_plan_info", async (req, res) => {
     }
 
     const resp = await axios.post(
-      "http://of-srv-apps-001.pmtech.ru:18005/acceptor/yandextracker/gettaskplanifo",
+      `${INTERNAL_API_BASE_URL}/acceptor/yandextracker/gettaskplanifo`,
       { taskKey },
       {
         timeout: 15000,
@@ -1743,7 +1758,7 @@ app.post("/api/yt_tl_checklist_data", async (req, res) => {
     };
 
     const resp = await axios.post(
-      "http://of-srv-apps-001.pmtech.ru:18005/acceptor/yandextracker/yttlchecklistdata",
+      `${INTERNAL_API_BASE_URL}/acceptor/yandextracker/yttlchecklistdata`,
       payload,
       {
         timeout: 15000,

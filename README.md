@@ -111,12 +111,23 @@ Admin access is defined by `isAdmin` (returned from TL user info).
 
 ## Environment Setup
 
-Create a `.env` file in the project root and add the following variables:
+Use two env files in the project root:
+- `.env.development` for local runs (`yarn dev`, `yarn start_proxy`)
+- `.env.production` for production builds/container runtime
+
+Client variables (`VITE_*`):
 
 ```dotenv
 VITE_APP_CLIENT_ID=xxxxxxxxxxx
 VITE_APP_REDIRECT_URI=https://ytracker.mobimed.ru
 VITE_APP_API_URL=https://ytracker.mobimed.ru
+```
+
+Server proxy variables (`proxy.js`):
+
+```dotenv
+YT_API_V2_BASE_URL=https://api.tracker.yandex.net/v2/
+YT_INTERNAL_API_BASE_URL=http://of-srv-apps-001.pmtech.ru:18005
 ```
 
 Where:

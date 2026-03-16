@@ -23,7 +23,7 @@
   "scripts": {
     "dev": "kill-port 3007 && vite",
     "build": "vite build",
-    "start_proxy": "kill-port 4000 && nodemon --watch proxy --inspect ./proxy.js",
+    "start_proxy": "kill-port 4000 && cross-env DOTENV_CONFIG_PATH=.env.development nodemon --watch proxy --inspect ./proxy.js",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest",

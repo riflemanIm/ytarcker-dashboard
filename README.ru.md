@@ -129,12 +129,23 @@ See the English version in [README.md](README.md).
 
 ## Настройка окружения
 
-Создайте файл `.env` в корне проекта и задайте следующие переменные:
+Используйте два файла окружения в корне проекта:
+- `.env.development` для локального запуска (`yarn dev`, `yarn start_proxy`)
+- `.env.production` для production-сборки/запуска в контейнере
+
+Переменные клиента (`VITE_*`):
 
 ```dotenv
 VITE_APP_CLIENT_ID=xxxxxxxxxxx
 VITE_APP_REDIRECT_URI=https://ytracker.mobimed.ru
 VITE_APP_API_URL=https://ytracker.mobimed.ru
+```
+
+Переменные прокси-сервера (`proxy.js`):
+
+```dotenv
+YT_API_V2_BASE_URL=https://api.tracker.yandex.net/v2/
+YT_INTERNAL_API_BASE_URL=http://of-srv-apps-001.pmtech.ru:18005
 ```
 
 Где:

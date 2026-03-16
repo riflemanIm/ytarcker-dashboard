@@ -8,8 +8,9 @@ RUN adduser -D -u 1100 pmt
 WORKDIR /app
 
 # Скопировать зависимости и собранный код из первого этапа
-RUN npm i express cors axios
+RUN npm i express cors axios dotenv
 COPY proxy.js /app
+COPY .env.production /app/.env
 
 
 # Убедиться, что все файлы принадлежат пользователю appuser
