@@ -156,6 +156,50 @@ YT_INTERNAL_API_BASE_URL=http://of-srv-apps-001.pmtech.ru:18005
 
 ---
 
+## Запуск proxy-сервера в production (Docker, пошагово)
+
+1. Подготовьте `.env.production` в корне проекта (клиентские `VITE_*` и серверные `YT_*` переменные).
+2. Соберите образ:
+
+```bash
+docker build -t ytracker-proxy:prod .
+```
+
+3. Запустите контейнер:
+
+```bash
+docker run -d --name ytracker-proxy -p 4000:4000 ytracker-proxy:prod
+```
+
+4. Проверьте, что контейнер запущен:
+
+```bash
+docker ps --filter name=ytracker-proxy
+```
+
+5. Проверьте логи:
+
+```bash
+docker logs -f ytracker-proxy
+```
+
+6. Проверьте API (пример):
+
+```bash
+curl "http://localhost:4000/api/queues?token=<OAUTH_TOKEN>"
+```
+
+7. Обновление версии:
+- остановить и удалить старый контейнер: `docker rm -f ytracker-proxy`
+- пересобрать образ: `docker build -t ytracker-proxy:prod .`
+- запустить контейнер снова.
+
+Важно:
+- В текущем `Dockerfile` файл `.env.production` копируется в контейнер как `/app/.env`, поэтому `proxy.js` читает именно production-настройки.
+- Если у вас оркестратор (Kubernetes/Swarm), лучше передавать переменные через `environment`/secrets, а не хранить чувствительные данные в git.
+
+---
+
 ## Методы API
 
 Все методы предоставляет прокси-сервер (порт 4000).  

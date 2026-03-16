@@ -138,6 +138,50 @@ Where:
 
 ---
 
+## Run Proxy In Production (Docker, Step by Step)
+
+1. Prepare `.env.production` in the project root (both `VITE_*` and `YT_*` variables).
+2. Build the image:
+
+```bash
+docker build -t ytracker-proxy:prod .
+```
+
+3. Run the container:
+
+```bash
+docker run -d --name ytracker-proxy -p 4000:4000 ytracker-proxy:prod
+```
+
+4. Verify container status:
+
+```bash
+docker ps --filter name=ytracker-proxy
+```
+
+5. Check logs:
+
+```bash
+docker logs -f ytracker-proxy
+```
+
+6. Test API endpoint (example):
+
+```bash
+curl "http://localhost:4000/api/queues?token=<OAUTH_TOKEN>"
+```
+
+7. Deploy an updated version:
+- remove old container: `docker rm -f ytracker-proxy`
+- rebuild image: `docker build -t ytracker-proxy:prod .`
+- run container again.
+
+Notes:
+- Current `Dockerfile` copies `.env.production` into the container as `/app/.env`, so `proxy.js` reads production settings explicitly.
+- In orchestrated environments (Kubernetes/Swarm), prefer runtime env vars/secrets over committing sensitive values.
+
+---
+
 ## API Methods
 
 All methods are provided by the proxy server (port 4000).  
