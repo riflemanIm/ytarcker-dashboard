@@ -29,7 +29,7 @@ interface TableTimeSpendByPlanProps {
   deleteData: (args: DeleteDataArgs) => void;
   isEditable: boolean;
   planItems?: WorkPlanItem[];
-  onWorkPlanRefresh?: () => void;
+  onWorkPlanRefresh?: () => void | Promise<void>;
   dataTimeSpendLoading?: boolean;
 }
 

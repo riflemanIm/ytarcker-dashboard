@@ -66,7 +66,7 @@ const RECENT_TYPE_MAX_CHARS = 20;
 const RECENT_TYPE_MAX_WIDTH_PX = 180;
 
 interface SetTimeSpendProps extends EditableCellMenuProps {
-  onWorkPlanRefresh?: () => void;
+  onWorkPlanRefresh?: () => void | Promise<void>;
 }
 
 const SetTimeSpend: FC<SetTimeSpendProps> = ({
@@ -82,6 +82,7 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
   const {
     state: { loginUid },
   } = state;
+  const skipLocalStateUpdate = state.viewMode === "table_time_plan";
   console.log("menuState", menuState);
   const trackerUid = loginUid;
   const [riskState, setRiskState] = useState({
@@ -125,8 +126,8 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
   const [openConfirm, setOpenConfirm] = useState(false);
   const [recentIssueTypes, setRecentIssueTypes] = useState<string[]>([]);
 
-  const bumpWorkPlanRefresh = useCallback(() => {
-    onWorkPlanRefresh?.();
+  const bumpWorkPlanRefresh = useCallback(async () => {
+    await onWorkPlanRefresh?.();
   }, [onWorkPlanRefresh]);
 
   const availableRecentTypes = useMemo(
@@ -413,40 +414,42 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
     getDurationKey,
   ]);
 
-  const handleSaveAllEdits = useCallback(() => {
+  const handleSaveAllEdits = useCallback(async () => {
     if (!validateAllEditRows()) return;
 
     // Всё валидно — отправляем все строки
-    durations.forEach((item, index) => {
-      const id = getDurationKey(item, index);
-      const row = rows[id] ?? getRowFromItem(item);
+    await Promise.all(
+      durations.map((item, index) => {
+        const id = getDurationKey(item, index);
+        const row = rows[id] ?? getRowFromItem(item);
 
-      setData({
-        dateCell: menuState.dateField || undefined,
-        dispatch,
-        token,
-        issueId: menuState.issueId,
-        duration: normalizeDuration(row.durationRaw ?? ""),
-        comment: row.cleanComment,
-        worklogId: item.id,
-        worklogIdInternal:
-          menuState.worklogIdInternal ??
-          extractWorklogId(item.comment ?? "") ??
-          undefined,
-        deadlineOk: riskState.deadlineOk,
-        needUpgradeEstimate: riskState.needUpgradeEstimate,
-        makeTaskFaster: riskState.makeTaskFaster,
-        issueTypeLabel: row.selectedLabel ?? null,
-        workPlanId:
-          menuState.workPlanId ??
-          extractWorkPlanId(item.comment ?? "") ??
-          undefined,
-        trackerUid,
-        checklistItemId: menuState.checklistItemId ?? undefined,
-      });
-    });
-
-    bumpWorkPlanRefresh();
+        return setData({
+          dateCell: menuState.dateField || undefined,
+          dispatch,
+          token,
+          issueId: menuState.issueId,
+          duration: normalizeDuration(row.durationRaw ?? ""),
+          comment: row.cleanComment,
+          worklogId: item.id,
+          worklogIdInternal:
+            menuState.worklogIdInternal ??
+            extractWorklogId(item.comment ?? "") ??
+            undefined,
+          deadlineOk: riskState.deadlineOk,
+          needUpgradeEstimate: riskState.needUpgradeEstimate,
+          makeTaskFaster: riskState.makeTaskFaster,
+          issueTypeLabel: row.selectedLabel ?? null,
+          workPlanId:
+            menuState.workPlanId ??
+            extractWorkPlanId(item.comment ?? "") ??
+            undefined,
+          trackerUid,
+          checklistItemId: menuState.checklistItemId ?? undefined,
+          skipLocalStateUpdate,
+        });
+      }),
+    );
+    await bumpWorkPlanRefresh();
     onClose();
   }, [
     validateAllEditRows,
@@ -466,6 +469,7 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
     trackerUid,
     onClose,
     bumpWorkPlanRefresh,
+    skipLocalStateUpdate,
   ]);
 
   // Кнопка "Сохранить изменения" disabled?
@@ -574,7 +578,7 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
     [rememberRecentIssueType],
   );
 
-  const handleNewSubmitItem = useCallback(() => {
+  const handleNewSubmitItem = useCallback(async () => {
     const err = validateDurationValue(newEntry.duration);
     if (err) {
       setValidationErrors((p) => ({ ...p, add_new: err }));
@@ -585,7 +589,7 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
       return;
     }
 
-    setData({
+    await setData({
       dateCell: menuState.dateField || undefined,
       dispatch,
       token,
@@ -600,10 +604,11 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
       checklistItemId: menuState.checklistItemId ?? undefined,
       workPlanId: menuState.workPlanId ?? undefined,
       worklogIdInternal: menuState.worklogIdInternal ?? undefined,
+      skipLocalStateUpdate,
     });
     setNewEntry({ duration: "", comment: "" });
     setSelectedIssueTypeLabelNew(null);
-    bumpWorkPlanRefresh();
+    await bumpWorkPlanRefresh();
     onClose();
   }, [
     newEntry,
@@ -621,21 +626,23 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
     trackerUid,
     onClose,
     bumpWorkPlanRefresh,
+    skipLocalStateUpdate,
   ]);
 
   // --- Удаление
-  const handleConfirmDeleteAll = useCallback(() => {
+  const handleConfirmDeleteAll = useCallback(async () => {
     if (menuState.durations?.length) {
-      deleteData({
+      await deleteData({
         token,
         dispatch,
         issueId: menuState.issueId,
         durations: menuState.durations ?? undefined,
         trackerUid,
+        skipLocalStateUpdate,
       });
     }
     setOpenConfirm(false);
-    bumpWorkPlanRefresh();
+    await bumpWorkPlanRefresh();
     onClose();
   }, [
     menuState,
@@ -645,19 +652,21 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
     onClose,
     trackerUid,
     bumpWorkPlanRefresh,
+    skipLocalStateUpdate,
   ]);
 
   const handleCancelDeleteAll = useCallback(() => setOpenConfirm(false), []);
   const handleDeleteItem = useCallback(
-    (item: DurationItem) => {
-      deleteData({
+    async (item: DurationItem) => {
+      await deleteData({
         token,
         dispatch,
         issueId: menuState.issueId,
         durations: [item],
         trackerUid,
+        skipLocalStateUpdate,
       });
-      bumpWorkPlanRefresh();
+      await bumpWorkPlanRefresh();
       onClose();
     },
     [
@@ -668,6 +677,7 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
       onClose,
       trackerUid,
       bumpWorkPlanRefresh,
+      skipLocalStateUpdate,
     ],
   );
 

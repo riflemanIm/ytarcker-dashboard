@@ -195,6 +195,7 @@ export interface SetDataArgs {
   startDate?: string;
   issueTypeLabel?: string | null;
   workPlanId?: string | number | null;
+  skipLocalStateUpdate?: boolean;
 }
 
 export interface TlWorklogUpdateArgs {
@@ -252,6 +253,7 @@ export const setData = async ({
   startDate,
   issueTypeLabel,
   workPlanId,
+  skipLocalStateUpdate = false,
 }: SetDataArgs): Promise<void> => {
   if (token == null) {
     return;
@@ -347,13 +349,15 @@ export const setData = async ({
         payload: (prev: AppState) => ({
           ...prev,
           dataTimeSpendLoading: false,
-          dataTimeSpend: worklogId
-            ? prev.dataTimeSpend.map((item: DataItem) =>
-                item.id === (res.data as DataItem).id
-                  ? (res.data as DataItem)
-                  : item,
-              )
-            : [...prev.dataTimeSpend, { ...(res.data as DataItem) }],
+          dataTimeSpend: skipLocalStateUpdate
+            ? prev.dataTimeSpend
+            : worklogId
+              ? prev.dataTimeSpend.map((item: DataItem) =>
+                  item.id === (res.data as DataItem).id
+                    ? (res.data as DataItem)
+                    : item,
+                )
+              : [...prev.dataTimeSpend, { ...(res.data as DataItem) }],
         }),
       });
       dispatch({
@@ -397,6 +401,7 @@ export interface DeleteDataArgs {
   deadlineOk?: boolean;
   needUpgradeEstimate?: boolean;
   makeTaskFaster?: boolean;
+  skipLocalStateUpdate?: boolean;
 }
 
 export const deleteData = async ({
@@ -409,6 +414,7 @@ export const deleteData = async ({
   deadlineOk,
   needUpgradeEstimate,
   makeTaskFaster,
+  skipLocalStateUpdate = false,
 }: DeleteDataArgs): Promise<void> => {
   if (token == null) {
     return;
@@ -476,11 +482,13 @@ export const deleteData = async ({
         payload: (prev: AppState) => ({
           ...prev,
           dataTimeSpendLoading: false,
-          dataTimeSpend: [
-            ...prev.dataTimeSpend.filter(
-              (item: DataItem) => !ids.includes(item.id),
-            ),
-          ],
+          dataTimeSpend: skipLocalStateUpdate
+            ? prev.dataTimeSpend
+            : [
+                ...prev.dataTimeSpend.filter(
+                  (item: DataItem) => !ids.includes(item.id),
+                ),
+              ],
         }),
       });
       dispatch({

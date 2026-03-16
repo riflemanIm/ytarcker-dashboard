@@ -171,7 +171,7 @@ const YandexTracker: FC = () => {
     fetchUserInfo();
   }, [fetchUserInfo]);
 
-  const fetchPlanRangeData = useCallback(() => {
+  const fetchPlanRangeData = useCallback(async () => {
     if (viewMode !== "table_time_plan") return;
     if (userInfoStatus !== "ready") return;
     const planRangeStart = sprintRange?.start;
@@ -185,7 +185,7 @@ const YandexTracker: FC = () => {
       type: "setState",
       payload: (prev) => ({ ...prev, dataTimeSpend: [] }),
     });
-    getData({
+    await getData({
       userId: currentTrackerUid,
       dispatch,
       token,
@@ -389,6 +389,7 @@ const YandexTracker: FC = () => {
                   setData={setData}
                   deleteData={deleteData}
                   dataTimeSpendLoading={state.dataTimeSpendLoading}
+                  onTimeSpendRefresh={fetchPlanRangeData}
                 />
                 <DurationAlert
                   open={alert.open}

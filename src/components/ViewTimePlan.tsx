@@ -17,6 +17,7 @@ interface ViewTimePlanProps {
   setData: (args: SetDataArgs) => Promise<void>;
   deleteData: (args: DeleteDataArgs) => void;
   dataTimeSpendLoading?: boolean;
+  onTimeSpendRefresh?: () => void | Promise<void>;
 }
 
 const ViewTimePlan: FC<ViewTimePlanProps> = ({
@@ -27,6 +28,7 @@ const ViewTimePlan: FC<ViewTimePlanProps> = ({
   setData,
   deleteData,
   dataTimeSpendLoading = false,
+  onTimeSpendRefresh,
 }) => {
   const {
     sprintId,
@@ -93,6 +95,10 @@ const ViewTimePlan: FC<ViewTimePlanProps> = ({
     workPlanRefreshKey,
     fetchWorkPlan,
   ]);
+
+  const refreshPlanView = useCallback(async () => {
+    await Promise.all([fetchWorkPlan(), onTimeSpendRefresh?.()]);
+  }, [fetchWorkPlan, onTimeSpendRefresh]);
   return (
     <Box sx={{ px: 2, pb: 2 }}>
       <Stack
@@ -162,7 +168,7 @@ const ViewTimePlan: FC<ViewTimePlanProps> = ({
           rows={workPlanRows}
           loading={workPlanLoading}
           setData={setData}
-          onWorkPlanRefresh={fetchWorkPlan}
+          onWorkPlanRefresh={refreshPlanView}
         />
         <Divider sx={{ my: 2 }} />
         <Typography variant="h5" textAlign="center" my={2}>
@@ -177,7 +183,7 @@ const ViewTimePlan: FC<ViewTimePlanProps> = ({
           deleteData={deleteData}
           isEditable={!showAdminControls}
           planItems={workPlanRows}
-          onWorkPlanRefresh={fetchWorkPlan}
+          onWorkPlanRefresh={refreshPlanView}
           dataTimeSpendLoading={dataTimeSpendLoading}
         />
       </Paper>
