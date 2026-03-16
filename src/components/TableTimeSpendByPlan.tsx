@@ -25,8 +25,8 @@ interface TableTimeSpendByPlanProps {
   start: Dayjs;
   rangeStart?: Dayjs;
   rangeEnd?: Dayjs;
-  setData: (args: SetDataArgs) => Promise<void>;
-  deleteData: (args: DeleteDataArgs) => void;
+  setData: (args: SetDataArgs) => Promise<boolean>;
+  deleteData: (args: DeleteDataArgs) => Promise<boolean>;
   isEditable: boolean;
   planItems?: WorkPlanItem[];
   onWorkPlanRefresh?: () => void | Promise<void>;

@@ -14,6 +14,6 @@ export interface BaseCellMenuProps {
 }
 
 export interface EditableCellMenuProps extends BaseCellMenuProps {
-  deleteData: (args: DeleteDataArgs) => void;
-  setData: (args: SetDataArgs) => void;
+  deleteData: (args: DeleteDataArgs) => Promise<boolean>;
+  setData: (args: SetDataArgs) => Promise<boolean>;
 }

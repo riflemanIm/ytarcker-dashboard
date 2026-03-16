@@ -743,20 +743,6 @@ app.post("/api/worklog_update", async (req, res) => {
               headers(token),
             );
             updatedTrackerComment = commentWithInternalTag;
-
-            await sendInternal(
-              buildInternalPayload({
-                duration: resolvedDurationMinutes,
-                startDate,
-                comment: commentWithInternalTag,
-                action: 1,
-                checklistItemId,
-                worklogId:
-                  internalWorklogIdFromResponse ??
-                  resolvedWorklogId ??
-                  undefined,
-              }),
-            );
           }
         } else if (!Number.isFinite(trackerWorklogId)) {
           console.warn(

@@ -2,10 +2,9 @@ import dayjs, { Dayjs } from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import axios from "axios";
-import isEmpty, { getLocalAdmin, parseISODurationToSeconds } from "@/helpers";
+import isEmpty, { getLocalAdmin } from "@/helpers";
 import {
   AppState,
-  DataItem,
   Issue,
   IssueType,
   QueueInfo,
@@ -195,7 +194,6 @@ export interface SetDataArgs {
   startDate?: string;
   issueTypeLabel?: string | null;
   workPlanId?: string | number | null;
-  skipLocalStateUpdate?: boolean;
 }
 
 export interface TlWorklogUpdateArgs {
@@ -253,10 +251,9 @@ export const setData = async ({
   startDate,
   issueTypeLabel,
   workPlanId,
-  skipLocalStateUpdate = false,
-}: SetDataArgs): Promise<void> => {
+}: SetDataArgs): Promise<boolean> => {
   if (token == null) {
-    return;
+    return false;
   }
   if (!issueId) {
     dispatch({
@@ -267,7 +264,7 @@ export const setData = async ({
         message: "Не указан ключ задачи (taskKey)",
       },
     });
-    return;
+    return false;
   }
   if (!trackerUid) {
     dispatch({
@@ -278,7 +275,7 @@ export const setData = async ({
         message: "Не выбран UID пользователя (trackerUid)",
       },
     });
-    return;
+    return false;
   }
 
   dispatch({
@@ -349,15 +346,6 @@ export const setData = async ({
         payload: (prev: AppState) => ({
           ...prev,
           dataTimeSpendLoading: false,
-          dataTimeSpend: skipLocalStateUpdate
-            ? prev.dataTimeSpend
-            : worklogId
-              ? prev.dataTimeSpend.map((item: DataItem) =>
-                  item.id === (res.data as DataItem).id
-                    ? (res.data as DataItem)
-                    : item,
-                )
-              : [...prev.dataTimeSpend, { ...(res.data as DataItem) }],
         }),
       });
       dispatch({
@@ -370,6 +358,7 @@ export const setData = async ({
             : "Данные успешно добавлены",
         },
       });
+      return true;
     } else {
       throw new Error(
         worklogId ? "Ошибка изменения данных" : "Ошибка добавления данных",
@@ -388,6 +377,7 @@ export const setData = async ({
       type: "setAlert",
       payload: { open: true, severity: "error", message: err.message },
     });
+    return false;
   }
 };
 
@@ -401,7 +391,6 @@ export interface DeleteDataArgs {
   deadlineOk?: boolean;
   needUpgradeEstimate?: boolean;
   makeTaskFaster?: boolean;
-  skipLocalStateUpdate?: boolean;
 }
 
 export const deleteData = async ({
@@ -414,10 +403,9 @@ export const deleteData = async ({
   deadlineOk,
   needUpgradeEstimate,
   makeTaskFaster,
-  skipLocalStateUpdate = false,
-}: DeleteDataArgs): Promise<void> => {
+}: DeleteDataArgs): Promise<boolean> => {
   if (token == null) {
-    return;
+    return false;
   }
   if (!issueId) {
     dispatch({
@@ -428,7 +416,7 @@ export const deleteData = async ({
         message: "Не указан ключ задачи (taskKey)",
       },
     });
-    return;
+    return false;
   }
   if (!trackerUid) {
     dispatch({
@@ -439,7 +427,7 @@ export const deleteData = async ({
         message: "Не выбран UID пользователя (trackerUid)",
       },
     });
-    return;
+    return false;
   }
 
   dispatch({
@@ -482,13 +470,6 @@ export const deleteData = async ({
         payload: (prev: AppState) => ({
           ...prev,
           dataTimeSpendLoading: false,
-          dataTimeSpend: skipLocalStateUpdate
-            ? prev.dataTimeSpend
-            : [
-                ...prev.dataTimeSpend.filter(
-                  (item: DataItem) => !ids.includes(item.id),
-                ),
-              ],
         }),
       });
       dispatch({
@@ -499,6 +480,7 @@ export const deleteData = async ({
           message: "Данные успешно удалены",
         },
       });
+      return true;
     } else {
       throw new Error("Ошибка удаления данных");
     }
@@ -515,6 +497,7 @@ export const deleteData = async ({
       type: "setAlert",
       payload: { open: true, severity: "error", message: err.message },
     });
+    return false;
   }
 };
 

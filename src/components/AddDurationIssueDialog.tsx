@@ -29,12 +29,11 @@ import PlanningInfoSection from "./PlanningInfoSection";
 import SelectIssueTypeList from "./SelectIssueTypeList";
 interface AddDurationIssueDialogProps {
   issues: Issue[];
-  setData: (args: SetDataArgs) => Promise<void>;
+  setData: (args: SetDataArgs) => Promise<boolean>;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   initialIssue?: Issue | null;
   hideTrigger?: boolean;
-  onSaved?: () => void;
   onWorkPlanRefresh?: () => void | Promise<void>;
 }
 
@@ -56,7 +55,6 @@ export default function AddDurationIssueDialog({
   onOpenChange,
   initialIssue,
   hideTrigger,
-  onSaved,
   onWorkPlanRefresh,
 }: AddDurationIssueDialogProps) {
   const { state, dispatch } = useAppContext();
@@ -146,7 +144,7 @@ export default function AddDurationIssueDialog({
       (values.issue as any)?.TaskKey ?? values.issue?.key ?? null;
     if (!issueKey) return;
     const dateCell = dayjs(values.dateTime);
-    await setData({
+    const success = await setData({
       dateCell,
       dispatch,
       token,
@@ -163,6 +161,7 @@ export default function AddDurationIssueDialog({
       addEndWorkDayTime: false,
       trackerUid: loginUid ?? undefined,
     } as SetDataArgs);
+    if (!success) return;
 
     dispatch({
       type: "setAlert",
@@ -174,10 +173,7 @@ export default function AddDurationIssueDialog({
     });
 
     handleClose();
-    onSaved?.();
-    if (onWorkPlanRefresh) {
-      await onWorkPlanRefresh();
-    }
+    await onWorkPlanRefresh?.();
   };
 
   const {

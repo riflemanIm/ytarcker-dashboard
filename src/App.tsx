@@ -52,6 +52,8 @@ const parseSprintRange = (raw?: string | null) => {
   return { start: start.startOf("day"), end: end.endOf("day") };
 };
 
+const POST_MUTATION_REFRESH_DELAY_MS = 700;
+
 const YandexTracker: FC = () => {
   const { state: appState, dispatch } = useAppContext();
   const { auth, state, alert, viewMode, weekOffset, reportFrom, reportTo } =
@@ -204,11 +206,11 @@ const YandexTracker: FC = () => {
     userInfoStatus,
   ]);
 
-  const fetchUserIssues = useCallback(() => {
+  const fetchUserIssues = useCallback(async () => {
     if (viewMode !== "table_time_spend") return;
     if (userInfoStatus !== "ready") return;
     if (state.showAdminControls && !selectedPatientUid) return;
-    getUserIssues({
+    await getUserIssues({
       dispatch,
       token,
       userId: state.showAdminControls ? selectedPatientUid : null,
@@ -224,7 +226,7 @@ const YandexTracker: FC = () => {
     userInfoStatus,
   ]);
 
-  const fetchForActiveRange = useCallback(() => {
+  const fetchForActiveRange = useCallback(async () => {
     if (viewMode === "search" || viewMode === "table_time_plan") return;
     if (userInfoStatus !== "ready") return;
     if (!token || (!state.showAdminControls && !login)) {
@@ -239,7 +241,7 @@ const YandexTracker: FC = () => {
       payload: (prev) => ({ ...prev, dataTimeSpend: [] }),
     });
 
-    getData({
+    await getData({
       userId: state.showAdminControls ? selectedPatientUid : null,
       dispatch,
       token,
@@ -314,11 +316,23 @@ const YandexTracker: FC = () => {
           workPlanRefreshKey: prev.workPlanRefreshKey + 1,
         }),
       });
+      await fetchPlanRangeData();
+      return;
     }
-    fetchForActiveRange();
-    fetchPlanRangeData();
-    fetchUserIssues();
+    if (viewMode !== "search") {
+      await fetchForActiveRange();
+    }
+    if (viewMode === "table_time_spend") {
+      await fetchUserIssues();
+    }
   };
+
+  const refreshAfterMutation = useCallback(async () => {
+    await new Promise<void>((resolve) => {
+      window.setTimeout(resolve, POST_MUTATION_REFRESH_DELAY_MS);
+    });
+    await handleRefresh();
+  }, [handleRefresh]);
 
   //console.log("appState", appState);
   const shouldShowAddDialog =
@@ -389,7 +403,7 @@ const YandexTracker: FC = () => {
                   setData={setData}
                   deleteData={deleteData}
                   dataTimeSpendLoading={state.dataTimeSpendLoading}
-                  onTimeSpendRefresh={fetchPlanRangeData}
+                  onRefresh={refreshAfterMutation}
                 />
                 <DurationAlert
                   open={alert.open}
@@ -420,6 +434,7 @@ const YandexTracker: FC = () => {
                         <AddDurationIssueDialog
                           issues={appState.state.issues}
                           setData={setData}
+                          onWorkPlanRefresh={refreshAfterMutation}
                         />
                       )}
                     </Stack>
@@ -431,6 +446,7 @@ const YandexTracker: FC = () => {
                       setData={setData}
                       deleteData={deleteData}
                       isEditable={!state.showAdminControls}
+                      onWorkPlanRefresh={refreshAfterMutation}
                       dataTimeSpendLoading={state.dataTimeSpendLoading}
                     />
                   </>
@@ -471,6 +487,7 @@ const YandexTracker: FC = () => {
                       <AddDurationIssueDialog
                         issues={appState.state.issues}
                         setData={setData}
+                        onWorkPlanRefresh={refreshAfterMutation}
                       />
                     )}
                   </Stack>

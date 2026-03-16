@@ -14,10 +14,10 @@ interface ViewTimePlanProps {
   start: Dayjs;
   rangeStart?: Dayjs;
   rangeEnd?: Dayjs;
-  setData: (args: SetDataArgs) => Promise<void>;
-  deleteData: (args: DeleteDataArgs) => void;
+  setData: (args: SetDataArgs) => Promise<boolean>;
+  deleteData: (args: DeleteDataArgs) => Promise<boolean>;
   dataTimeSpendLoading?: boolean;
-  onTimeSpendRefresh?: () => void | Promise<void>;
+  onRefresh?: () => void | Promise<void>;
 }
 
 const ViewTimePlan: FC<ViewTimePlanProps> = ({
@@ -28,7 +28,7 @@ const ViewTimePlan: FC<ViewTimePlanProps> = ({
   setData,
   deleteData,
   dataTimeSpendLoading = false,
-  onTimeSpendRefresh,
+  onRefresh,
 }) => {
   const {
     sprintId,
@@ -97,8 +97,8 @@ const ViewTimePlan: FC<ViewTimePlanProps> = ({
   ]);
 
   const refreshPlanView = useCallback(async () => {
-    await Promise.all([fetchWorkPlan(), onTimeSpendRefresh?.()]);
-  }, [fetchWorkPlan, onTimeSpendRefresh]);
+    await onRefresh?.();
+  }, [onRefresh]);
   return (
     <Box sx={{ px: 2, pb: 2 }}>
       <Stack

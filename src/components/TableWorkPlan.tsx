@@ -33,7 +33,7 @@ import TableTaskPlanInfo from "./TableTaskPlanInfo";
 interface TableWorkPlanProps {
   rows: WorkPlanItem[];
   loading?: boolean;
-  setData?: (args: SetDataArgs) => Promise<void>;
+  setData?: (args: SetDataArgs) => Promise<boolean>;
   onWorkPlanRefresh?: () => void | Promise<void>;
 }
 
@@ -176,10 +176,6 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
       dispatchState({ type: "setInfo", payload: { loading: false } });
     }
   }, []);
-
-  const handleTimeSaved = useCallback(() => {
-    onWorkPlanRefresh?.();
-  }, [onWorkPlanRefresh]);
 
   const columns = useMemo<GridColDef<WorkPlanItem | { id: string }>[]>(() => {
     const baseColumns: GridColDef<WorkPlanItem | { id: string }>[] = [
@@ -686,7 +682,6 @@ const TableWorkPlan: FC<TableWorkPlanProps> = ({
           }}
           initialIssue={addTimeIssue}
           hideTrigger
-          onSaved={handleTimeSaved}
           onWorkPlanRefresh={onWorkPlanRefresh}
         />
       )}

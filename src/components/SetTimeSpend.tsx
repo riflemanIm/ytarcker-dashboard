@@ -82,7 +82,6 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
   const {
     state: { loginUid },
   } = state;
-  const skipLocalStateUpdate = state.viewMode === "table_time_plan";
   console.log("menuState", menuState);
   const trackerUid = loginUid;
   const [riskState, setRiskState] = useState({
@@ -125,10 +124,6 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
   >({});
   const [openConfirm, setOpenConfirm] = useState(false);
   const [recentIssueTypes, setRecentIssueTypes] = useState<string[]>([]);
-
-  const bumpWorkPlanRefresh = useCallback(async () => {
-    await onWorkPlanRefresh?.();
-  }, [onWorkPlanRefresh]);
 
   const availableRecentTypes = useMemo(
     () =>
@@ -418,7 +413,7 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
     if (!validateAllEditRows()) return;
 
     // Всё валидно — отправляем все строки
-    await Promise.all(
+    const results = await Promise.all(
       durations.map((item, index) => {
         const id = getDurationKey(item, index);
         const row = rows[id] ?? getRowFromItem(item);
@@ -445,11 +440,13 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
             undefined,
           trackerUid,
           checklistItemId: menuState.checklistItemId ?? undefined,
-          skipLocalStateUpdate,
         });
       }),
     );
-    await bumpWorkPlanRefresh();
+
+    if (results.some(Boolean)) {
+      await onWorkPlanRefresh?.();
+    }
     onClose();
   }, [
     validateAllEditRows,
@@ -467,9 +464,8 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
     menuState.workPlanId,
     menuState.worklogIdInternal,
     trackerUid,
+    onWorkPlanRefresh,
     onClose,
-    bumpWorkPlanRefresh,
-    skipLocalStateUpdate,
   ]);
 
   // Кнопка "Сохранить изменения" disabled?
@@ -589,7 +585,7 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
       return;
     }
 
-    await setData({
+    const success = await setData({
       dateCell: menuState.dateField || undefined,
       dispatch,
       token,
@@ -604,11 +600,11 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
       checklistItemId: menuState.checklistItemId ?? undefined,
       workPlanId: menuState.workPlanId ?? undefined,
       worklogIdInternal: menuState.worklogIdInternal ?? undefined,
-      skipLocalStateUpdate,
     });
+    if (!success) return;
     setNewEntry({ duration: "", comment: "" });
     setSelectedIssueTypeLabelNew(null);
-    await bumpWorkPlanRefresh();
+    await onWorkPlanRefresh?.();
     onClose();
   }, [
     newEntry,
@@ -624,49 +620,47 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
     dispatch,
     token,
     trackerUid,
+    onWorkPlanRefresh,
     onClose,
-    bumpWorkPlanRefresh,
-    skipLocalStateUpdate,
   ]);
 
   // --- Удаление
   const handleConfirmDeleteAll = useCallback(async () => {
     if (menuState.durations?.length) {
-      await deleteData({
+      const success = await deleteData({
         token,
         dispatch,
         issueId: menuState.issueId,
         durations: menuState.durations ?? undefined,
         trackerUid,
-        skipLocalStateUpdate,
       });
+      if (!success) return;
     }
     setOpenConfirm(false);
-    await bumpWorkPlanRefresh();
+    await onWorkPlanRefresh?.();
     onClose();
   }, [
     menuState,
     token,
     deleteData,
     dispatch,
+    onWorkPlanRefresh,
     onClose,
     trackerUid,
-    bumpWorkPlanRefresh,
-    skipLocalStateUpdate,
   ]);
 
   const handleCancelDeleteAll = useCallback(() => setOpenConfirm(false), []);
   const handleDeleteItem = useCallback(
     async (item: DurationItem) => {
-      await deleteData({
+      const success = await deleteData({
         token,
         dispatch,
         issueId: menuState.issueId,
         durations: [item],
         trackerUid,
-        skipLocalStateUpdate,
       });
-      await bumpWorkPlanRefresh();
+      if (!success) return;
+      await onWorkPlanRefresh?.();
       onClose();
     },
     [
@@ -674,10 +668,9 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
       token,
       deleteData,
       dispatch,
+      onWorkPlanRefresh,
       onClose,
       trackerUid,
-      bumpWorkPlanRefresh,
-      skipLocalStateUpdate,
     ],
   );
 

@@ -42,8 +42,8 @@ interface TableTimeSpendProps {
   rangeStart?: Dayjs;
   rangeEnd?: Dayjs;
   title?: string;
-  setData: (args: SetDataArgs) => Promise<void>;
-  deleteData: (args: DeleteDataArgs) => void;
+  setData: (args: SetDataArgs) => Promise<boolean>;
+  deleteData: (args: DeleteDataArgs) => Promise<boolean>;
   isEditable: boolean;
   isAddable?: boolean;
   onWorkPlanRefresh?: () => void | Promise<void>;
@@ -291,7 +291,7 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
 
   // --- 6) Сохранение времени в выбранный день диапазона ---
   const handleCellEdit = useCallback(
-    (
+    async (
       field: string,
       newValue: string,
       issueId: string,
@@ -321,7 +321,7 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
         if (!dateCell || !dateCell.isValid()) {
           return false;
         }
-        setData({
+        const success = await setData({
           dateCell,
           dispatch,
           token,
@@ -330,7 +330,10 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
           trackerUid,
           checklistItemId: checklistItemId ?? undefined,
         });
-        return true;
+        if (success) {
+          await onWorkPlanRefresh?.();
+        }
+        return success;
       } catch (err: any) {
         console.error("handleCellEdit error:", err.message);
         dispatch({
@@ -340,7 +343,14 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
         return false;
       }
     },
-    [dispatch, getDateForField, setData, token, trackerUid],
+    [
+      dispatch,
+      getDateForField,
+      onWorkPlanRefresh,
+      setData,
+      token,
+      trackerUid,
+    ],
   );
 
   // --- 7) Колонки (шапка дат строится от viewStart/диапазона) ---
@@ -467,18 +477,18 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
             );
           }
         }}
-        processRowUpdate={(updatedRow, originalRow) => {
+        processRowUpdate={async (updatedRow, originalRow) => {
           const changedField = Object.keys(updatedRow).find(
             (key) => (updatedRow as any)[key] !== (originalRow as any)[key],
           ) as string;
-          return handleCellEdit(
+          return (await handleCellEdit(
             changedField,
             (updatedRow as any)[changedField],
             updatedRow.issueId,
             (updatedRow as any).checklistItemId,
           )
             ? updatedRow
-            : originalRow;
+            : originalRow);
         }}
         getRowClassName={(params) => (params.id === "total" ? "no-hover" : "")}
       />
