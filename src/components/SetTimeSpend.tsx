@@ -82,7 +82,8 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
   const {
     state: { loginUid },
   } = state;
-  console.log("menuState", menuState);
+  const isSubmitting = state.state.dataTimeSpendLoading;
+
   const trackerUid = loginUid;
   const [riskState, setRiskState] = useState({
     deadlineOk: true,
@@ -686,7 +687,14 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
         <Grid
           container
           spacing={2}
-          sx={{ p: 2.5, minWidth: 240, maxWidth: 600 }}
+          sx={{
+            p: 2.5,
+            minWidth: 240,
+            maxWidth: 600,
+            pointerEvents: isSubmitting ? "none" : "auto",
+            userSelect: isSubmitting ? "none" : "auto",
+            opacity: isSubmitting ? 0.65 : 1,
+          }}
         >
           <Grid size={8}>
             <Typography variant="subtitle1">
@@ -878,7 +886,14 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
             <Grid
               container
               spacing={2}
-              sx={{ p: 2.5, minWidth: 240, maxWidth: 600 }}
+              sx={{
+                p: 2.5,
+                minWidth: 240,
+                maxWidth: 600,
+                pointerEvents: isSubmitting ? "none" : "auto",
+                userSelect: isSubmitting ? "none" : "auto",
+                opacity: isSubmitting ? 0.65 : 1,
+              }}
             >
               <Grid size={12}>
                 <Typography variant="h6" color="info">

@@ -77,6 +77,7 @@ const initialState: AppState = {
   planEditMode: false,
   dataTimeSpend: [],
   dataTimeSpendLoading: false,
+  refreshKey: 0,
   showAdminControls: false,
   issues: [],
 };

@@ -163,6 +163,7 @@ export interface AppState {
   planEditMode?: boolean;
   dataTimeSpend: DataItem[];
   dataTimeSpendLoading: boolean;
+  refreshKey: number;
   showAdminControls: boolean;
   issues: Issue[];
 }

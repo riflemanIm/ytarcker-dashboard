@@ -7,7 +7,7 @@ import {
   Typography,
 } from "@mui/material";
 import dayjs from "dayjs";
-import { FC, useCallback, useEffect, useMemo, useState } from "react";
+import { FC, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   deleteData,
   getData,
@@ -52,7 +52,7 @@ const parseSprintRange = (raw?: string | null) => {
   return { start: start.startOf("day"), end: end.endOf("day") };
 };
 
-const POST_MUTATION_REFRESH_DELAY_MS = 700;
+const REFRESH_KEY_DELAY_MS = 1500;
 
 const YandexTracker: FC = () => {
   const { state: appState, dispatch } = useAppContext();
@@ -175,7 +175,6 @@ const YandexTracker: FC = () => {
 
   const fetchPlanRangeData = useCallback(async () => {
     if (viewMode !== "table_time_plan") return;
-    if (userInfoStatus !== "ready") return;
     const planRangeStart = sprintRange?.start;
     const planRangeEnd = sprintRange?.end;
 
@@ -203,12 +202,10 @@ const YandexTracker: FC = () => {
     viewMode,
     state.showAdminControls,
     workPlanRefreshKey,
-    userInfoStatus,
   ]);
 
   const fetchUserIssues = useCallback(async () => {
     if (viewMode !== "table_time_spend") return;
-    if (userInfoStatus !== "ready") return;
     if (state.showAdminControls && !selectedPatientUid) return;
     await getUserIssues({
       dispatch,
@@ -223,12 +220,10 @@ const YandexTracker: FC = () => {
     token,
     viewMode,
     state.showAdminControls,
-    userInfoStatus,
   ]);
 
   const fetchForActiveRange = useCallback(async () => {
     if (viewMode === "search" || viewMode === "table_time_plan") return;
-    if (userInfoStatus !== "ready") return;
     if (!token || (!state.showAdminControls && !login)) {
       return;
     }
@@ -261,7 +256,6 @@ const YandexTracker: FC = () => {
     end,
     viewMode,
     selectedPatientUid,
-    userInfoStatus,
   ]);
 
   useEffect(() => {
@@ -306,8 +300,6 @@ const YandexTracker: FC = () => {
   }, [dispatch, selectedGroupIds, viewMode]);
 
   const handleRefresh = async () => {
-    const ok = await fetchUserInfo();
-    if (!ok) return;
     if (viewMode === "table_time_plan") {
       dispatch({
         type: "setTableTimePlanState",
@@ -316,7 +308,6 @@ const YandexTracker: FC = () => {
           workPlanRefreshKey: prev.workPlanRefreshKey + 1,
         }),
       });
-      await fetchPlanRangeData();
       return;
     }
     if (viewMode !== "search") {
@@ -327,19 +318,27 @@ const YandexTracker: FC = () => {
     }
   };
 
-  const refreshAfterMutation = useCallback(async () => {
-    await new Promise<void>((resolve) => {
-      window.setTimeout(resolve, POST_MUTATION_REFRESH_DELAY_MS);
-    });
-    await handleRefresh();
-  }, [handleRefresh]);
+  // const refreshFromKeyRef = useRef(handleRefresh);
+  // useEffect(() => {
+  //   refreshFromKeyRef.current = handleRefresh;
+  // }, [handleRefresh]);
+
+  // useEffect(() => {
+  //   if (state.refreshKey === 0) return;
+  //   const timeoutId = window.setTimeout(() => {
+  //     refreshFromKeyRef.current();
+  //   }, REFRESH_KEY_DELAY_MS);
+  //   return () => {
+  //     window.clearTimeout(timeoutId);
+  //   };
+  // }, [state.refreshKey]);
 
   //console.log("appState", appState);
   const shouldShowAddDialog =
     viewMode === "table_time_spend" &&
     !state.showAdminControls &&
     !isEmpty(appState.state.issues);
-  console.log("appState.state.issues", appState.state.issues);
+  console.log("appState.state ", appState.state);
   return (
     <>
       <AppUpdateDialog />
@@ -349,7 +348,6 @@ const YandexTracker: FC = () => {
         sx={{
           backgroundColor: "background.default",
           height: "100vh",
-
           justifyContent: "center",
           textAlign: "center",
         }}
@@ -403,7 +401,6 @@ const YandexTracker: FC = () => {
                   setData={setData}
                   deleteData={deleteData}
                   dataTimeSpendLoading={state.dataTimeSpendLoading}
-                  onRefresh={refreshAfterMutation}
                 />
                 <DurationAlert
                   open={alert.open}
@@ -434,7 +431,6 @@ const YandexTracker: FC = () => {
                         <AddDurationIssueDialog
                           issues={appState.state.issues}
                           setData={setData}
-                          onWorkPlanRefresh={refreshAfterMutation}
                         />
                       )}
                     </Stack>
@@ -446,7 +442,6 @@ const YandexTracker: FC = () => {
                       setData={setData}
                       deleteData={deleteData}
                       isEditable={!state.showAdminControls}
-                      onWorkPlanRefresh={refreshAfterMutation}
                       dataTimeSpendLoading={state.dataTimeSpendLoading}
                     />
                   </>
@@ -487,7 +482,6 @@ const YandexTracker: FC = () => {
                       <AddDurationIssueDialog
                         issues={appState.state.issues}
                         setData={setData}
-                        onWorkPlanRefresh={refreshAfterMutation}
                       />
                     )}
                   </Stack>

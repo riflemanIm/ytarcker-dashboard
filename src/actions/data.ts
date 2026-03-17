@@ -32,6 +32,10 @@ dayjs.extend(timezone);
 const apiUrl: string = import.meta.env.VITE_APP_API_URL;
 let tlSprintsPromise: Promise<TlSprint[]> | null = null;
 let tlSprintsCache: TlSprint[] | null = null;
+let latestGetDataRequestId = 0;
+
+const isSameId = (left: unknown, right: unknown): boolean =>
+  String(left ?? "") === String(right ?? "");
 
 type AppDispatch = Dispatch<AppAction>;
 
@@ -42,6 +46,41 @@ type GetDataArgs = {
   start: string;
   end: string;
   login?: string;
+};
+
+type AppStateUpdater = (prev: AppState) => AppState;
+type DataTimeSpendUpdater = (prev: AppState["dataTimeSpend"]) => AppState["dataTimeSpend"];
+
+const patchAppState = (dispatch: AppDispatch, updater: AppStateUpdater): void => {
+  dispatch({
+    type: "setState",
+    payload: updater,
+  });
+};
+
+const patchDataTimeSpend = (
+  dispatch: AppDispatch,
+  updater: DataTimeSpendUpdater,
+): AppState["dataTimeSpend"] => {
+  let snapshot: AppState["dataTimeSpend"] = [];
+  patchAppState(dispatch, (prev) => {
+    snapshot = [...prev.dataTimeSpend];
+    return {
+      ...prev,
+      dataTimeSpend: updater(prev.dataTimeSpend),
+    };
+  });
+  return snapshot;
+};
+
+const rollbackDataTimeSpend = (
+  dispatch: AppDispatch,
+  snapshot: AppState["dataTimeSpend"],
+): void => {
+  patchAppState(dispatch, (prev) => ({
+    ...prev,
+    dataTimeSpend: snapshot,
+  }));
 };
 
 export interface TlUserInfo {
@@ -58,6 +97,8 @@ export const getData = async ({
   end,
   login,
 }: GetDataArgs): Promise<void> => {
+  const requestId = ++latestGetDataRequestId;
+
   dispatch({
     type: "setState",
     payload: (prev) => ({
@@ -79,6 +120,10 @@ export const getData = async ({
     if (res.status !== 200) {
       throw new Error("Api get data error");
     }
+    if (requestId !== latestGetDataRequestId) {
+      return;
+    }
+
     dispatch({
       type: "setState",
       payload: (prev) => {
@@ -103,6 +148,9 @@ export const getData = async ({
 
     const errorMessage = err instanceof Error ? err.message : String(err);
     console.error("getData error:", errorMessage);
+    if (requestId !== latestGetDataRequestId) {
+      return;
+    }
     dispatch({
       type: "setState",
       payload: (prev) => ({
@@ -278,36 +326,66 @@ export const setData = async ({
     return false;
   }
 
-  dispatch({
-    type: "setState",
-    payload: (prev) => ({ ...prev, dataTimeSpendLoading: true }),
+  patchAppState(dispatch, (prev) => ({ ...prev, dataTimeSpendLoading: true }));
+
+  const startDateTime = (() => {
+    const HOURS_END_DAY = 18;
+
+    if (addEndWorkDayTime && dateCell) {
+      return dateCell
+        .add(HOURS_END_DAY, "hours")
+        .format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
+    }
+
+    if (addEndWorkDayTime && !dateCell) {
+      return dayjs()
+        .add(HOURS_END_DAY, "hours")
+        .format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
+    }
+
+    if (dateCell) {
+      return dateCell.format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
+    }
+
+    return dayjs().format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
+  })();
+
+  const optimisticDuration = String(duration ?? "");
+  const optimisticComment = planningComment ?? comment ?? "";
+  const optimisticItem = {
+    id: worklogId
+      ? String(worklogId)
+      : `tmp-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    duration: optimisticDuration,
+    start: startDateTime,
+    comment: optimisticComment,
+    issue: {
+      key: issueId,
+      display: issueId,
+    },
+    updatedBy: {
+      id: trackerUid,
+      display: trackerUid,
+    },
+  };
+
+  const optimisticSnapshot = patchDataTimeSpend(dispatch, (prevData) => {
+    if (worklogId) {
+      return prevData.map((item) =>
+        isSameId(item.id, worklogId)
+          ? {
+              ...item,
+              duration: optimisticDuration,
+              comment: optimisticComment,
+              start: startDateTime,
+            }
+          : item,
+      );
+    }
+    return [optimisticItem as any, ...prevData];
   });
 
   try {
-    const startDateTime = (() => {
-      const HOURS_END_DAY = 18; // конец рабочего дня
-
-      if (addEndWorkDayTime && dateCell) {
-        // дата из ячейки + конец рабочего дня
-        return dateCell
-          .add(HOURS_END_DAY, "hours")
-          .format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
-      }
-
-      if (addEndWorkDayTime && !dateCell) {
-        // текущая дата + конец рабочего дня
-        return dayjs()
-          .add(HOURS_END_DAY, "hours")
-          .format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
-      }
-
-      if (dateCell) {
-        return dateCell.format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
-      }
-
-      return dayjs().format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
-    })();
-
     const internalStartDate =
       startDate ||
       (dateCell
@@ -341,13 +419,10 @@ export const setData = async ({
     }
 
     if (!isEmpty(res.data)) {
-      dispatch({
-        type: "setState",
-        payload: (prev: AppState) => ({
-          ...prev,
-          dataTimeSpendLoading: false,
-        }),
-      });
+      patchAppState(dispatch, (prev: AppState) => ({
+        ...prev,
+        dataTimeSpendLoading: false,
+      }));
       dispatch({
         type: "setAlert",
         payload: {
@@ -366,13 +441,11 @@ export const setData = async ({
     }
   } catch (err: any) {
     console.error("ERROR", err.message);
-    dispatch({
-      type: "setState",
-      payload: (prev: AppState) => ({
-        ...prev,
-        dataTimeSpendLoading: false,
-      }),
-    });
+    rollbackDataTimeSpend(dispatch, optimisticSnapshot);
+    patchAppState(dispatch, (prev: AppState) => ({
+      ...prev,
+      dataTimeSpendLoading: false,
+    }));
     dispatch({
       type: "setAlert",
       payload: { open: true, severity: "error", message: err.message },
@@ -430,9 +503,20 @@ export const deleteData = async ({
     return false;
   }
 
-  dispatch({
-    type: "setState",
-    payload: (prev) => ({ ...prev, dataTimeSpendLoading: true }),
+  patchAppState(dispatch, (prev) => ({ ...prev, dataTimeSpendLoading: true }));
+
+  const optimisticIds = Array.isArray(durations)
+    ? durations
+        .map((item) => item?.id)
+        .filter((id): id is string | number => id != null)
+        .map((id) => String(id))
+    : [];
+
+  const optimisticSnapshot = patchDataTimeSpend(dispatch, (prevData) => {
+    if (optimisticIds.length === 0) return prevData;
+    return prevData.filter(
+      (item) => !optimisticIds.includes(String(item.id)),
+    );
   });
 
   try {
@@ -445,7 +529,6 @@ export const deleteData = async ({
             comment: item.comment ?? "",
           }))
         : [];
-    const ids = items.map((item) => item.worklogId);
 
     const payload = {
       token,
@@ -465,13 +548,10 @@ export const deleteData = async ({
       throw new Error("Ошибка удаления данных");
     }
     if (res.data === true) {
-      dispatch({
-        type: "setState",
-        payload: (prev: AppState) => ({
-          ...prev,
-          dataTimeSpendLoading: false,
-        }),
-      });
+      patchAppState(dispatch, (prev: AppState) => ({
+        ...prev,
+        dataTimeSpendLoading: false,
+      }));
       dispatch({
         type: "setAlert",
         payload: {
@@ -486,13 +566,11 @@ export const deleteData = async ({
     }
   } catch (err: any) {
     console.error("ERROR", err.message);
-    dispatch({
-      type: "setState",
-      payload: (prev: AppState) => ({
-        ...prev,
-        dataTimeSpendLoading: false,
-      }),
-    });
+    rollbackDataTimeSpend(dispatch, optimisticSnapshot);
+    patchAppState(dispatch, (prev: AppState) => ({
+      ...prev,
+      dataTimeSpendLoading: false,
+    }));
     dispatch({
       type: "setAlert",
       payload: { open: true, severity: "error", message: err.message },
