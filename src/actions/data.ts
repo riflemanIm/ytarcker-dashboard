@@ -48,6 +48,25 @@ type GetDataArgs = {
   login?: string;
 };
 
+type TrackerWorklogResponse = {
+  id: string | number;
+  duration: string;
+  start: string;
+  comment?: string | null;
+  issue?: {
+    key?: string;
+    display?: string;
+  };
+  updatedBy?: {
+    id?: string | number;
+    display?: string;
+  };
+  createdBy?: {
+    id?: string | number;
+    display?: string;
+  };
+};
+
 type AppStateUpdater = (prev: AppState) => AppState;
 type DataTimeSpendUpdater = (prev: AppState["dataTimeSpend"]) => AppState["dataTimeSpend"];
 
@@ -82,6 +101,28 @@ const rollbackDataTimeSpend = (
     dataTimeSpend: snapshot,
   }));
 };
+
+const toDataTimeSpendItem = (
+  worklog: TrackerWorklogResponse,
+  fallbackIssueId: string,
+  fallbackTrackerUid: string,
+): AppState["dataTimeSpend"][number] => ({
+  id: String(worklog.id),
+  duration: worklog.duration,
+  start: worklog.start,
+  comment: worklog.comment ?? "",
+  issue: {
+    key: worklog.issue?.key ?? fallbackIssueId,
+    display: worklog.issue?.display ?? fallbackIssueId,
+  },
+  updatedBy: {
+    id: String(worklog.updatedBy?.id ?? worklog.createdBy?.id ?? fallbackTrackerUid),
+    display:
+      worklog.updatedBy?.display ??
+      worklog.createdBy?.display ??
+      fallbackTrackerUid,
+  },
+});
 
 export interface TlUserInfo {
   trackerUid: string;
@@ -412,13 +453,28 @@ export const setData = async ({
       workPlanId: workPlanId ?? null,
     };
 
-    const res = await axios.post(`${apiUrl}/api/worklog_update`, payload);
+    const res = await axios.post<TrackerWorklogResponse>(
+      `${apiUrl}/api/worklog_update`,
+      payload,
+    );
 
     if (res.status !== 200) {
       throw new Error("Api set data error");
     }
 
     if (!isEmpty(res.data)) {
+      const savedItem = toDataTimeSpendItem(res.data, issueId, trackerUid);
+      patchDataTimeSpend(dispatch, (prevData) => {
+        if (worklogId) {
+          return prevData.map((item) =>
+            isSameId(item.id, worklogId) ? savedItem : item,
+          );
+        }
+        return prevData.map((item) =>
+          isSameId(item.id, optimisticItem.id) ? savedItem : item,
+        );
+      });
+
       patchAppState(dispatch, (prev: AppState) => ({
         ...prev,
         dataTimeSpendLoading: false,
