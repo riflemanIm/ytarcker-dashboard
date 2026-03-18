@@ -28,6 +28,8 @@ export interface ToggleViewButtonProps {
   onLogout?: () => void;
   paletteMode: PaletteMode;
   onTogglePaletteMode: (mode: PaletteMode) => void;
+  useSystemTheme: boolean;
+  onToggleUseSystemTheme: (enabled: boolean) => void;
 }
 
 type IconComponent = typeof TodayIcon;
@@ -82,6 +84,8 @@ export default function ToggleViewButton({
   onLogout,
   paletteMode,
   onTogglePaletteMode,
+  useSystemTheme,
+  onToggleUseSystemTheme,
 }: ToggleViewButtonProps) {
   const [anchorEl, setAnchorEl] = React.useState<HTMLElement | null>(null);
 
@@ -190,10 +194,37 @@ export default function ToggleViewButton({
               },
             }}
           >
+            <ListItemText primary="Системная тема" />
+            <Switch
+              edge="end"
+              checked={useSystemTheme}
+              onChange={(event) => {
+                event.stopPropagation();
+                onToggleUseSystemTheme(event.target.checked);
+              }}
+              onClick={(event) => event.stopPropagation()}
+              color="primary"
+            />
+          </MenuItem>
+        )}
+        {showLogout && onLogout && (
+          <MenuItem
+            disableRipple
+            onClick={(event) => {
+              event.preventDefault();
+            }}
+            sx={{
+              cursor: "default",
+              "&.MuiMenuItem-root:hover": {
+                backgroundColor: "transparent",
+              },
+            }}
+          >
             <ListItemText primary="Тёмная тема" />
             <Switch
               edge="end"
               checked={paletteMode === "dark"}
+              disabled={useSystemTheme}
               onChange={(event) => {
                 event.stopPropagation();
                 onTogglePaletteMode(

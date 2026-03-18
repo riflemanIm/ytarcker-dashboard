@@ -1,7 +1,7 @@
-import { ReactNode, useMemo } from 'react';
+import { ReactNode, useEffect, useMemo } from 'react';
 
 // material-ui
-import { Components, CssBaseline, StyledEngineProvider, ThemeOptions, ThemeProvider, createTheme } from '@mui/material';
+import { Components, CssBaseline, PaletteMode, StyledEngineProvider, ThemeOptions, ThemeProvider, createTheme } from '@mui/material';
 import { useAppContext } from '@/context/AppContext';
 
 // project import
@@ -14,8 +14,30 @@ import Typography from './typography';
 
 export default function ThemeCustomization(props: { children: ReactNode }) {
   const {
-    state: { paletteMode }
+    state: { paletteMode, useSystemTheme },
+    dispatch
   } = useAppContext();
+
+  useEffect(() => {
+    if (!useSystemTheme || typeof window === 'undefined') return;
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const resolveMode = (matches: boolean): PaletteMode => (matches ? 'dark' : 'light');
+    const syncMode = (matches: boolean) => {
+      dispatch({ type: 'setPaletteMode', payload: resolveMode(matches) });
+    };
+
+    syncMode(mediaQuery.matches);
+
+    const listener = (event: MediaQueryListEvent) => syncMode(event.matches);
+    if (typeof mediaQuery.addEventListener === 'function') {
+      mediaQuery.addEventListener('change', listener);
+      return () => mediaQuery.removeEventListener('change', listener);
+    }
+
+    mediaQuery.addListener(listener);
+    return () => mediaQuery.removeListener(listener);
+  }, [dispatch, useSystemTheme]);
+
   const theme = useMemo(() => Palette(paletteMode), [paletteMode]);
 
   const themeTypography = Typography(`'Public Sans', sans-serif`);

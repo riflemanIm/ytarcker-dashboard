@@ -29,6 +29,7 @@ export type AppContextState = {
   state: AppState;
   alert: AlertState;
   paletteMode: PaletteMode;
+  useSystemTheme: boolean;
   viewMode: ViewMode;
   weekOffset: number;
   reportFrom: dayjs.Dayjs;
@@ -42,6 +43,7 @@ export type AppAction =
   | { type: "setState"; payload: SetStateAction<AppState> }
   | { type: "setAlert"; payload: SetStateAction<AlertState> }
   | { type: "setPaletteMode"; payload: SetStateAction<PaletteMode> }
+  | { type: "setUseSystemTheme"; payload: SetStateAction<boolean> }
   | { type: "setViewMode"; payload: SetStateAction<ViewMode> }
   | { type: "setWeekOffset"; payload: SetStateAction<number> }
   | { type: "setReportFrom"; payload: SetStateAction<dayjs.Dayjs> }
@@ -89,10 +91,15 @@ const initialAlert: AlertState = {
 };
 
 const THEME_MODE_STORAGE_KEY = "theme_mode";
+const SYSTEM_THEME_STORAGE_KEY = "theme_use_system";
 const getInitialPaletteMode = (): PaletteMode => {
   if (typeof window === "undefined") return "light";
   const raw = window.localStorage.getItem(THEME_MODE_STORAGE_KEY);
   return raw === "dark" ? "dark" : "light";
+};
+const getInitialUseSystemTheme = (): boolean => {
+  if (typeof window === "undefined") return false;
+  return window.localStorage.getItem(SYSTEM_THEME_STORAGE_KEY) === "true";
 };
 
 const initialViewMode: ViewMode = "table_time_spend";
@@ -152,6 +159,7 @@ const initAppContextState = (): AppContextState => ({
   state: initialState,
   alert: initialAlert,
   paletteMode: getInitialPaletteMode(),
+  useSystemTheme: getInitialUseSystemTheme(),
   viewMode: initialViewMode,
   weekOffset: initialWeekOffset,
   reportFrom: initialReportFrom,
@@ -177,6 +185,16 @@ function appReducer(
         window.localStorage.setItem(THEME_MODE_STORAGE_KEY, paletteMode);
       }
       return { ...state, paletteMode };
+    }
+    case "setUseSystemTheme": {
+      const useSystemTheme = applySetState(state.useSystemTheme, action.payload);
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(
+          SYSTEM_THEME_STORAGE_KEY,
+          String(useSystemTheme),
+        );
+      }
+      return { ...state, useSystemTheme };
     }
     case "setViewMode":
       return {

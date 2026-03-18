@@ -32,7 +32,7 @@ const AppHeader: FC<AppHeaderProps> = ({
   onRefresh,
 }) => {
   const { state: appState, dispatch } = useAppContext();
-  const { auth, state, viewMode, paletteMode } = appState;
+  const { auth, state, viewMode, paletteMode, useSystemTheme } = appState;
   const { token, login } = auth;
   const { isAdmin, showAdminControls, dataTimeSpendLoading, planEditMode } =
     state;
@@ -46,6 +46,16 @@ const AppHeader: FC<AppHeaderProps> = ({
   };
   const handlePaletteModeChange = (mode: PaletteMode) => {
     dispatch({ type: "setPaletteMode", payload: mode });
+  };
+  const handleSystemThemeChange = (enabled: boolean) => {
+    dispatch({ type: "setUseSystemTheme", payload: enabled });
+    if (!enabled || typeof window === "undefined") return;
+    const systemMode: PaletteMode = window.matchMedia(
+      "(prefers-color-scheme: dark)",
+    ).matches
+      ? "dark"
+      : "light";
+    dispatch({ type: "setPaletteMode", payload: systemMode });
   };
 
   const handleToggleShowAdminControls = () => {
@@ -103,6 +113,8 @@ const AppHeader: FC<AppHeaderProps> = ({
             onLogout={handleLogout}
             paletteMode={paletteMode}
             onTogglePaletteMode={handlePaletteModeChange}
+            useSystemTheme={useSystemTheme}
+            onToggleUseSystemTheme={handleSystemThemeChange}
           />
         </Box>
 
