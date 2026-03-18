@@ -42,19 +42,20 @@ const VIEW_MODE_OPTIONS: Array<{
   access?: (params: { isAdmin: boolean; planEditMode: boolean }) => boolean;
 }> = [
   {
-    mode: "table_time_spend",
-    icon: TodayIcon,
-    tooltip: "Показать таблицу списания времени за неделю",
-    menuLabel: "Списания",
-    access: ({ planEditMode }) => !planEditMode,
-  },
-  {
     mode: "table_time_plan",
     icon: EventNoteIcon,
     tooltip: "Показать планирования времени",
     menuLabel: "Планирование",
     access: () => true,
   },
+  {
+    mode: "table_time_spend",
+    icon: TodayIcon,
+    tooltip: "Показать таблицу списания времени за неделю",
+    menuLabel: "Списания",
+    access: ({ planEditMode }) => !planEditMode,
+  },
+
   {
     mode: "report",
     icon: DateRangeIcon,
@@ -227,9 +228,7 @@ export default function ToggleViewButton({
               disabled={useSystemTheme}
               onChange={(event) => {
                 event.stopPropagation();
-                onTogglePaletteMode(
-                  paletteMode === "dark" ? "light" : "dark",
-                );
+                onTogglePaletteMode(paletteMode === "dark" ? "light" : "dark");
               }}
               onClick={(event) => event.stopPropagation()}
               color="primary"

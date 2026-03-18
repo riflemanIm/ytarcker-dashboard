@@ -102,7 +102,7 @@ const getInitialUseSystemTheme = (): boolean => {
   return window.localStorage.getItem(SYSTEM_THEME_STORAGE_KEY) === "true";
 };
 
-const initialViewMode: ViewMode = "table_time_spend";
+const initialViewMode: ViewMode = "table_time_plan";
 const initialWeekOffset = 0;
 const initialReportFrom = dayjs().startOf("month");
 const initialReportTo = dayjs().endOf("month");
@@ -187,7 +187,10 @@ function appReducer(
       return { ...state, paletteMode };
     }
     case "setUseSystemTheme": {
-      const useSystemTheme = applySetState(state.useSystemTheme, action.payload);
+      const useSystemTheme = applySetState(
+        state.useSystemTheme,
+        action.payload,
+      );
       if (typeof window !== "undefined") {
         window.localStorage.setItem(
           SYSTEM_THEME_STORAGE_KEY,
