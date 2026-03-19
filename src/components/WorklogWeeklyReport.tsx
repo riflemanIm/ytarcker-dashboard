@@ -74,12 +74,13 @@ export default function WorklogWeeklyReport({
 
   // 5) строим колонки и строки
   const { rows, columns } = React.useMemo(() => {
+    const SHRINK_MIN_WIDTH = 72;
     const cols: GridColDef[] = [
       {
         field: "issueTitle",
         headerName: "Название",
-        flex: 1,
-        minWidth: 220,
+        flex: 420,
+        minWidth: SHRINK_MIN_WIDTH,
         sortable: false,
         filterable: false,
         disableColumnMenu: true,
@@ -97,8 +98,8 @@ export default function WorklogWeeklyReport({
       {
         field: "issueKey",
         headerName: "Key",
-        minWidth: 120,
-        flex: 0.5,
+        minWidth: SHRINK_MIN_WIDTH,
+        flex: 120,
         sortable: false,
         filterable: false,
         disableColumnMenu: true,
@@ -110,7 +111,7 @@ export default function WorklogWeeklyReport({
       cols.push({
         field: key,
         headerName: formatWeekLabelTz(monday),
-        flex: 1,
+        flex: 140,
         sortable: false,
         filterable: false,
         disableColumnMenu: true,
@@ -121,14 +122,14 @@ export default function WorklogWeeklyReport({
         ),
         align: "right",
         headerAlign: "right",
-        minWidth: 140,
+        minWidth: SHRINK_MIN_WIDTH,
       });
     });
 
     cols.push({
       field: "total",
       headerName: "Итого",
-      flex: 1,
+      flex: 120,
       sortable: false,
       filterable: false,
       disableColumnMenu: true,
@@ -139,7 +140,7 @@ export default function WorklogWeeklyReport({
       ),
       align: "right",
       headerAlign: "right",
-      minWidth: 120,
+      minWidth: SHRINK_MIN_WIDTH,
     });
 
     type RowAcc = Record<string, any>;
