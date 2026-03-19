@@ -354,12 +354,13 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
   );
 
   // --- 7) Колонки (шапка дат строится от viewStart/диапазона) ---
+  const SHRINK_MIN_WIDTH = 72;
   const columns: GridColDef[] = [
     {
       field: "issue",
       headerName: "Key + Название",
-      flex: 4,
-      minWidth: 420,
+      flex: 420,
+      minWidth: SHRINK_MIN_WIDTH,
       sortable: true,
       filterable: false,
       disableColumnMenu: true,
@@ -392,7 +393,8 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
       return {
         field,
         headerName: header,
-        flex: 1,
+        flex: 100,
+        minWidth: SHRINK_MIN_WIDTH,
         editable: false,
         sortable: true,
         sortComparator: (v1: string, v2: string, params1, params2) => {
@@ -416,7 +418,13 @@ const TableTimeSpend: FC<TableTimeSpendProps> = ({
       } as GridColDef;
     }),
 
-    { field: "total", headerName: "Итого", sortable: false, flex: 1.5 },
+    {
+      field: "total",
+      headerName: "Итого",
+      sortable: false,
+      flex: 150,
+      minWidth: SHRINK_MIN_WIDTH,
+    },
   ];
 
   // --- 8) Строка «Итого» по отфильтрованным строкам ---

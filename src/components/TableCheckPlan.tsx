@@ -180,109 +180,112 @@ const TableCheckPlan: FC = () => {
   ]);
 
   const columns = useMemo<GridColDef<TaskListItem>[]>(
-    () => [
-      {
-        field: "TaskName",
-        headerName: "Key + Название",
-        flex: 1,
-        minWidth: nameMinWidth,
-        sortable: true,
-        filterable: false,
-        disableColumnMenu: true,
-        valueGetter: (_value, row) => row.TaskKey,
-        renderCell: (params: GridRenderCellParams) => {
-          const workName = params.row.WorkName ?? "";
-          const workType = params.row.WorkNameDict ?? "";
-          const hintParts = [
-            workName ? `Работа: ${workName}` : null,
-            workType ? `Тип работы: ${workType}` : null,
-          ].filter(Boolean);
-          const hint = hintParts.length ? (
-            <Box sx={{ whiteSpace: "pre-line" }}>{hintParts.join("\n")}</Box>
-          ) : null;
-          return (
-            <IssueDisplay
-              taskKey={params.row.TaskKey}
-              taskName={params.row.TaskName}
-              href={`https://tracker.yandex.ru/${params.row.TaskKey}`}
-              fio={params.row.CheckListAssignee ?? ""}
-              hint={hint}
-            />
-          );
+    () => {
+      const SHRINK_MIN_WIDTH = 60;
+      return [
+        {
+          field: "TaskName",
+          headerName: "Key + Название",
+          flex: nameMinWidth,
+          minWidth: SHRINK_MIN_WIDTH,
+          sortable: true,
+          filterable: false,
+          disableColumnMenu: true,
+          valueGetter: (_value, row) => row.TaskKey,
+          renderCell: (params: GridRenderCellParams) => {
+            const workName = params.row.WorkName ?? "";
+            const workType = params.row.WorkNameDict ?? "";
+            const hintParts = [
+              workName ? `Работа: ${workName}` : null,
+              workType ? `Тип работы: ${workType}` : null,
+            ].filter(Boolean);
+            const hint = hintParts.length ? (
+              <Box sx={{ whiteSpace: "pre-line" }}>{hintParts.join("\n")}</Box>
+            ) : null;
+            return (
+              <IssueDisplay
+                taskKey={params.row.TaskKey}
+                taskName={params.row.TaskName}
+                href={`https://tracker.yandex.ru/${params.row.TaskKey}`}
+                fio={params.row.CheckListAssignee ?? ""}
+                hint={hint}
+              />
+            );
+          },
         },
-      },
-      {
-        field: "TaskKey",
-        headerName: "В План",
-        minWidth: 76,
-        flex: 1,
-        sortable: false,
-        filterable: false,
-        disableColumnMenu: true,
-        renderCell: (params: GridRenderCellParams) => (
-          <Stack
-            direction="row"
-            spacing={1}
-            alignItems="center"
-            justifyContent="space-between"
-            sx={{ height: "100%" }}
-          >
-            <Tooltip title={params.value}>
-              <span>
+        {
+          field: "TaskKey",
+          headerName: "В План",
+          minWidth: SHRINK_MIN_WIDTH,
+          flex: 76,
+          sortable: false,
+          filterable: false,
+          disableColumnMenu: true,
+          renderCell: (params: GridRenderCellParams) => (
+            <Stack
+              direction="row"
+              spacing={1}
+              alignItems="center"
+              justifyContent="space-between"
+              sx={{ height: "100%" }}
+            >
+              <Tooltip title={params.value}>
+                <span>
+                  <IconButton
+                    size="medium"
+                    sx={(theme) => ({ color: theme.palette.primary.main })}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      dispatchState({
+                        type: "setDialog",
+                        open: true,
+                        issue: params.row,
+                      });
+                    }}
+                    disabled={!sprintId}
+                  >
+                    <PlaylistAddIcon fontSize="medium" />
+                  </IconButton>
+                </span>
+              </Tooltip>
+              <Tooltip title="Показать информацию по задаче">
                 <IconButton
                   size="medium"
-                  sx={(theme) => ({ color: theme.palette.primary.main })}
+                  sx={(theme) => ({ color: theme.palette.info.main })}
                   onClick={(event) => {
                     event.stopPropagation();
-                    dispatchState({
-                      type: "setDialog",
-                      open: true,
-                      issue: params.row,
-                    });
+                    handleOpenInfo(params.row as TaskListItem);
                   }}
-                  disabled={!sprintId}
                 >
-                  <PlaylistAddIcon fontSize="medium" />
+                  <InfoIcon fontSize="medium" />
                 </IconButton>
-              </span>
-            </Tooltip>
-            <Tooltip title="Показать информацию по задаче">
-              <IconButton
-                size="medium"
-                sx={(theme) => ({ color: theme.palette.info.main })}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  handleOpenInfo(params.row as TaskListItem);
-                }}
-              >
-                <InfoIcon fontSize="medium" />
-              </IconButton>
-            </Tooltip>
-          </Stack>
-        ),
-      },
+              </Tooltip>
+            </Stack>
+          ),
+        },
 
-      {
-        field: "WorkMinutes",
-        headerName: "Трудозатраты.",
-        flex: 1,
-        minWidth: 60,
-        disableColumnMenu: true,
-        valueFormatter: (value: TaskListItem["WorkMinutes"]) =>
-          formatWorkMinutes(value) || "-",
-      },
-      {
-        field: "Deadline",
-        headerName: "Дедлайн",
-        flex: 1,
-        minWidth: 90,
-        disableColumnMenu: true,
-        valueFormatter: (value: TaskListItem["Deadline"]) =>
-          value && dayjs(value).isValid()
-            ? dayjs(value).format("DD.MM.YYYY")
-            : "-",
-      },
-    ],
+        {
+          field: "WorkMinutes",
+          headerName: "Трудозатраты.",
+          flex: 60,
+          minWidth: SHRINK_MIN_WIDTH,
+          disableColumnMenu: true,
+          valueFormatter: (value: TaskListItem["WorkMinutes"]) =>
+            formatWorkMinutes(value) || "-",
+        },
+        {
+          field: "Deadline",
+          headerName: "Дедлайн",
+          flex: 90,
+          minWidth: SHRINK_MIN_WIDTH,
+          disableColumnMenu: true,
+          valueFormatter: (value: TaskListItem["Deadline"]) =>
+            value && dayjs(value).isValid()
+              ? dayjs(value).format("DD.MM.YYYY")
+              : "-",
+        },
+      ];
+    },
     [nameMinWidth, sprintId],
   );
 

@@ -88,45 +88,53 @@ const TableWorkPlanCapacity: FC = () => {
   ]);
 
   const columns = useMemo<GridColDef<WorkPlanCapacityItem>[]>(
-    () => [
-      { field: "Sprint", headerName: "Спринт", flex: 1, minWidth: 160 },
-      {
-        field: "CheckListAssignee",
-        headerName: "Сотрудник / Роль",
-        flex: 1.2,
-        minWidth: 160,
-        renderCell: (params) => (
-          <Box sx={{ display: "flex", flexDirection: "column" }}>
-            <span>{params.row.CheckListAssignee}</span>
-            <span>{params.row.RoleName}</span>
-          </Box>
-        ),
-      },
-      {
-        field: "EstimateTimeMinutes",
-        headerName: "План.",
-        flex: 1.5,
-        minWidth: 160,
-        valueFormatter: (value: WorkPlanCapacityItem["EstimateTimeMinutes"]) =>
-          workMinutesToDurationInput(value),
-      },
-      {
-        field: "SpentTimeMinutes",
-        headerName: "Факт.",
-        flex: 1,
-        minWidth: 60,
-        valueFormatter: (value: WorkPlanCapacityItem["SpentTimeMinutes"]) =>
-          workMinutesToDurationInput(value),
-      },
-      {
-        field: "RemainTimeMinutes",
-        headerName: "Остаток.",
-        flex: 1,
-        minWidth: 140,
-        valueFormatter: (value: WorkPlanCapacityItem["RemainTimeMinutes"]) =>
-          workMinutesToDurationInput(value),
-      },
-    ],
+    () => {
+      const SHRINK_MIN_WIDTH = 60;
+      return [
+        {
+          field: "Sprint",
+          headerName: "Спринт",
+          flex: 160,
+          minWidth: SHRINK_MIN_WIDTH,
+        },
+        {
+          field: "CheckListAssignee",
+          headerName: "Сотрудник / Роль",
+          flex: 160,
+          minWidth: SHRINK_MIN_WIDTH,
+          renderCell: (params) => (
+            <Box sx={{ display: "flex", flexDirection: "column" }}>
+              <span>{params.row.CheckListAssignee}</span>
+              <span>{params.row.RoleName}</span>
+            </Box>
+          ),
+        },
+        {
+          field: "EstimateTimeMinutes",
+          headerName: "План.",
+          flex: 160,
+          minWidth: SHRINK_MIN_WIDTH,
+          valueFormatter: (value: WorkPlanCapacityItem["EstimateTimeMinutes"]) =>
+            workMinutesToDurationInput(value),
+        },
+        {
+          field: "SpentTimeMinutes",
+          headerName: "Факт.",
+          flex: 60,
+          minWidth: SHRINK_MIN_WIDTH,
+          valueFormatter: (value: WorkPlanCapacityItem["SpentTimeMinutes"]) =>
+            workMinutesToDurationInput(value),
+        },
+        {
+          field: "RemainTimeMinutes",
+          headerName: "Остаток.",
+          flex: 140,
+          minWidth: SHRINK_MIN_WIDTH,
+          valueFormatter: (value: WorkPlanCapacityItem["RemainTimeMinutes"]) =>
+            workMinutesToDurationInput(value),
+        },
+      ];
+    },
     [],
   );
 

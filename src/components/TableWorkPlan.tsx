@@ -57,12 +57,14 @@ const TableWorkPlanContent: FC = () => {
   const isSprintReady = sprintId != null;
 
   const columns = useMemo<GridColDef<WorkPlanItem | { id: string }>[]>(() => {
+    const SHRINK_MIN_WIDTH = 72;
+
     const baseColumns: GridColDef<WorkPlanItem | { id: string }>[] = [
       {
         field: "TaskKey",
         headerName: "Key + Название",
-        flex: 1.6,
-        minWidth: 520,
+        flex: 520,
+        minWidth: SHRINK_MIN_WIDTH,
         sortable: true,
         filterable: false,
         disableColumnMenu: true,
@@ -97,16 +99,16 @@ const TableWorkPlanContent: FC = () => {
       },
     ];
 
+    const actionFlex = canAddTime ? 160 : 120;
     const actionColumn: GridColDef<WorkPlanItem | { id: string }> = {
       field: "actions",
       headerName: "Действия",
-      minWidth: canAddTime ? 160 : 120,
+      flex: actionFlex,
+      minWidth: SHRINK_MIN_WIDTH,
       sortable: false,
       filterable: false,
       disableColumnMenu: true,
-      renderCell: (
-        params: GridRenderCellParams<WorkPlanItem | { id: string }>,
-      ) =>
+      renderCell: (params: GridRenderCellParams<WorkPlanItem | { id: string }>) =>
         (params.row as any).id === "__total__" ? null : (
           <TableWorkPlanActions row={params.row as WorkPlanItem} />
         ),
@@ -116,8 +118,8 @@ const TableWorkPlanContent: FC = () => {
       {
         field: "Deadline",
         headerName: "Дедлайн",
-        flex: 0.8,
-        minWidth: 90,
+        flex: 90,
+        minWidth: SHRINK_MIN_WIDTH,
         valueFormatter: (value: WorkPlanItem["Deadline"]) =>
           value && dayjs(value).isValid()
             ? dayjs(value).format("DD.MM.YYYY")
@@ -126,8 +128,8 @@ const TableWorkPlanContent: FC = () => {
       {
         field: "WorkName",
         headerName: "Работа",
-        flex: 1.4,
-        minWidth: 200,
+        flex: 200,
+        minWidth: SHRINK_MIN_WIDTH,
         renderCell: (params: GridRenderCellParams) => {
           const row = params.row as WorkPlanItem;
           const title =
@@ -142,24 +144,24 @@ const TableWorkPlanContent: FC = () => {
       {
         field: "EstimateTimeMinutes",
         headerName: "Оценка.",
-        flex: 0.7,
-        minWidth: 90,
+        flex: 90,
+        minWidth: SHRINK_MIN_WIDTH,
         valueFormatter: (value: WorkPlanItem["EstimateTimeMinutes"]) =>
           formatWorkMinutes(value),
       },
       {
         field: "RemainTimeMinutes",
         headerName: "Остаток.",
-        flex: 0.8,
-        minWidth: 90,
+        flex: 90,
+        minWidth: SHRINK_MIN_WIDTH,
         valueFormatter: (value: WorkPlanItem["RemainTimeMinutes"]) =>
           formatWorkMinutes(value),
       },
       {
         field: "Comment",
         headerName: "Комментарий",
-        flex: 1,
-        minWidth: 280,
+        flex: 280,
+        minWidth: SHRINK_MIN_WIDTH,
         renderCell: (params: GridRenderCellParams) => (
           <Typography
             variant="body2"
@@ -178,14 +180,14 @@ const TableWorkPlanContent: FC = () => {
       {
         field: "CheckListAssignee",
         headerName: "Тек.Исполнитель",
-        flex: 1,
-        minWidth: 120,
+        flex: 120,
+        minWidth: SHRINK_MIN_WIDTH,
       },
       {
         field: "StatusName",
         headerName: "Статус",
-        flex: 1,
-        minWidth: 120,
+        flex: 120,
+        minWidth: SHRINK_MIN_WIDTH,
         renderCell: (params: GridRenderCellParams) => (
           <Typography
             variant="body2"
@@ -201,7 +203,12 @@ const TableWorkPlanContent: FC = () => {
           </Typography>
         ),
       },
-      { field: "ProjectName", headerName: "Проект", flex: 1.1, minWidth: 150 },
+      {
+        field: "ProjectName",
+        headerName: "Проект",
+        flex: 150,
+        minWidth: SHRINK_MIN_WIDTH,
+      },
     ];
 
     return [...baseColumns, actionColumn, ...tailColumns];

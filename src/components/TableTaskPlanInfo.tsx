@@ -14,13 +14,14 @@ const TableTaskPlanInfo: FC<TableTaskPlanInfoProps> = ({
   rows,
   loading = false,
 }) => {
+  const SHRINK_MIN_WIDTH = 60;
   const columns = useMemo<GridColDef<TaskPlanInfoItem>[]>(
     () => [
       {
         field: "SprintLabel",
         headerName: "Спринт",
-        minWidth: 110,
-        flex: 0.8,
+        minWidth: SHRINK_MIN_WIDTH,
+        flex: 110,
         sortable: false,
         filterable: false,
         disableColumnMenu: true,
@@ -28,8 +29,8 @@ const TableTaskPlanInfo: FC<TableTaskPlanInfoProps> = ({
       {
         field: "CheckListAssignee",
         headerName: "Исполнитель",
-        minWidth: 140,
-        flex: 1,
+        minWidth: SHRINK_MIN_WIDTH,
+        flex: 140,
         sortable: false,
         filterable: false,
         disableColumnMenu: true,
@@ -37,8 +38,8 @@ const TableTaskPlanInfo: FC<TableTaskPlanInfoProps> = ({
       {
         field: "WorkName",
         headerName: "Работа",
-        minWidth: 140,
-        flex: 1.1,
+        minWidth: SHRINK_MIN_WIDTH,
+        flex: 140,
         sortable: false,
         filterable: false,
         disableColumnMenu: true,
@@ -46,8 +47,8 @@ const TableTaskPlanInfo: FC<TableTaskPlanInfoProps> = ({
       {
         field: "WorkDone",
         headerName: "Готово",
-        minWidth: 70,
-        flex: 0.5,
+        minWidth: SHRINK_MIN_WIDTH,
+        flex: 70,
         sortable: false,
         filterable: false,
         disableColumnMenu: true,
@@ -57,8 +58,8 @@ const TableTaskPlanInfo: FC<TableTaskPlanInfoProps> = ({
       {
         field: "Deadline",
         headerName: "Дедлайн",
-        minWidth: 90,
-        flex: 0.6,
+        minWidth: SHRINK_MIN_WIDTH,
+        flex: 90,
         sortable: false,
         filterable: false,
         disableColumnMenu: true,
@@ -70,8 +71,8 @@ const TableTaskPlanInfo: FC<TableTaskPlanInfoProps> = ({
       {
         field: "EstimateTimeMinutes",
         headerName: "Оценка",
-        minWidth: 60,
-        flex: 0.6,
+        minWidth: SHRINK_MIN_WIDTH,
+        flex: 60,
         sortable: false,
         filterable: false,
         disableColumnMenu: true,
@@ -81,8 +82,8 @@ const TableTaskPlanInfo: FC<TableTaskPlanInfoProps> = ({
       {
         field: "SpentTimeMinutes",
         headerName: "Затрачено",
-        minWidth: 60,
-        flex: 0.6,
+        minWidth: SHRINK_MIN_WIDTH,
+        flex: 60,
         sortable: false,
         filterable: false,
         disableColumnMenu: true,
@@ -92,8 +93,8 @@ const TableTaskPlanInfo: FC<TableTaskPlanInfoProps> = ({
       {
         field: "RemainTimeMinutes",
         headerName: "Осталось",
-        minWidth: 60,
-        flex: 0.6,
+        minWidth: SHRINK_MIN_WIDTH,
+        flex: 60,
         sortable: false,
         filterable: false,
         disableColumnMenu: true,
@@ -103,8 +104,8 @@ const TableTaskPlanInfo: FC<TableTaskPlanInfoProps> = ({
       {
         field: "Hint",
         headerName: "Комментарий",
-        minWidth: 120,
-        flex: 0.9,
+        minWidth: SHRINK_MIN_WIDTH,
+        flex: 120,
         sortable: false,
         filterable: false,
         disableColumnMenu: true,

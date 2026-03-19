@@ -271,12 +271,13 @@ const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
     return "";
   }, [rangeEnd, rangeMode, rangeStart]);
 
+  const SHRINK_MIN_WIDTH = 72;
   const columns: GridColDef[] = [
     {
       field: "issue",
       headerName: "Key + Название",
-      flex: 4,
-      minWidth: 420,
+      flex: 420,
+      minWidth: SHRINK_MIN_WIDTH,
       sortable: true,
       filterable: false,
       disableColumnMenu: true,
@@ -304,7 +305,8 @@ const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
       return {
         field,
         headerName: header,
-        flex: 1,
+        flex: 100,
+        minWidth: SHRINK_MIN_WIDTH,
         editable: false,
         sortable: true,
         sortComparator: (v1: string, v2: string, params1, params2) => {
@@ -327,7 +329,13 @@ const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
         ),
       } as GridColDef;
     }),
-    { field: "total", headerName: "Итого", sortable: false, flex: 1.5 },
+    {
+      field: "total",
+      headerName: "Итого",
+      sortable: false,
+      flex: 150,
+      minWidth: SHRINK_MIN_WIDTH,
+    },
   ];
 
   const totalRow = useMemo(() => {
