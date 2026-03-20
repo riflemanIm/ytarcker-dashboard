@@ -19,6 +19,7 @@ import {
   TextField,
   Tooltip,
   Typography,
+  Box,
 } from "@mui/material";
 import Autocomplete from "@mui/material/Autocomplete";
 import dayjs, { Dayjs } from "dayjs";
@@ -367,19 +368,21 @@ export default function AddDurationIssueDialog({
             alignItems="center"
             justifyContent="space-between"
           >
-            <Typography variant="h5" color="success">
-              Добавить затраченное время по задаче
-            </Typography>
-            {hasTaskKey && (
-              <Stack spacing={0.5}>
-                <Typography variant="subtitle2">
-                  {headerTaskName} • {headerTaskKey} • {headerWorkName}
-                </Typography>
-                <Typography variant="subtitle2">
-                  Спринт: {sprintName}
-                </Typography>
-              </Stack>
-            )}
+            <Box>
+              <Typography variant="h6" color="success">
+                Добавить затраченное время по задаче
+              </Typography>
+              {hasTaskKey && (
+                <>
+                  <Typography variant="subtitle1">
+                    {headerTaskName} • {headerTaskKey} • {headerWorkName}
+                  </Typography>
+                  <Typography variant="subtitle2">
+                    Спринт: {sprintName}
+                  </Typography>
+                </>
+              )}
+            </Box>
             <IconButton
               onClick={handleClose}
               disabled={isLoading}
@@ -432,7 +435,10 @@ export default function AddDurationIssueDialog({
                       // ВАЖНО: props должны быть на li, а не на Grid
                       <Grid container spacing={2} component="li" {...props}>
                         <Grid size={3} component="div">
-                          <Typography variant="subtitle2" color="text.secondary">
+                          <Typography
+                            variant="subtitle2"
+                            color="text.secondary"
+                          >
                             [{option.key}]
                           </Typography>
                         </Grid>
@@ -485,7 +491,10 @@ export default function AddDurationIssueDialog({
                   minRows={3}
                   value={values.comment ?? ""} // ВСЕГДА чистый (без тегов)
                   onChange={(e) => {
-                    const newVals = { ...values, comment: e.target.value ?? "" };
+                    const newVals = {
+                      ...values,
+                      comment: e.target.value ?? "",
+                    };
                     setValues(newVals);
                     setErrors(validate(newVals));
                   }}

@@ -318,17 +318,33 @@ const TableWorkPlanContent: FC = () => {
         getRowId={(row) => (row as any).id ?? row.YT_TL_WORKPLAN_ID}
         sx={(theme) => {
           const palette = getPriorityPalette(theme);
+          const isDarkMode = theme.palette.mode === "dark";
           return {
+            ...(isDarkMode && {
+              "& .MuiDataGrid-cell": {
+                color: theme.palette.common.white,
+              },
+              "& .MuiDataGrid-columnHeaderTitle": {
+                color: theme.palette.common.white,
+              },
+              "& .MuiDataGrid-columnHeader": {
+                color: theme.palette.common.white,
+              },
+            }),
             "& .priority-green .MuiDataGrid-cell": {
               backgroundColor: palette.Green.main,
-              color: palette.Green.text,
+              color: isDarkMode
+                ? theme.palette.common.white
+                : palette.Green.text,
             },
             "& .priority-green:hover .MuiDataGrid-cell": {
               backgroundColor: palette.Green.hover,
             },
             "& .priority-orange .MuiDataGrid-cell": {
               backgroundColor: palette.Orange.main,
-              color: palette.Orange.text,
+              color: isDarkMode
+                ? theme.palette.common.white
+                : palette.Orange.text,
             },
             "& .priority-orange:hover .MuiDataGrid-cell": {
               backgroundColor: palette.Orange.hover,
@@ -351,7 +367,9 @@ const TableWorkPlanContent: FC = () => {
             },
             "& .row-done": {
               backgroundColor: theme.palette.action.disabledBackground,
-              color: theme.palette.text.disabled,
+              color: isDarkMode
+                ? theme.palette.common.white
+                : theme.palette.text.disabled,
             },
           };
         }}
