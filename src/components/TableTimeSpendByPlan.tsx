@@ -48,8 +48,8 @@ const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
   useTableTimePlanSelectors();
   const effectivePlanItems = planItems ?? [];
   const [filterByPlanOnly, setFilterByPlanOnly] = useState(false);
-  console.log("data", data);
-  console.log("planItems", planItems);
+  // console.log("data", data);
+  // console.log("planItems", planItems);
   const { planKeys, planMeta } = useMemo(() => {
     const next = new Set<string>();
     const meta: Record<
@@ -122,6 +122,7 @@ const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
       durations.forEach((d) => {
         items.push({
           ...item,
+          id: d.id,
           start: d.start,
           duration: d.duration,
           comment: d.comment ?? item.comment,
@@ -136,18 +137,16 @@ const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
     const source = filterByPlanOnly
       ? normalizedData.filter((item) => planKeys.has(String(item.issueId)))
       : normalizedData;
-    return (
-      source.map((item) => {
-        const meta = planMeta[String(item.issueId)];
-        return {
-          ...item,
-          checklistItemId: meta?.checklistItemId ?? null,
-          remainTimeMinutes: meta?.remainTimeMinutes,
-          workPlanId: meta?.workPlanId ?? null,
-          worklogIdInternal: meta?.worklogIdInternal ?? null,
-        };
-      })
-    );
+    return source.map((item) => {
+      const meta = planMeta[String(item.issueId)];
+      return {
+        ...item,
+        checklistItemId: meta?.checklistItemId ?? null,
+        remainTimeMinutes: meta?.remainTimeMinutes,
+        workPlanId: meta?.workPlanId ?? null,
+        worklogIdInternal: meta?.worklogIdInternal ?? null,
+      };
+    });
   }, [filterByPlanOnly, normalizedData, planKeys, planMeta]);
 
   const dataForRange = useMemo(() => {
@@ -162,8 +161,8 @@ const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
       return d.isSameOrAfter(s) && d.isSameOrBefore(e);
     });
   }, [filteredData, rangeEnd, rangeMode, rangeStart, start]);
-  console.log("planKeys", planKeys);
-  console.log("planMeta", planMeta);
+  // console.log("planKeys", planKeys);
+  // console.log("planMeta", planMeta);
   const fieldKeys = rangeMode
     ? rangeDays
     : [
@@ -382,7 +381,9 @@ const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
           rows={[...tableRows, totalRow]}
           columns={columns}
           loading={dataTimeSpendLoading}
-          getRowClassName={(params) => (params.id === "total" ? "no-hover" : "")}
+          getRowClassName={(params) =>
+            params.id === "total" ? "no-hover" : ""
+          }
         />
       )}
       <SetTimeSpend

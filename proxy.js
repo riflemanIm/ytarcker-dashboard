@@ -278,8 +278,7 @@ app.get("/api/issues", async (req, res) => {
         requestBody.createdBy = userId;
       }
 
-      const url =
-        `${TRACKER_API_V2_BASE_URL}/worklog/_search?perPage=10000`;
+      const url = `${TRACKER_API_V2_BASE_URL}/worklog/_search?perPage=10000`;
       const response = await axios.post(url, requestBody, headers(token));
 
       // Фильтрация данных с использованием уже вычисленных timestamp'ов
@@ -411,7 +410,7 @@ app.post("/api/worklog_update", async (req, res) => {
       workPlanId,
       items,
     } = req.body ?? {};
-    console.log("delete items =", items);
+
     const hasToken = typeof token === "string" && token.length > 0;
     const resolvedDurationMinutes = resolveDurationMinutes(duration);
     const internalWorklogIdFromRequest = Number.isInteger(
@@ -506,11 +505,21 @@ app.post("/api/worklog_update", async (req, res) => {
       if (!ENABLE_INTERNAL_UPDATES) {
         return { data: { skipped: true } };
       }
-      return axios.post(
+      console.log("[api/worklog_update] internal request payload", {
+        endpoint: `${INTERNAL_API_BASE_URL}/acceptor/yandextracker/tlworklogupdate`,
+        payload,
+      });
+      const response = await axios.post(
         `${INTERNAL_API_BASE_URL}/acceptor/yandextracker/tlworklogupdate`,
         payload,
         { timeout: 15000 },
       );
+      console.log("[api/worklog_update] internal response payload", {
+        endpoint: `${INTERNAL_API_BASE_URL}/acceptor/yandextracker/tlworklogupdate`,
+        status: response?.status,
+        data: response?.data,
+      });
+      return response;
     };
 
     const sendInternalLogged = async (payload, scope) => {
@@ -555,7 +564,7 @@ app.post("/api/worklog_update", async (req, res) => {
 
       const commentWithTags = buildInternalComment(
         comment,
-        internalWorklogIdFromRequest,
+        action === 0 ? undefined : internalWorklogIdFromRequest,
       );
       const internalResponse = await sendInternalLogged(
         buildInternalPayload({
@@ -565,10 +574,12 @@ app.post("/api/worklog_update", async (req, res) => {
           action,
           checklistItemId,
           worklogId:
-            internalWorklogIdFromRequest ??
-            (Number.isInteger(Number(worklogId))
-              ? Number(worklogId)
-              : undefined),
+            action === 0
+              ? undefined
+              : (internalWorklogIdFromRequest ??
+                (Number.isInteger(Number(worklogId))
+                  ? Number(worklogId)
+                  : undefined)),
         }),
         "internal-only",
       );
@@ -580,6 +591,136 @@ app.post("/api/worklog_update", async (req, res) => {
       // Action: Add or Edit
       case 0:
       case 1: {
+        const isBatchEdit =
+          action === 1 && Array.isArray(items) && items.length > 0;
+        if (isBatchEdit) {
+          const responses = [];
+          for (const item of items) {
+            const itemWorklogId = Number(item?.worklogId);
+            const itemDuration = item?.duration;
+            const itemStartDate = item?.startDate;
+            const itemComment = item?.comment ?? "";
+            const itemIssueTypeLabel = item?.issueTypeLabel ?? issueTypeLabel;
+            const itemWorkPlanId = item?.workPlanId ?? workPlanId;
+            const itemWorklogIdInternal = Number.isInteger(
+              Number(item?.worklogIdInternal),
+            )
+              ? Number(item.worklogIdInternal)
+              : undefined;
+            const itemChecklistItemId =
+              item?.checklistItemId ?? checklistItemId ?? undefined;
+            const itemDurationMinutes = resolveDurationMinutes(itemDuration);
+
+            if (!Number.isInteger(itemWorklogId)) {
+              return res.status(400).json({
+                message:
+                  "Field 'items[].worklogId' is required and must be an integer for Edit action.",
+              });
+            }
+            const itemInternalError = requireInternalFields({
+              duration: itemDurationMinutes,
+              startDate: itemStartDate,
+              comment: itemComment,
+              trackerUid,
+              deadlineOk,
+              needUpgradeEstimate,
+              makeTaskFaster,
+            });
+            if (itemInternalError) {
+              return res.status(400).json({ message: itemInternalError });
+            }
+
+            let existingComment = null;
+            let existingWorkPlanId;
+            let existingWorklogId;
+            try {
+              const existing = await axios.get(
+                `${TRACKER_API_V2_BASE_URL}/issues/${taskKey}/worklog/${itemWorklogId}`,
+                headers(token),
+              );
+              const existingData = existing?.data ?? {};
+              existingComment =
+                normalizeCommentText(existingData?.comment) || null;
+              existingWorkPlanId =
+                extractWorkPlanIdFromComment(existingComment);
+              existingWorklogId = extractWorklogIdFromComment(existingComment);
+            } catch (error) {
+              console.warn(
+                "[api/worklog_update] failed to load existing comment for tags (batch)",
+                { taskKey, worklogId: itemWorklogId, error: error?.message },
+              );
+            }
+
+            const resolvedWorkPlanId =
+              existingWorkPlanId ?? itemWorkPlanId ?? undefined;
+            const resolvedWorklogId =
+              itemWorklogIdInternal ?? existingWorklogId ?? undefined;
+            console.log("[api/worklog_update] batch resolved ids", {
+              taskKey,
+              trackerWorklogId: itemWorklogId,
+              requestWorklogIdInternal: itemWorklogIdInternal,
+              existingWorklogIdInternal: existingWorklogId,
+              resolvedWorklogIdInternal: resolvedWorklogId,
+            });
+            const itemCommentWithTags = buildCommentWithTags(
+              itemComment,
+              itemIssueTypeLabel ?? undefined,
+              riskState,
+              resolvedWorkPlanId,
+              resolvedWorklogId,
+            );
+
+            const trackerResponse = await axios.patch(
+              `${TRACKER_API_V2_BASE_URL}/issues/${taskKey}/worklog/${itemWorklogId}`,
+              {
+                duration: normalizeTrackerDuration(itemDuration),
+                comment: itemCommentWithTags,
+              },
+              headers(token),
+            );
+
+            const internalResponse = await sendInternal(
+              buildInternalPayload({
+                duration: itemDurationMinutes,
+                startDate: itemStartDate,
+                comment: itemCommentWithTags,
+                action: 1,
+                checklistItemId: itemChecklistItemId,
+                worklogId:
+                  resolvedWorklogId != null
+                    ? Number(resolvedWorklogId)
+                    : undefined,
+                issueTypeLabel: itemIssueTypeLabel ?? undefined,
+                workPlanId: resolvedWorkPlanId ?? undefined,
+              }),
+            );
+
+            const internalWorklogIdFromResponse =
+              internalResponse?.data?.YT_TL_WORKLOG_ID;
+            const commentWithInternalTag = buildCommentWithTags(
+              itemComment,
+              itemIssueTypeLabel ?? undefined,
+              riskState,
+              resolvedWorkPlanId,
+              internalWorklogIdFromResponse ?? resolvedWorklogId,
+            );
+            let responseData = trackerResponse?.data ?? null;
+            if (commentWithInternalTag !== itemCommentWithTags) {
+              const trackerSecondPatch = await axios.patch(
+                `${TRACKER_API_V2_BASE_URL}/issues/${taskKey}/worklog/${itemWorklogId}`,
+                { comment: commentWithInternalTag },
+                headers(token),
+              );
+              responseData = {
+                ...(trackerSecondPatch?.data ?? trackerResponse?.data ?? {}),
+                comment: commentWithInternalTag,
+              };
+            }
+            responses.push(responseData);
+          }
+          return res.json(responses);
+        }
+
         const hasDurationValue =
           (typeof duration === "string" && duration.length > 0) ||
           (typeof duration === "number" && Number.isFinite(duration));
@@ -641,7 +782,14 @@ app.post("/api/worklog_update", async (req, res) => {
         const resolvedWorklogId =
           action === 1
             ? (internalWorklogIdFromRequest ?? existingWorklogId)
-            : (internalWorklogIdFromRequest ?? undefined);
+            : undefined;
+        console.log("[api/worklog_update] single resolved ids", {
+          taskKey,
+          trackerWorklogId: worklogId,
+          requestWorklogIdInternal: internalWorklogIdFromRequest,
+          existingWorklogIdInternal: existingWorklogId,
+          resolvedWorklogIdInternal: resolvedWorklogId,
+        });
         const commentWithTags = buildInternalComment(
           comment,
           resolvedWorklogId,
@@ -677,7 +825,10 @@ app.post("/api/worklog_update", async (req, res) => {
               comment: commentWithTags,
               action,
               checklistItemId,
-              worklogId: action === 1 ? Number(worklogId) : undefined,
+              worklogId:
+                action === 1 && resolvedWorklogId != null
+                  ? Number(resolvedWorklogId)
+                  : undefined,
             }),
           );
         } catch (error) {
@@ -1714,10 +1865,7 @@ app.post("/api/yt_tl_checklist_data", async (req, res) => {
       });
     }
 
-    if (
-      typeof updatePlan !== "undefined" &&
-      typeof updatePlan !== "boolean"
-    ) {
+    if (typeof updatePlan !== "undefined" && typeof updatePlan !== "boolean") {
       return res.status(400).json({
         message: "Field 'updatePlan' must be a boolean if provided.",
       });

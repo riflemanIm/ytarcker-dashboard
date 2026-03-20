@@ -54,6 +54,7 @@ import { EditableCellMenuProps } from "@/types/menu";
 import { DurationItem, TaskItemMenu } from "../types/global";
 import SelectIssueTypeList from "./SelectIssueTypeList";
 import PlanningInfoSection from "./PlanningInfoSection";
+import dayjs from "dayjs";
 
 type RowUI = {
   durationRaw: string;
@@ -93,7 +94,7 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
   // --- данные из бэка
   const [localState, setLocalState] = useState<TaskItemMenu>({
     issue_type_list: [],
-    durations: menuState.durations || [],
+    durations: [],
     loaded: true,
   });
 
@@ -103,8 +104,8 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
   );
   const loaded = localState.loaded ?? true;
   const durations = useMemo<DurationItem[]>(
-    () => localState.durations ?? [],
-    [localState.durations],
+    () => menuState.durations ?? [],
+    [menuState.durations],
   );
 
   // --- UI по строкам
@@ -147,6 +148,13 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
       });
     }
   }, [open, menuState.durations]);
+
+  useEffect(() => {
+    if (!open) return;
+    setRows({});
+    setValidationErrors({});
+    setNewEntry({ duration: "", comment: "" });
+  }, [open, menuState.issueId, menuState.field, menuState.durations]);
 
   const rememberRecentIssueType = useCallback((label: string | null) => {
     if (!label || typeof window === "undefined") return;
@@ -413,42 +421,59 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
   const handleSaveAllEdits = useCallback(async () => {
     if (!validateAllEditRows()) return;
 
-    // Всё валидно — отправляем все строки
-    const results = await Promise.all(
-      durations.map((item, index) => {
-        const id = getDurationKey(item, index);
-        const row = rows[id] ?? getRowFromItem(item);
+    const batchItems = durations.map((item, index) => {
+      const id = getDurationKey(item, index);
+      const row = rows[id] ?? getRowFromItem(item);
+      return {
+        worklogId: item.id,
+        duration: normalizeDuration(row.durationRaw ?? ""),
+        comment: row.cleanComment,
+        startDate: menuState.dateField
+          ? menuState.dateField.format("YYYY-MM-DD")
+          : dayjs(item.start).format("YYYY-MM-DD"),
+        issueTypeLabel: row.selectedLabel ?? null,
+        workPlanId:
+          menuState.workPlanId ??
+          extractWorkPlanId(item.comment ?? "") ??
+          undefined,
+        worklogIdInternal: extractWorklogId(item.comment ?? "") ?? undefined,
+        checklistItemId: menuState.checklistItemId ?? undefined,
+      };
+    });
 
-        return setData({
-          dateCell: menuState.dateField || undefined,
-          dispatch,
-          token,
-          issueId: menuState.issueId,
-          duration: normalizeDuration(row.durationRaw ?? ""),
-          comment: row.cleanComment,
-          worklogId: item.id,
-          worklogIdInternal:
-            menuState.worklogIdInternal ??
-            extractWorklogId(item.comment ?? "") ??
-            undefined,
-          deadlineOk: riskState.deadlineOk,
-          needUpgradeEstimate: riskState.needUpgradeEstimate,
-          makeTaskFaster: riskState.makeTaskFaster,
-          issueTypeLabel: row.selectedLabel ?? null,
-          workPlanId:
-            menuState.workPlanId ??
-            extractWorkPlanId(item.comment ?? "") ??
-            undefined,
-          trackerUid,
-          checklistItemId: menuState.checklistItemId ?? undefined,
-        });
-      }),
+    const invalidItem = batchItems.find(
+      (item) => !Number.isInteger(Number(item.worklogId)),
     );
-
-    if (results.some(Boolean)) {
-      await onWorkPlanRefresh?.();
+    if (invalidItem) {
+      dispatch({
+        type: "setAlert",
+        payload: {
+          open: true,
+          severity: "error",
+          message:
+            "Не удалось сохранить изменения: некорректный идентификатор worklog в одной из строк.",
+        },
+      });
+      return;
     }
-    onClose();
+
+    const success = await setData({
+      dispatch,
+      token,
+      issueId: menuState.issueId,
+      duration: "PT0M",
+      deadlineOk: riskState.deadlineOk,
+      needUpgradeEstimate: riskState.needUpgradeEstimate,
+      makeTaskFaster: riskState.makeTaskFaster,
+      trackerUid,
+      checklistItemId: menuState.checklistItemId ?? undefined,
+      items: batchItems,
+    });
+
+    if (success) {
+      await onWorkPlanRefresh?.();
+      onClose();
+    }
   }, [
     validateAllEditRows,
     durations,
@@ -462,8 +487,8 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
     token,
     menuState.issueId,
     menuState.dateField,
+    menuState.checklistItemId,
     menuState.workPlanId,
-    menuState.worklogIdInternal,
     trackerUid,
     onWorkPlanRefresh,
     onClose,
@@ -600,7 +625,6 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
       trackerUid,
       checklistItemId: menuState.checklistItemId ?? undefined,
       workPlanId: menuState.workPlanId ?? undefined,
-      worklogIdInternal: menuState.worklogIdInternal ?? undefined,
     });
     if (!success) return;
     setNewEntry({ duration: "", comment: "" });
@@ -617,7 +641,6 @@ const SetTimeSpend: FC<SetTimeSpendProps> = ({
     menuState.dateField,
     menuState.issueId,
     menuState.workPlanId,
-    menuState.worklogIdInternal,
     dispatch,
     token,
     trackerUid,

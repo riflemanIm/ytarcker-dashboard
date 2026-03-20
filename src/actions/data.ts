@@ -68,9 +68,14 @@ type TrackerWorklogResponse = {
 };
 
 type AppStateUpdater = (prev: AppState) => AppState;
-type DataTimeSpendUpdater = (prev: AppState["dataTimeSpend"]) => AppState["dataTimeSpend"];
+type DataTimeSpendUpdater = (
+  prev: AppState["dataTimeSpend"],
+) => AppState["dataTimeSpend"];
 
-const patchAppState = (dispatch: AppDispatch, updater: AppStateUpdater): void => {
+const patchAppState = (
+  dispatch: AppDispatch,
+  updater: AppStateUpdater,
+): void => {
   dispatch({
     type: "setState",
     payload: updater,
@@ -116,7 +121,9 @@ const toDataTimeSpendItem = (
     display: worklog.issue?.display ?? fallbackIssueId,
   },
   updatedBy: {
-    id: String(worklog.updatedBy?.id ?? worklog.createdBy?.id ?? fallbackTrackerUid),
+    id: String(
+      worklog.updatedBy?.id ?? worklog.createdBy?.id ?? fallbackTrackerUid,
+    ),
     display:
       worklog.updatedBy?.display ??
       worklog.createdBy?.display ??
@@ -234,13 +241,9 @@ export const getTlUserInfo = async ({
       type: "setState",
       // payload: (prev) => ({
       //   ...prev,
-      //   loginUid: info.trackerUid ?? prev.loginUid ?? null,
-      //   isAdmin: localAdmin?.isAdmin ?? info.isAdmin ?? prev.isAdmin ?? false,
-      //   planEditMode:
-      //     localAdmin?.planEditMode ??
-      //     info.planEditMode ??
-      //     prev.planEditMode ??
-      //     false,
+      //   loginUid: "8000000000000145",
+      //   isAdmin: true,
+      //   planEditMode: true,
       // }),
       payload: (prev) => ({
         ...prev,
@@ -283,6 +286,16 @@ export interface SetDataArgs {
   startDate?: string;
   issueTypeLabel?: string | null;
   workPlanId?: string | number | null;
+  items?: Array<{
+    worklogId: string | number;
+    duration: string | number;
+    startDate: string;
+    comment: string;
+    issueTypeLabel?: string | null;
+    workPlanId?: string | number | null;
+    worklogIdInternal?: string | number | null;
+    checklistItemId?: string | null;
+  }>;
 }
 
 export interface TlWorklogUpdateArgs {
@@ -340,6 +353,7 @@ export const setData = async ({
   startDate,
   issueTypeLabel,
   workPlanId,
+  items,
 }: SetDataArgs): Promise<boolean> => {
   if (token == null) {
     return false;
@@ -365,6 +379,83 @@ export const setData = async ({
       },
     });
     return false;
+  }
+
+  if (Array.isArray(items) && items.length > 0) {
+    patchAppState(dispatch, (prev) => ({
+      ...prev,
+      dataTimeSpendLoading: true,
+    }));
+    try {
+      const payload = {
+        token,
+        taskKey: issueId,
+        action: 1,
+        trackerUid,
+        checklistItemId,
+        deadlineOk: deadlineOk ?? true,
+        needUpgradeEstimate: needUpgradeEstimate ?? false,
+        makeTaskFaster: makeTaskFaster ?? false,
+        items: items.map((item) => ({
+          worklogId: Number(item.worklogId),
+          duration: item.duration,
+          startDate: item.startDate,
+          comment: item.comment ?? "",
+          issueTypeLabel: item.issueTypeLabel ?? null,
+          workPlanId: item.workPlanId ?? null,
+          worklogIdInternal:
+            item.worklogIdInternal != null
+              ? Number(item.worklogIdInternal)
+              : undefined,
+          checklistItemId: item.checklistItemId ?? checklistItemId ?? null,
+        })),
+      };
+
+      const res = await axios.post<TrackerWorklogResponse[]>(
+        `${apiUrl}/api/worklog_update`,
+        payload,
+      );
+      if (res.status !== 200) {
+        throw new Error("Api set data error");
+      }
+
+      if (Array.isArray(res.data) && res.data.length > 0) {
+        const byId = new Map(
+          res.data.map((item) => [
+            String(item.id),
+            toDataTimeSpendItem(item, issueId, trackerUid),
+          ]),
+        );
+        patchDataTimeSpend(dispatch, (prevData) =>
+          prevData.map((item) => byId.get(String(item.id)) ?? item),
+        );
+      }
+
+      patchAppState(dispatch, (prev: AppState) => ({
+        ...prev,
+        dataTimeSpendLoading: false,
+      }));
+      dispatch({
+        type: "setAlert",
+        payload: {
+          open: true,
+          severity: "success",
+          message: "Записи успешно изменены",
+        },
+      });
+      return true;
+    } catch (err: any) {
+      console.error("ERROR", err.message);
+      patchAppState(dispatch, (prev: AppState) => ({
+        ...prev,
+        dataTimeSpendLoading: false,
+      }));
+      dispatch({
+        type: "setAlert",
+        payload: { open: true, severity: "error", message: err.message },
+      });
+      return false;
+    }
   }
 
   patchAppState(dispatch, (prev) => ({ ...prev, dataTimeSpendLoading: true }));
@@ -570,9 +661,7 @@ export const deleteData = async ({
 
   const optimisticSnapshot = patchDataTimeSpend(dispatch, (prevData) => {
     if (optimisticIds.length === 0) return prevData;
-    return prevData.filter(
-      (item) => !optimisticIds.includes(String(item.id)),
-    );
+    return prevData.filter((item) => !optimisticIds.includes(String(item.id)));
   });
 
   try {

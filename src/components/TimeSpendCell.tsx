@@ -87,7 +87,9 @@ const TimeSpendCell = ({
       <Typography
         variant="body2"
         sx={(theme) => ({
-          color: allTagged ? theme.palette.success.main : theme.palette.error.main,
+          color: allTagged
+            ? theme.palette.success.main
+            : theme.palette.error.main,
           fontWeight: 500,
         })}
       >
@@ -101,7 +103,9 @@ const TimeSpendCell = ({
       <Typography
         variant="button"
         sx={(theme) => ({
-          color: allTagged ? theme.palette.success.main : theme.palette.error.main,
+          color: allTagged
+            ? theme.palette.success.main
+            : theme.palette.error.main,
           fontWeight: 600,
         })}
       >

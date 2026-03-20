@@ -338,7 +338,10 @@ const YandexTracker: FC = () => {
     viewMode === "table_time_spend" &&
     !state.showAdminControls &&
     !isEmpty(appState.state.issues);
-  console.log("appState.state ", appState.state);
+  console.log(
+    "dataTimeSpend ",
+    appState.state.dataTimeSpend.filter((it) => it.issue.key === "PMTTASKS-67"),
+  );
   return (
     <>
       <AppUpdateDialog />
