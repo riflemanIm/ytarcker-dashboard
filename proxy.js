@@ -537,8 +537,8 @@ app.post("/api/worklog_update", async (req, res) => {
       return response;
     };
 
-    // Action: Internal-only (no OAuth token)
-    if (!hasToken) {
+    // Internal-only mode: call only internal API, skip Tracker requests.
+    const handleInternalOnly = async () => {
       if (
         (action === 1 || action === 2) &&
         !Number.isInteger(Number(worklogId)) &&
@@ -583,458 +583,442 @@ app.post("/api/worklog_update", async (req, res) => {
         }),
         "internal-only",
       );
-
       return res.json(internalResponse?.data ?? null);
-    }
+    };
 
-    switch (action) {
-      // Action: Add or Edit
-      case 0:
-      case 1: {
-        const isBatchEdit =
-          action === 1 && Array.isArray(items) && items.length > 0;
-        if (isBatchEdit) {
-          const responses = [];
-          for (const item of items) {
-            const itemWorklogId = Number(item?.worklogId);
-            const itemDuration = item?.duration;
-            const itemStartDate = item?.startDate;
-            const itemComment = item?.comment ?? "";
-            const itemIssueTypeLabel = item?.issueTypeLabel ?? issueTypeLabel;
-            const itemWorkPlanId = item?.workPlanId ?? workPlanId;
-            const itemWorklogIdInternal = Number.isInteger(
-              Number(item?.worklogIdInternal),
-            )
-              ? Number(item.worklogIdInternal)
-              : undefined;
-            const itemChecklistItemId =
-              item?.checklistItemId ?? checklistItemId ?? undefined;
-            const itemDurationMinutes = resolveDurationMinutes(itemDuration);
+    // Shared helper: load current Tracker comment to reuse existing tags.
+    const loadExistingWorklogMeta = async (trackerWorklogId, scope) => {
+      try {
+        const existing = await axios.get(
+          `${TRACKER_API_V2_BASE_URL}/issues/${taskKey}/worklog/${trackerWorklogId}`,
+          headers(token),
+        );
+        const existingData = existing?.data ?? {};
+        const existingComment = normalizeCommentText(existingData?.comment) || null;
+        return {
+          existingComment,
+          existingWorkPlanId: extractWorkPlanIdFromComment(existingComment),
+          existingWorklogId: extractWorklogIdFromComment(existingComment),
+        };
+      } catch (error) {
+        console.warn(
+          "[api/worklog_update] failed to load existing comment for tags",
+          { scope, taskKey, worklogId: trackerWorklogId, error: error?.message },
+        );
+        return {
+          existingComment: null,
+          existingWorkPlanId: undefined,
+          existingWorklogId: undefined,
+        };
+      }
+    };
 
-            if (!Number.isInteger(itemWorklogId)) {
-              return res.status(400).json({
-                message:
-                  "Field 'items[].worklogId' is required and must be an integer for Edit action.",
-              });
-            }
-            const itemInternalError = requireInternalFields({
-              duration: itemDurationMinutes,
-              startDate: itemStartDate,
-              comment: itemComment,
-              trackerUid,
-              deadlineOk,
-              needUpgradeEstimate,
-              makeTaskFaster,
-            });
-            if (itemInternalError) {
-              return res.status(400).json({ message: itemInternalError });
-            }
+    // Batch edit: multiple tracker worklogs in one endpoint call.
+    const handleBatchEdit = async () => {
+      const responses = [];
+      for (const item of items) {
+        const itemWorklogId = Number(item?.worklogId);
+        const itemDuration = item?.duration;
+        const itemStartDate = item?.startDate;
+        const itemComment = item?.comment ?? "";
+        const itemIssueTypeLabel = item?.issueTypeLabel ?? issueTypeLabel;
+        const itemWorkPlanId = item?.workPlanId ?? workPlanId;
+        const itemWorklogIdInternal = Number.isInteger(
+          Number(item?.worklogIdInternal),
+        )
+          ? Number(item.worklogIdInternal)
+          : undefined;
+        const itemChecklistItemId =
+          item?.checklistItemId ?? checklistItemId ?? undefined;
+        const itemDurationMinutes = resolveDurationMinutes(itemDuration);
 
-            let existingComment = null;
-            let existingWorkPlanId;
-            let existingWorklogId;
-            try {
-              const existing = await axios.get(
-                `${TRACKER_API_V2_BASE_URL}/issues/${taskKey}/worklog/${itemWorklogId}`,
-                headers(token),
-              );
-              const existingData = existing?.data ?? {};
-              existingComment =
-                normalizeCommentText(existingData?.comment) || null;
-              existingWorkPlanId =
-                extractWorkPlanIdFromComment(existingComment);
-              existingWorklogId = extractWorklogIdFromComment(existingComment);
-            } catch (error) {
-              console.warn(
-                "[api/worklog_update] failed to load existing comment for tags (batch)",
-                { taskKey, worklogId: itemWorklogId, error: error?.message },
-              );
-            }
-
-            const resolvedWorkPlanId =
-              existingWorkPlanId ?? itemWorkPlanId ?? undefined;
-            const resolvedWorklogId =
-              itemWorklogIdInternal ?? existingWorklogId ?? undefined;
-            console.log("[api/worklog_update] batch resolved ids", {
-              taskKey,
-              trackerWorklogId: itemWorklogId,
-              requestWorklogIdInternal: itemWorklogIdInternal,
-              existingWorklogIdInternal: existingWorklogId,
-              resolvedWorklogIdInternal: resolvedWorklogId,
-            });
-            const itemCommentWithTags = buildCommentWithTags(
-              itemComment,
-              itemIssueTypeLabel ?? undefined,
-              riskState,
-              resolvedWorkPlanId,
-              resolvedWorklogId,
-            );
-
-            const trackerResponse = await axios.patch(
-              `${TRACKER_API_V2_BASE_URL}/issues/${taskKey}/worklog/${itemWorklogId}`,
-              {
-                duration: normalizeTrackerDuration(itemDuration),
-                comment: itemCommentWithTags,
-              },
-              headers(token),
-            );
-
-            const internalResponse = await sendInternal(
-              buildInternalPayload({
-                duration: itemDurationMinutes,
-                startDate: itemStartDate,
-                comment: itemCommentWithTags,
-                action: 1,
-                checklistItemId: itemChecklistItemId,
-                worklogId:
-                  resolvedWorklogId != null
-                    ? Number(resolvedWorklogId)
-                    : undefined,
-                issueTypeLabel: itemIssueTypeLabel ?? undefined,
-                workPlanId: resolvedWorkPlanId ?? undefined,
-              }),
-            );
-
-            const internalWorklogIdFromResponse =
-              internalResponse?.data?.YT_TL_WORKLOG_ID;
-            const commentWithInternalTag = buildCommentWithTags(
-              itemComment,
-              itemIssueTypeLabel ?? undefined,
-              riskState,
-              resolvedWorkPlanId,
-              internalWorklogIdFromResponse ?? resolvedWorklogId,
-            );
-            let responseData = trackerResponse?.data ?? null;
-            if (commentWithInternalTag !== itemCommentWithTags) {
-              const trackerSecondPatch = await axios.patch(
-                `${TRACKER_API_V2_BASE_URL}/issues/${taskKey}/worklog/${itemWorklogId}`,
-                { comment: commentWithInternalTag },
-                headers(token),
-              );
-              responseData = {
-                ...(trackerSecondPatch?.data ?? trackerResponse?.data ?? {}),
-                comment: commentWithInternalTag,
-              };
-            }
-            responses.push(responseData);
-          }
-          return res.json(responses);
-        }
-
-        const hasDurationValue =
-          (typeof duration === "string" && duration.length > 0) ||
-          (typeof duration === "number" && Number.isFinite(duration));
-        if (!hasDurationValue) {
-          return res.status(400).json({
-            message: "Missing or invalid field 'duration'.",
-          });
-        }
-        if (typeof start !== "string" || start.length === 0) {
-          return res.status(400).json({
-            message: "Missing or invalid field 'start'. It must be a string.",
-          });
-        }
-        if (action === 1 && !Number.isInteger(Number(worklogId))) {
+        if (!Number.isInteger(itemWorklogId)) {
           return res.status(400).json({
             message:
-              "Field 'worklogId' is required and must be an integer for Edit action.",
+              "Field 'items[].worklogId' is required and must be an integer for Edit action.",
           });
         }
-        const internalError = requireInternalFields({
-          duration: resolvedDurationMinutes,
-          startDate,
-          comment,
+        const itemInternalError = requireInternalFields({
+          duration: itemDurationMinutes,
+          startDate: itemStartDate,
+          comment: itemComment,
           trackerUid,
           deadlineOk,
           needUpgradeEstimate,
           makeTaskFaster,
         });
-        if (internalError) {
-          return res.status(400).json({ message: internalError });
+        if (itemInternalError) {
+          return res.status(400).json({ message: itemInternalError });
         }
 
-        let existingComment = null;
-        let existingWorkPlanId;
-        let existingWorklogId;
-        if (action === 1) {
-          try {
-            const existing = await axios.get(
-              `${TRACKER_API_V2_BASE_URL}/issues/${taskKey}/worklog/${worklogId}`,
-              headers(token),
-            );
-            const existingData = existing?.data ?? {};
-            existingComment =
-              normalizeCommentText(existingData?.comment) || null;
-            existingWorkPlanId = extractWorkPlanIdFromComment(existingComment);
-            existingWorklogId = extractWorklogIdFromComment(existingComment);
-          } catch (error) {
-            console.warn(
-              "[api/worklog_update] failed to load existing comment for tags",
-              { taskKey, worklogId, error: error?.message },
-            );
-          }
-        }
-
+        const { existingWorkPlanId, existingWorklogId } =
+          await loadExistingWorklogMeta(itemWorklogId, "batch");
         const resolvedWorkPlanId =
-          action === 1
-            ? existingWorkPlanId
-            : (workPlanId ?? existingWorkPlanId);
+          existingWorkPlanId ?? itemWorkPlanId ?? undefined;
         const resolvedWorklogId =
-          action === 1
-            ? (internalWorklogIdFromRequest ?? existingWorklogId)
-            : undefined;
-        console.log("[api/worklog_update] single resolved ids", {
+          itemWorklogIdInternal ?? existingWorklogId ?? undefined;
+
+        console.log("[api/worklog_update] batch resolved ids", {
           taskKey,
-          trackerWorklogId: worklogId,
-          requestWorklogIdInternal: internalWorklogIdFromRequest,
+          trackerWorklogId: itemWorklogId,
+          requestWorklogIdInternal: itemWorklogIdInternal,
           existingWorklogIdInternal: existingWorklogId,
           resolvedWorklogIdInternal: resolvedWorklogId,
         });
-        const commentWithTags = buildInternalComment(
-          comment,
-          resolvedWorklogId,
+
+        const itemCommentWithTags = buildCommentWithTags(
+          itemComment,
+          itemIssueTypeLabel ?? undefined,
+          riskState,
           resolvedWorkPlanId,
+          resolvedWorklogId,
         );
-        const trackerUrl =
-          action === 0
-            ? `${TRACKER_API_V2_BASE_URL}/issues/${taskKey}/worklog`
-            : `${TRACKER_API_V2_BASE_URL}/issues/${taskKey}/worklog/${worklogId}`;
-        const trackerPayload =
-          action === 0
-            ? {
-                start,
-                duration: normalizeTrackerDuration(duration),
-                comment: commentWithTags,
-              }
-            : {
-                duration: normalizeTrackerDuration(duration),
-                comment: commentWithTags,
-              };
 
-        const trackerResponse =
-          action === 0
-            ? await axios.post(trackerUrl, trackerPayload, headers(token))
-            : await axios.patch(trackerUrl, trackerPayload, headers(token));
+        const trackerResponse = await axios.patch(
+          `${TRACKER_API_V2_BASE_URL}/issues/${taskKey}/worklog/${itemWorklogId}`,
+          {
+            duration: normalizeTrackerDuration(itemDuration),
+            comment: itemCommentWithTags,
+          },
+          headers(token),
+        );
 
-        let internalResponse;
-        try {
-          internalResponse = await sendInternal(
-            buildInternalPayload({
-              duration: resolvedDurationMinutes,
-              startDate,
-              comment: commentWithTags,
-              action,
-              checklistItemId,
-              worklogId:
-                action === 1 && resolvedWorklogId != null
-                  ? Number(resolvedWorklogId)
-                  : undefined,
-            }),
+        const internalResponse = await sendInternal(
+          buildInternalPayload({
+            duration: itemDurationMinutes,
+            startDate: itemStartDate,
+            comment: itemCommentWithTags,
+            action: resolvedWorklogId != null ? 1 : 0,
+            checklistItemId: itemChecklistItemId,
+            worklogId:
+              resolvedWorklogId != null ? Number(resolvedWorklogId) : undefined,
+            issueTypeLabel: itemIssueTypeLabel ?? undefined,
+            workPlanId: resolvedWorkPlanId ?? undefined,
+          }),
+        );
+
+        const internalWorklogIdFromResponse =
+          internalResponse?.data?.YT_TL_WORKLOG_ID;
+        const commentWithInternalTag = buildCommentWithTags(
+          itemComment,
+          itemIssueTypeLabel ?? undefined,
+          riskState,
+          resolvedWorkPlanId,
+          internalWorklogIdFromResponse ?? resolvedWorklogId,
+        );
+        let responseData = trackerResponse?.data ?? null;
+        if (commentWithInternalTag !== itemCommentWithTags) {
+          const trackerSecondPatch = await axios.patch(
+            `${TRACKER_API_V2_BASE_URL}/issues/${taskKey}/worklog/${itemWorklogId}`,
+            { comment: commentWithInternalTag },
+            headers(token),
           );
-        } catch (error) {
-          if (action === 0) {
-            const trackerWorklogId = Number(
+          responseData = {
+            ...(trackerSecondPatch?.data ?? trackerResponse?.data ?? {}),
+            comment: commentWithInternalTag,
+          };
+        }
+        responses.push(responseData);
+      }
+      return res.json(responses);
+    };
+
+    // Single add/edit in Tracker + internal synchronization.
+    const handleSingleAddOrEdit = async () => {
+      const hasDurationValue =
+        (typeof duration === "string" && duration.length > 0) ||
+        (typeof duration === "number" && Number.isFinite(duration));
+      if (!hasDurationValue) {
+        return res.status(400).json({
+          message: "Missing or invalid field 'duration'.",
+        });
+      }
+      if (typeof start !== "string" || start.length === 0) {
+        return res.status(400).json({
+          message: "Missing or invalid field 'start'. It must be a string.",
+        });
+      }
+      if (action === 1 && !Number.isInteger(Number(worklogId))) {
+        return res.status(400).json({
+          message:
+            "Field 'worklogId' is required and must be an integer for Edit action.",
+        });
+      }
+      const internalError = requireInternalFields({
+        duration: resolvedDurationMinutes,
+        startDate,
+        comment,
+        trackerUid,
+        deadlineOk,
+        needUpgradeEstimate,
+        makeTaskFaster,
+      });
+      if (internalError) {
+        return res.status(400).json({ message: internalError });
+      }
+
+      const { existingWorkPlanId, existingWorklogId } =
+        action === 1
+          ? await loadExistingWorklogMeta(worklogId, "single")
+          : {
+              existingWorkPlanId: undefined,
+              existingWorklogId: undefined,
+            };
+      const resolvedWorkPlanId =
+        action === 1
+          ? existingWorkPlanId
+          : (workPlanId ?? existingWorkPlanId);
+      const resolvedWorklogId =
+        action === 1
+          ? (internalWorklogIdFromRequest ?? existingWorklogId)
+          : undefined;
+      console.log("[api/worklog_update] single resolved ids", {
+        taskKey,
+        trackerWorklogId: worklogId,
+        requestWorklogIdInternal: internalWorklogIdFromRequest,
+        existingWorklogIdInternal: existingWorklogId,
+        resolvedWorklogIdInternal: resolvedWorklogId,
+      });
+
+      const commentWithTags = buildInternalComment(
+        comment,
+        resolvedWorklogId,
+        resolvedWorkPlanId,
+      );
+      const trackerUrl =
+        action === 0
+          ? `${TRACKER_API_V2_BASE_URL}/issues/${taskKey}/worklog`
+          : `${TRACKER_API_V2_BASE_URL}/issues/${taskKey}/worklog/${worklogId}`;
+      const trackerPayload =
+        action === 0
+          ? {
+              start,
+              duration: normalizeTrackerDuration(duration),
+              comment: commentWithTags,
+            }
+          : {
+              duration: normalizeTrackerDuration(duration),
+              comment: commentWithTags,
+            };
+
+      const trackerResponse =
+        action === 0
+          ? await axios.post(trackerUrl, trackerPayload, headers(token))
+          : await axios.patch(trackerUrl, trackerPayload, headers(token));
+
+      let internalResponse;
+      try {
+        internalResponse = await sendInternal(
+          buildInternalPayload({
+            duration: resolvedDurationMinutes,
+            startDate,
+            comment: commentWithTags,
+            action: action === 1 && resolvedWorklogId == null ? 0 : action,
+            checklistItemId,
+            worklogId:
+              action === 1 && resolvedWorklogId != null
+                ? Number(resolvedWorklogId)
+                : undefined,
+          }),
+        );
+      } catch (error) {
+        if (action === 0) {
+          const trackerWorklogId = Number(
+            trackerResponse?.data?.id ??
+              trackerResponse?.data?.ID ??
+              trackerResponse?.data?.worklogId,
+          );
+          if (Number.isFinite(trackerWorklogId)) {
+            try {
+              await axios.delete(
+                `${TRACKER_API_V2_BASE_URL}/issues/${taskKey}/worklog/${trackerWorklogId}`,
+                headers(token),
+              );
+            } catch (cleanupError) {
+              console.error(
+                "[api/worklog_update] add cleanup failed after internal error",
+                {
+                  taskKey,
+                  trackerWorklogId,
+                  error: cleanupError?.message,
+                },
+              );
+            }
+          } else {
+            console.warn(
+              "[api/worklog_update] add cleanup skipped: missing tracker worklog id",
+              {
+                taskKey,
+                trackerResponseData: trackerResponse?.data,
+              },
+            );
+          }
+        }
+        throw error;
+      }
+
+      const internalWorklogIdFromResponse =
+        internalResponse?.data?.YT_TL_WORKLOG_ID;
+      const trackerWorklogId =
+        action === 1
+          ? Number(worklogId)
+          : Number(
               trackerResponse?.data?.id ??
                 trackerResponse?.data?.ID ??
                 trackerResponse?.data?.worklogId,
             );
-            if (Number.isFinite(trackerWorklogId)) {
-              try {
-                await axios.delete(
-                  `${TRACKER_API_V2_BASE_URL}/issues/${taskKey}/worklog/${trackerWorklogId}`,
-                  headers(token),
-                );
-              } catch (cleanupError) {
-                console.error(
-                  "[api/worklog_update] add cleanup failed after internal error",
-                  {
-                    taskKey,
-                    trackerWorklogId,
-                    error: cleanupError?.message,
-                  },
-                );
-              }
-            } else {
-              console.warn(
-                "[api/worklog_update] add cleanup skipped: missing tracker worklog id",
-                {
-                  taskKey,
-                  trackerResponseData: trackerResponse?.data,
-                },
-              );
-            }
-          }
-          throw error;
-        }
 
-        const internalWorklogIdFromResponse =
-          internalResponse?.data?.YT_TL_WORKLOG_ID;
-        const trackerWorklogId =
-          action === 1
-            ? Number(worklogId)
-            : Number(
-                trackerResponse?.data?.id ??
-                  trackerResponse?.data?.ID ??
-                  trackerResponse?.data?.worklogId,
-              );
-
-        let updatedTrackerComment = null;
-        if (Number.isFinite(trackerWorklogId)) {
-          const commentWithInternalTag = buildInternalComment(
-            comment,
-            internalWorklogIdFromResponse ?? resolvedWorklogId,
-            resolvedWorkPlanId,
+      let updatedTrackerComment = null;
+      if (Number.isFinite(trackerWorklogId)) {
+        const commentWithInternalTag = buildInternalComment(
+          comment,
+          internalWorklogIdFromResponse ?? resolvedWorklogId,
+          resolvedWorkPlanId,
+        );
+        if (commentWithInternalTag !== commentWithTags) {
+          await axios.patch(
+            `${TRACKER_API_V2_BASE_URL}/issues/${taskKey}/worklog/${trackerWorklogId}`,
+            { comment: commentWithInternalTag },
+            headers(token),
           );
-          console.log("commentWithInternalTag\n\n", commentWithInternalTag);
-          console.log("-----------\n\n");
-          if (commentWithInternalTag !== commentWithTags) {
-            await axios.patch(
-              `${TRACKER_API_V2_BASE_URL}/issues/${taskKey}/worklog/${trackerWorklogId}`,
-              { comment: commentWithInternalTag },
-              headers(token),
-            );
-            updatedTrackerComment = commentWithInternalTag;
-          }
-        } else if (!Number.isFinite(trackerWorklogId)) {
-          console.warn(
-            "[api/worklog_update] missing tracker worklog id in response",
-            {
-              taskKey,
-              action,
-              trackerResponseData: trackerResponse?.data,
-            },
-          );
+          updatedTrackerComment = commentWithInternalTag;
         }
-
-        const responseData =
-          updatedTrackerComment == null
-            ? trackerResponse.data
-            : {
-                ...(trackerResponse.data ?? {}),
-                comment: updatedTrackerComment,
-              };
-        return res.json(responseData);
+      } else {
+        console.warn("[api/worklog_update] missing tracker worklog id in response", {
+          taskKey,
+          action,
+          trackerResponseData: trackerResponse?.data,
+        });
       }
-      // Action: Delete
-      case 2: {
-        const isBatch = Array.isArray(items) && items.length > 0;
-        const deleteIds = isBatch
-          ? items
-              .map((item) => Number(item?.worklogId))
-              .filter((id) => Number.isInteger(id))
-          : [];
 
-        if (!isBatch && !Number.isInteger(Number(worklogId))) {
+      const responseData =
+        updatedTrackerComment == null
+          ? trackerResponse.data
+          : {
+              ...(trackerResponse.data ?? {}),
+              comment: updatedTrackerComment,
+            };
+      return res.json(responseData);
+    };
+
+    // Delete mode: supports single and batch delete.
+    const handleDelete = async () => {
+      const isBatch = Array.isArray(items) && items.length > 0;
+      const deleteIds = isBatch
+        ? items
+            .map((item) => Number(item?.worklogId))
+            .filter((id) => Number.isInteger(id))
+        : [];
+
+      if (!isBatch && !Number.isInteger(Number(worklogId))) {
+        return res.status(400).json({
+          message:
+            "Field 'worklogId' is required and must be an integer for Delete action.",
+        });
+      }
+
+      if (isBatch) {
+        if (!Array.isArray(items) || items.length === 0) {
           return res.status(400).json({
-            message:
-              "Field 'worklogId' is required and must be an integer for Delete action.",
+            message: "Field 'items' must be a non-empty array for batch delete.",
           });
         }
-
-        if (isBatch) {
-          if (!Array.isArray(items) || items.length === 0) {
-            return res.status(400).json({
-              message:
-                "Field 'items' must be a non-empty array for batch delete.",
-            });
-          }
-          const internalErrors = items
-            .map((item) =>
-              requireInternalFields({
-                duration: resolveDurationMinutes(item?.duration),
-                startDate: item?.startDate,
-                comment: item?.comment,
-                trackerUid,
-                deadlineOk,
-                needUpgradeEstimate,
-                makeTaskFaster,
-              }),
-            )
-            .filter(Boolean);
-          if (internalErrors.length > 0) {
-            return res.status(400).json({ message: internalErrors[0] });
-          }
-
-          await Promise.all(
-            deleteIds.map((id) =>
-              axios.delete(
-                `${TRACKER_API_V2_BASE_URL}/issues/${taskKey}/worklog/${id}`,
-                headers(token),
-              ),
-            ),
-          );
-
-          await Promise.all(
-            items.map((item) => {
-              console.log("item.comment", item.comment);
-              const commentText = normalizeCommentText(item.comment);
-              const internalWorklogId =
-                extractWorklogIdFromComment(commentText);
-              console.log("internalWorklogId", internalWorklogId);
-              if (internalWorklogId) {
-                return sendInternalLogged(
-                  buildInternalPayload({
-                    duration: resolveDurationMinutes(item.duration),
-                    startDate: item.startDate,
-                    comment: buildInternalComment(
-                      commentText,
-                      internalWorklogId,
-                    ),
-                    action: 2,
-                    checklistItemId: item.checklistItemId ?? checklistItemId,
-                    worklogId:
-                      internalWorklogId != null
-                        ? Number(internalWorklogId)
-                        : undefined,
-                  }),
-                  "batch",
-                );
-              }
+        const internalErrors = items
+          .map((item) =>
+            requireInternalFields({
+              duration: resolveDurationMinutes(item?.duration),
+              startDate: item?.startDate,
+              comment: item?.comment,
+              trackerUid,
+              deadlineOk,
+              needUpgradeEstimate,
+              makeTaskFaster,
             }),
-          );
-          return res.json(true);
+          )
+          .filter(Boolean);
+        if (internalErrors.length > 0) {
+          return res.status(400).json({ message: internalErrors[0] });
         }
 
-        const internalError = requireInternalFields({
-          duration: resolvedDurationMinutes,
-          startDate,
-          comment,
-          trackerUid,
-          deadlineOk,
-          needUpgradeEstimate,
-          makeTaskFaster,
-        });
-        if (internalError) {
-          return res.status(400).json({ message: internalError });
-        }
-
-        await axios.delete(
-          `${TRACKER_API_V2_BASE_URL}/issues/${taskKey}/worklog/${worklogId}`,
-          headers(token),
+        await Promise.all(
+          deleteIds.map((id) =>
+            axios.delete(
+              `${TRACKER_API_V2_BASE_URL}/issues/${taskKey}/worklog/${id}`,
+              headers(token),
+            ),
+          ),
         );
 
-        const internalWorklogId =
-          internalWorklogIdFromRequest ?? extractWorklogIdFromComment(comment);
-        await sendInternalLogged(
-          buildInternalPayload({
-            duration: resolvedDurationMinutes,
-            startDate,
-            comment: buildInternalComment(comment, internalWorklogId),
-            action: 2,
-            checklistItemId,
-            worklogId:
-              internalWorklogId != null ? Number(internalWorklogId) : undefined,
+        await Promise.all(
+          items.map((item) => {
+            const commentText = normalizeCommentText(item.comment);
+            const internalWorklogId = extractWorklogIdFromComment(commentText);
+            if (internalWorklogId) {
+              return sendInternalLogged(
+                buildInternalPayload({
+                  duration: resolveDurationMinutes(item.duration),
+                  startDate: item.startDate,
+                  comment: buildInternalComment(commentText, internalWorklogId),
+                  action: 2,
+                  checklistItemId: item.checklistItemId ?? checklistItemId,
+                  worklogId:
+                    internalWorklogId != null
+                      ? Number(internalWorklogId)
+                      : undefined,
+                }),
+                "batch",
+              );
+            }
           }),
-          "single",
         );
-
         return res.json(true);
       }
-      default:
-        return res.status(400).json({
-          message: "Field 'action' must be 0 (Add), 1 (Edit), or 2 (Delete).",
-        });
+
+      const internalError = requireInternalFields({
+        duration: resolvedDurationMinutes,
+        startDate,
+        comment,
+        trackerUid,
+        deadlineOk,
+        needUpgradeEstimate,
+        makeTaskFaster,
+      });
+      if (internalError) {
+        return res.status(400).json({ message: internalError });
+      }
+
+      await axios.delete(
+        `${TRACKER_API_V2_BASE_URL}/issues/${taskKey}/worklog/${worklogId}`,
+        headers(token),
+      );
+
+      const internalWorklogId =
+        internalWorklogIdFromRequest ?? extractWorklogIdFromComment(comment);
+      await sendInternalLogged(
+        buildInternalPayload({
+          duration: resolvedDurationMinutes,
+          startDate,
+          comment: buildInternalComment(comment, internalWorklogId),
+          action: 2,
+          checklistItemId,
+          worklogId:
+            internalWorklogId != null ? Number(internalWorklogId) : undefined,
+        }),
+        "single",
+      );
+      return res.json(true);
+    };
+
+    if (!hasToken) return await handleInternalOnly();
+    if (action === 0 || action === 1) {
+      const isBatchEdit =
+        action === 1 && Array.isArray(items) && items.length > 0;
+      return isBatchEdit ? await handleBatchEdit() : await handleSingleAddOrEdit();
     }
+    if (action === 2) return await handleDelete();
+    return res.status(400).json({
+      message: "Field 'action' must be 0 (Add), 1 (Edit), or 2 (Delete).",
+    });
   } catch (error) {
     const status = error.response?.status || 500;
     const payload = {
