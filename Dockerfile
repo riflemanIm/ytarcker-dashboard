@@ -22,4 +22,3 @@ USER pmt
 # Команда для запуска приложения
 CMD ["nodejs", "./proxy.js"]
 #CMD ["yarn", "start_proxy"]  
-# или CMD ["node", "dist/index.js"], если вы используете build-процесс
