@@ -276,7 +276,7 @@ const TableTimeSpendByPlan: FC<TableTimeSpendByPlanProps> = ({
       field: "issue",
       headerName: "Key + Название",
       flex: 420,
-      minWidth: SHRINK_MIN_WIDTH,
+      minWidth: 230,
       sortable: true,
       filterable: false,
       disableColumnMenu: true,
